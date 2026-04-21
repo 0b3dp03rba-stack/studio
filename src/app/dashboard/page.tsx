@@ -1,8 +1,8 @@
 "use client";
 
 import { useApp } from '@/lib/store';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertCircle, CheckCircle2, Clock, XCircle, TrendingUp } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { AlertCircle, CheckCircle2, Clock, XCircle, TrendingUp, Send } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils-app';
 
 export default function UserDashboard() {

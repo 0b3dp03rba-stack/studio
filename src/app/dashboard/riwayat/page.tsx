@@ -3,7 +3,7 @@
 import { useApp } from '@/lib/store';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatDate } from '@/lib/utils-app';
-import { CheckCircle2, Clock, XCircle, ChevronRight } from 'lucide-react';
+import { CheckCircle2, Clock, XCircle, ChevronRight, History } from 'lucide-react';
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
@@ -13,13 +13,6 @@ export default function RiwayatPage() {
   const [selectedBatch, setSelectedBatch] = useState<any>(null);
 
   const userBatches = state.batches.filter(b => b.userId === state.currentUser?.id);
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'Selesai': return <CheckCircle2 className="text-primary" size={16} />;
-      default: return <Clock className="text-muted-foreground" size={16} />;
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -78,7 +71,7 @@ export default function RiwayatPage() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-2 mt-4">
-            {selectedBatch?.items.map((item: any, idx: number) => (
+            {selectedBatch?.items.map((item: any) => (
               <div key={item.id} className="p-3 bg-white/5 rounded-xl flex items-center justify-between border border-white/5">
                 <div className="space-y-0.5 truncate flex-1 mr-2">
                   <p className="text-xs font-medium truncate">{item.email}</p>
@@ -97,4 +90,3 @@ export default function RiwayatPage() {
     </div>
   );
 }
-import { History } from 'lucide-react';
