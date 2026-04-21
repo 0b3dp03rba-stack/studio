@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, ReactNode } from 'react';
 
 // --- Types ---
 
@@ -48,6 +48,14 @@ export type WithdrawalRequest = {
   createdAt: string;
 };
 
+export type Message = {
+  id: string;
+  senderId: string;
+  receiverId: string;
+  text: string;
+  createdAt: string;
+};
+
 export type AppSettings = {
   gmailRate: number;
   minWithdraw: number;
@@ -63,6 +71,7 @@ export type AppState = {
   users: User[];
   batches: Batch[];
   withdrawals: WithdrawalRequest[];
+  messages: Message[];
   settings: AppSettings;
 };
 
@@ -115,6 +124,7 @@ const initialState: AppState = {
   users: initialUsers,
   batches: [],
   withdrawals: [],
+  messages: [],
   settings: initialSettings,
 };
 
@@ -129,6 +139,7 @@ type Action =
   | { type: 'PROCESS_GMAIL'; payload: { batchId: string; gmailId: string; status: SubmissionStatus } }
   | { type: 'CREATE_WITHDRAWAL'; payload: WithdrawalRequest }
   | { type: 'PROCESS_WITHDRAWAL'; payload: { withdrawalId: string; status: WithdrawStatus } }
+  | { type: 'SEND_MESSAGE'; payload: Message }
   | { type: 'UPDATE_SETTINGS'; payload: Partial<AppSettings> }
   | { type: 'ADD_PAYMENT_METHOD'; payload: string }
   | { type: 'DELETE_PAYMENT_METHOD'; payload: string }
@@ -228,6 +239,8 @@ function reducer(state: AppState, action: Action): AppState {
       }
       return newState;
     }
+    case 'SEND_MESSAGE':
+      return { ...state, messages: [...state.messages, action.payload] };
     case 'UPDATE_SETTINGS':
       return { ...state, settings: { ...state.settings, ...action.payload } };
     case 'ADD_PAYMENT_METHOD':

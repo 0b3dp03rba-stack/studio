@@ -1,7 +1,8 @@
+
 "use client";
 
 import { useApp } from '@/lib/store';
-import { LayoutDashboard, Send, Wallet, History, User, FileText, Users, Settings } from 'lucide-react';
+import { LayoutDashboard, Send, Wallet, History, User, FileText, Users, Settings, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -17,7 +18,7 @@ export default function BottomNav() {
   const userNav = [
     { label: 'Home', icon: LayoutDashboard, href: '/dashboard' },
     { label: 'Setor', icon: Send, href: '/dashboard/setor' },
-    { label: 'Tarik', icon: Wallet, href: '/dashboard/withdraw' },
+    { label: 'Chat', icon: MessageCircle, href: '/dashboard/chat' },
     { label: 'History', icon: History, href: '/dashboard/riwayat' },
     { label: 'Profil', icon: User, href: '/dashboard/profil' },
   ];
@@ -25,7 +26,7 @@ export default function BottomNav() {
   const adminNav = [
     { label: 'Panel', icon: LayoutDashboard, href: '/admin' },
     { label: 'Setoran', icon: FileText, href: '/admin/setoran' },
-    { label: 'Tarik', icon: Wallet, href: '/admin/withdraw' },
+    { label: 'Chat', icon: MessageCircle, href: '/admin/chat' },
     { label: 'Users', icon: Users, href: '/admin/users' },
     { label: 'System', icon: Settings, href: '/admin/settings' },
   ];
@@ -35,7 +36,7 @@ export default function BottomNav() {
   return (
     <nav className="bottom-nav">
       {activeNav.map((item) => {
-        const isActive = pathname === item.href;
+        const isActive = pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href));
         const Icon = item.icon;
         return (
           <Link
