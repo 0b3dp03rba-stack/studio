@@ -1,537 +1,112 @@
+
 {
   "entities": {
     "UserProfile": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "UserProfile",
       "type": "object",
-      "description": "Represents a user profile in the application, storing personal information, role, and current balance.",
+      "description": "Profil pengguna dengan informasi rekening bank dan saldo.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the UserProfile entity."
-        },
-        "email": {
-          "type": "string",
-          "description": "The user's email address, used for identification. (Note: Authentication is handled by an external system, this email is for data association and display).",
-          "format": "email"
-        },
-        "role": {
-          "type": "string",
-          "description": "The role of the user within the application, either 'User' or 'Admin'.",
-          "format": "enum"
-        },
-        "balance": {
-          "type": "number",
-          "description": "The current monetary balance of the user, derived from approved Gmail submissions."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the user profile was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the user profile was last updated.",
-          "format": "date-time"
-        }
+        "id": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["User", "Admin"] },
+        "balance": { "type": "number" },
+        "bankName": { "type": "string" },
+        "bankAccount": { "type": "string" },
+        "bankAccountName": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "id",
-        "email",
-        "role",
-        "balance",
-        "createdAt",
-        "updatedAt"
-      ]
+      "required": ["id", "email", "role", "balance"]
     },
     "GmailBatch": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "GmailBatch",
       "type": "object",
-      "description": "Represents a single submission batch of multiple Gmail credentials made by a user.",
+      "description": "Grup setoran Gmail dari pengguna.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the GmailBatch entity."
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to the UserProfile who submitted this batch. (Relationship: UserProfile 1:N GmailBatch)"
-        },
-        "submissionDate": {
-          "type": "string",
-          "description": "Timestamp when this batch of Gmails was submitted.",
-          "format": "date-time"
-        },
-        "status": {
-          "type": "string",
-          "description": "The overall status of the batch. 'Pending' if any Gmails within are still pending, 'Selesai' if all Gmails have been processed.",
-          "format": "enum"
-        },
-        "totalGmailsCount": {
-          "type": "number",
-          "description": "The total number of Gmail submissions within this batch."
-        },
-        "pendingGmailsCount": {
-          "type": "number",
-          "description": "The count of Gmail submissions in this batch that are still in 'Pending' status."
-        },
-        "approvedGmailsCount": {
-          "type": "number",
-          "description": "The count of Gmail submissions in this batch that have been 'Disetujui' (approved)."
-        },
-        "rejectedGmailsCount": {
-          "type": "number",
-          "description": "The count of Gmail submissions in this batch that have been 'Ditolak' (rejected)."
-        }
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["Pending", "Selesai"] },
+        "totalCount": { "type": "number" }
       },
-      "required": [
-        "id",
-        "userId",
-        "submissionDate",
-        "status",
-        "totalGmailsCount",
-        "pendingGmailsCount",
-        "approvedGmailsCount",
-        "rejectedGmailsCount"
-      ]
+      "required": ["id", "userId", "createdAt", "status", "totalCount"]
     },
     "GmailSubmission": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "GmailSubmission",
       "type": "object",
-      "description": "Represents a single Gmail credential submitted by a user as part of a batch.",
+      "description": "Data individu akun Gmail yang disetor.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the GmailSubmission entity."
-        },
-        "batchId": {
-          "type": "string",
-          "description": "Reference to the GmailBatch this submission belongs to. (Relationship: GmailBatch 1:N GmailSubmission)"
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to the UserProfile who submitted this individual Gmail. (Relationship: UserProfile 1:N GmailSubmission)"
-        },
-        "email": {
-          "type": "string",
-          "description": "The email address of the submitted Gmail account.",
-          "format": "email"
-        },
-        "passwordHash": {
-          "type": "string",
-          "description": "A securely stored hash or encrypted version of the Gmail account password. This is not stored in plain text."
-        },
-        "status": {
-          "type": "string",
-          "description": "The current status of this individual Gmail submission: 'Pending', 'Disetujui' (Approved), or 'Ditolak' (Rejected).",
-          "format": "enum"
-        },
-        "processedAt": {
-          "type": "string",
-          "description": "Timestamp when this Gmail submission was processed (approved or rejected). Null if still pending.",
-          "format": "date-time"
-        }
+        "id": { "type": "string" },
+        "batchId": { "type": "string" },
+        "userId": { "type": "string" },
+        "email": { "type": "string" },
+        "password": { "type": "string" },
+        "status": { "type": "string", "enum": ["Pending", "Proses", "Disetujui", "Ditolak"] },
+        "processedAt": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "id",
-        "batchId",
-        "userId",
-        "email",
-        "passwordHash",
-        "status"
-      ]
+      "required": ["id", "batchId", "userId", "email", "password", "status"]
     },
     "WithdrawalRequest": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "WithdrawalRequest",
       "type": "object",
-      "description": "Represents a user's request to withdraw funds from their balance.",
+      "description": "Permintaan penarikan saldo oleh pengguna.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the WithdrawalRequest entity."
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to the UserProfile who initiated the withdrawal request. (Relationship: UserProfile 1:N WithdrawalRequest)"
-        },
-        "amount": {
-          "type": "number",
-          "description": "The amount of money the user requested to withdraw."
-        },
-        "adminFee": {
-          "type": "number",
-          "description": "The administrative fee applied to this withdrawal request."
-        },
-        "totalDeduction": {
-          "type": "number",
-          "description": "The total amount to be deducted from the user's balance, including the requested amount and the admin fee."
-        },
-        "paymentMethodId": {
-          "type": "string",
-          "description": "Reference to the PaymentMethod selected by the user for this withdrawal. (Relationship: PaymentMethod 1:N WithdrawalRequest)"
-        },
-        "accountName": {
-          "type": "string",
-          "description": "The name associated with the user's payment account for the withdrawal."
-        },
-        "accountNumber": {
-          "type": "string",
-          "description": "The account number or identifier for the user's selected payment method."
-        },
-        "status": {
-          "type": "string",
-          "description": "The current status of the withdrawal request: 'Pending', 'Approved', or 'Rejected'.",
-          "format": "enum"
-        },
-        "requestedAt": {
-          "type": "string",
-          "description": "Timestamp when the withdrawal request was submitted by the user.",
-          "format": "date-time"
-        },
-        "processedByUserId": {
-          "type": "string",
-          "description": "Optional reference to the UserProfile (admin) who processed this withdrawal request. (Relationship: UserProfile 1:N WithdrawalRequest)"
-        },
-        "processedAt": {
-          "type": "string",
-          "description": "Timestamp when the withdrawal request was approved or rejected by an admin. Null if still pending.",
-          "format": "date-time"
-        },
-        "rejectionReason": {
-          "type": "string",
-          "description": "An optional reason provided by the admin if the withdrawal request was rejected."
-        }
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "amount": { "type": "number" },
+        "fee": { "type": "number" },
+        "totalDeduction": { "type": "number" },
+        "method": { "type": "string" },
+        "status": { "type": "string", "enum": ["Pending", "Disetujui", "Ditolak"] },
+        "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "id",
-        "userId",
-        "amount",
-        "adminFee",
-        "totalDeduction",
-        "paymentMethodId",
-        "accountName",
-        "accountNumber",
-        "status",
-        "requestedAt"
-      ]
+      "required": ["id", "userId", "amount", "fee", "totalDeduction", "method", "status", "createdAt"]
     },
-    "AppConfig": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "AppConfig",
+    "ChatMessage": {
+      "title": "ChatMessage",
       "type": "object",
-      "description": "Stores global application settings and configurable parameters managed by administrators.",
+      "description": "Pesan dalam sistem live chat.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the AppConfig entity. Expected to be a fixed value (e.g., 'singletonConfig') as there should only be one configuration object."
-        },
-        "gmailRate": {
-          "type": "number",
-          "description": "The rate earned per approved Gmail submission."
-        },
-        "minWithdrawAmount": {
-          "type": "number",
-          "description": "The minimum amount a user can request for withdrawal."
-        },
-        "adminFeeAmount": {
-          "type": "number",
-          "description": "The fixed administrative fee applied to each withdrawal request."
-        },
-        "floatingButtonLink": {
-          "type": "string",
-          "description": "The URL that the floating action button navigates to.",
-          "format": "uri"
-        },
-        "lastUpdatedAt": {
-          "type": "string",
-          "description": "Timestamp when the application configuration was last updated.",
-          "format": "date-time"
-        }
+        "id": { "type": "string" },
+        "senderId": { "type": "string" },
+        "receiverId": { "type": "string" },
+        "text": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "id",
-        "gmailRate",
-        "minWithdrawAmount",
-        "adminFeeAmount",
-        "floatingButtonLink",
-        "lastUpdatedAt"
-      ]
-    },
-    "PaymentMethod": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "PaymentMethod",
-      "type": "object",
-      "description": "Defines available payment methods for withdrawals, configurable by administrators.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the PaymentMethod entity."
-        },
-        "name": {
-          "type": "string",
-          "description": "The display name of the payment method (e.g., 'DANA', 'OVO', 'BCA')."
-        },
-        "isEnabled": {
-          "type": "boolean",
-          "description": "Indicates whether this payment method is currently enabled and available for users."
-        },
-        "displayOrder": {
-          "type": "number",
-          "description": "A numerical value to control the order in which payment methods are displayed in the UI."
-        }
-      },
-      "required": [
-        "id",
-        "name",
-        "isEnabled",
-        "displayOrder"
-      ]
-    },
-    "Rule": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Rule",
-      "type": "object",
-      "description": "Stores application rules and guidelines to be displayed to users, managed by administrators.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Rule entity."
-        },
-        "title": {
-          "type": "string",
-          "description": "The title of the rule."
-        },
-        "content": {
-          "type": "string",
-          "description": "The full text content of the rule."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the rule was first created.",
-          "format": "date-time"
-        },
-        "lastUpdatedAt": {
-          "type": "string",
-          "description": "Timestamp when the rule was last updated.",
-          "format": "date-time"
-        },
-        "displayOrder": {
-          "type": "number",
-          "description": "A numerical value to control the order in which rules are displayed in the UI."
-        }
-      },
-      "required": [
-        "id",
-        "title",
-        "content",
-        "createdAt",
-        "lastUpdatedAt",
-        "displayOrder"
-      ]
-    },
-    "Announcement": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Announcement",
-      "type": "object",
-      "description": "Stores important announcements to be displayed on the dashboard or other pages, managed by administrators.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Announcement entity."
-        },
-        "title": {
-          "type": "string",
-          "description": "The title of the announcement."
-        },
-        "content": {
-          "type": "string",
-          "description": "The full text content of the announcement message."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the announcement was first created.",
-          "format": "date-time"
-        },
-        "lastUpdatedAt": {
-          "type": "string",
-          "description": "Timestamp when the announcement was last updated.",
-          "format": "date-time"
-        },
-        "isActive": {
-          "type": "boolean",
-          "description": "Indicates whether this announcement is currently active and should be displayed."
-        },
-        "displayOrder": {
-          "type": "number",
-          "description": "A numerical value to control the order in which announcements are displayed in the UI."
-        }
-      },
-      "required": [
-        "id",
-        "title",
-        "content",
-        "createdAt",
-        "lastUpdatedAt",
-        "isActive",
-        "displayOrder"
-      ]
+      "required": ["id", "senderId", "receiverId", "text", "createdAt"]
     }
   },
   "auth": {
-    "providers": [
-      "password",
-      "anonymous"
-    ]
+    "providers": ["password", "anonymous"]
   },
   "firestore": {
-    "structure": [
-      {
-        "path": "/userProfiles/{userId}",
-        "definition": {
-          "entityName": "UserProfile",
-          "schema": {
-            "$ref": "#/backend/entities/UserProfile"
-          },
-          "description": "Stores individual user profile information. The document ID (userId) corresponds to the Firebase Authentication UID. This collection does not store the user's role, which is handled via the /adminRoles collection for authorization independence. Access is restricted to the owner (user matching the UID) for write operations, and read access for all authenticated users for their own profile. Admins can read all profiles.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique ID of the user, matching Firebase Authentication UID."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/adminRoles/{userId}",
-        "definition": {
-          "entityName": "UserProfile",
-          "schema": {
-            "$ref": "#/backend/entities/UserProfile"
-          },
-          "description": "Stores an empty document for each user who has the 'Admin' role. The document ID (userId) corresponds to the Firebase Authentication UID. The existence of a document in this collection signifies admin privileges. This enables robust, authorization-independent role checks without relying on document get() operations, supporting DBAC principles. Only existing admins can create/delete documents here.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique ID of the user, matching Firebase Authentication UID, who holds the admin role."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/gmailBatches/{batchId}",
-        "definition": {
-          "entityName": "GmailBatch",
-          "schema": {
-            "$ref": "#/backend/entities/GmailBatch"
-          },
-          "description": "Stores user's Gmail submission batches. Each document includes a denormalized userId field (acting as ownerId) for authorization independence, allowing users to query and access only their own batches without relying on parent document lookups. Admins have full access to all batches for processing. This structure supports QAPs for both users and admins.",
-          "params": [
-            {
-              "name": "batchId",
-              "description": "The unique ID of the Gmail submission batch."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/gmailBatches/{batchId}/gmailSubmissions/{submissionId}",
-        "definition": {
-          "entityName": "GmailSubmission",
-          "schema": {
-            "$ref": "#/backend/entities/GmailSubmission"
-          },
-          "description": "Stores individual Gmail credentials submitted as part of a batch. Each document denormalizes userId (ownerId) and batchId to ensure authorization independence and allow for simple security rules. Access is limited to the userId associated with the submission and batchId matching the path segment. Admins have full access for processing. This path adheres to hierarchical data for nested 1:N relationships.",
-          "params": [
-            {
-              "name": "batchId",
-              "description": "The unique ID of the parent Gmail batch."
-            },
-            {
-              "name": "submissionId",
-              "description": "The unique ID of the individual Gmail submission."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/withdrawalRequests/{requestId}",
-        "definition": {
-          "entityName": "WithdrawalRequest",
-          "schema": {
-            "$ref": "#/backend/entities/WithdrawalRequest"
-          },
-          "description": "Stores user withdrawal requests. Each document includes a denormalized userId field (acting as ownerId) for authorization independence. Users can only access their own requests, while administrators can view and process all requests. This structure facilitates QAPs for both user and admin views.",
-          "params": [
-            {
-              "name": "requestId",
-              "description": "The unique ID of the withdrawal request."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/appConfig/singletonConfig",
-        "definition": {
-          "entityName": "AppConfig",
-          "schema": {
-            "$ref": "#/backend/entities/AppConfig"
-          },
-          "description": "Stores global application configuration settings. This is a singleton document, with a fixed ID 'singletonConfig'. All authenticated users have read access, and only administrators have write access. It simplifies global settings management and ensures clear separation of concerns.",
-          "params": []
-        }
-      },
-      {
-        "path": "/paymentMethods/{methodId}",
-        "definition": {
-          "entityName": "PaymentMethod",
-          "schema": {
-            "$ref": "#/backend/entities/PaymentMethod"
-          },
-          "description": "Stores definitions of available payment methods. All authenticated users have read access (to select methods), and only administrators have write access (to enable/disable or manage methods). This collection maintains a homogeneous security posture and supports QAPs.",
-          "params": [
-            {
-              "name": "methodId",
-              "description": "The unique ID of the payment method."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/rules/{ruleId}",
-        "definition": {
-          "entityName": "Rule",
-          "schema": {
-            "$ref": "#/backend/entities/Rule"
-          },
-          "description": "Stores application rules and guidelines. All authenticated users have read access, and only administrators have write access (to add/edit/delete rules). This collection maintains a homogeneous security posture and supports QAPs.",
-          "params": [
-            {
-              "name": "ruleId",
-              "description": "The unique ID of the application rule."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/announcements/{announcementId}",
-        "definition": {
-          "entityName": "Announcement",
-          "schema": {
-            "$ref": "#/backend/entities/Announcement"
-          },
-          "description": "Stores application announcements. All authenticated users have read access (to view active announcements), and only administrators have write access (to add/delete/manage announcements). This collection maintains a homogeneous security posture and supports QAPs.",
-          "params": [
-            {
-              "name": "announcementId",
-              "description": "The unique ID of the announcement."
-            }
-          ]
-        }
-      }
-    ],
-    "reasoning": "The recommended Firestore structure prioritizes Authorization Independence, Structural Segregation, and consistent Access Modeling to ensure robust and easily debuggable security rules. Each collection's security posture is homogeneous, meaning all documents within it share similar access requirements, simplifying rule logic. Denormalization is a critical component to achieve Authorization Independence. For instance, user-specific data like GmailBatch and WithdrawalRequest are stored in top-level collections (/gmailBatches, /withdrawalRequests) but include a denormalized userId (acting as ownerId) field. This eliminates the need for expensive and complex get() calls in security rules, enabling atomic operations and straightforward authorization checks (e.g., request.auth.uid == resource.data.userId). To support QAPs (Rules are not Filters), user-specific collections allow querying on the userId field to retrieve only their data, while admin-level collections can list all documents without needing to iterate through user-specific subcollections. For global application configurations, rules, payment methods, and announcements, dedicated top-level collections (/appConfig, /paymentMethods, /rules, /announcements) are used, offering read access for all authenticated users and write access exclusively for administrators. Admin roles are managed via a separate collection (/adminRoles/{userId}), where the mere existence of a document for a userId signifies admin privileges. This 'existence over content' pattern for roles provides an atomic and independent authorization check for admin permissions across the entire database, further simplifying security rules and maintaining a clear separation of concerns."
+    "/userProfiles/{userId}": {
+      "schema": { "$ref": "#/backend/entities/UserProfile" },
+      "description": "Profil pengguna."
+    },
+    "/adminRoles/{userId}": {
+      "schema": { "type": "object" },
+      "description": "Tanda peran Admin (dokumen ada = Admin)."
+    },
+    "/gmailBatches/{batchId}": {
+      "schema": { "$ref": "#/backend/entities/GmailBatch" },
+      "description": "Batch setoran pengguna."
+    },
+    "/gmailBatches/{batchId}/gmailSubmissions/{submissionId}": {
+      "schema": { "$ref": "#/backend/entities/GmailSubmission" },
+      "description": "Detail akun Gmail dalam batch."
+    },
+    "/withdrawalRequests/{requestId}": {
+      "schema": { "$ref": "#/backend/entities/WithdrawalRequest" },
+      "description": "Permintaan penarikan dana."
+    },
+    "/messages/{messageId}": {
+      "schema": { "$ref": "#/backend/entities/ChatMessage" },
+      "description": "Pesan chat real-time."
+    },
+    "/appConfig/singletonConfig": {
+      "schema": { "type": "object" },
+      "description": "Konfigurasi global sistem."
+    }
   }
 }
