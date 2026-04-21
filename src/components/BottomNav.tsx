@@ -15,19 +15,19 @@ export default function BottomNav() {
   const isAdmin = state.currentUser.role === 'Admin';
 
   const userNav = [
-    { label: 'Dashboard', icon: LayoutDashboard, href: '/dashboard' },
+    { label: 'Home', icon: LayoutDashboard, href: '/dashboard' },
     { label: 'Setor', icon: Send, href: '/dashboard/setor' },
-    { label: 'Withdraw', icon: Wallet, href: '/dashboard/withdraw' },
-    { label: 'Riwayat', icon: History, href: '/dashboard/riwayat' },
+    { label: 'Tarik', icon: Wallet, href: '/dashboard/withdraw' },
+    { label: 'History', icon: History, href: '/dashboard/riwayat' },
     { label: 'Profil', icon: User, href: '/dashboard/profil' },
   ];
 
   const adminNav = [
-    { label: 'Dashboard', icon: LayoutDashboard, href: '/admin' },
+    { label: 'Panel', icon: LayoutDashboard, href: '/admin' },
     { label: 'Setoran', icon: FileText, href: '/admin/setoran' },
-    { label: 'Withdraw', icon: Wallet, href: '/admin/withdraw' },
-    { label: 'User', icon: Users, href: '/admin/users' },
-    { label: 'Settings', icon: Settings, href: '/admin/settings' },
+    { label: 'Tarik', icon: Wallet, href: '/admin/withdraw' },
+    { label: 'Users', icon: Users, href: '/admin/users' },
+    { label: 'System', icon: Settings, href: '/admin/settings' },
   ];
 
   const activeNav = isAdmin ? adminNav : userNav;
@@ -42,13 +42,23 @@ export default function BottomNav() {
             key={item.href}
             href={item.href}
             className={cn(
-              "flex flex-col items-center justify-center gap-1 flex-1 h-full transition-all duration-300",
-              isActive ? "text-primary scale-110" : "text-muted-foreground hover:text-white"
+              "relative flex flex-col items-center justify-center gap-1.5 flex-1 h-full transition-all duration-500",
+              isActive ? "text-primary scale-110" : "text-muted-foreground/60 hover:text-white"
             )}
           >
-            <Icon size={20} className={cn(isActive && "glow-primary")} />
-            <span className="text-[10px] font-medium">{item.label}</span>
-            {isActive && <div className="absolute -bottom-1 w-1 h-1 rounded-full bg-primary glow-primary" />}
+            <div className={cn(
+              "p-2 rounded-2xl transition-all duration-500",
+              isActive && "bg-primary/10 glow-primary"
+            )}>
+              <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
+            </div>
+            <span className={cn(
+              "text-[10px] font-black uppercase tracking-tighter transition-all duration-500",
+              isActive ? "opacity-100" : "opacity-0 scale-75"
+            )}>{item.label}</span>
+            {isActive && (
+              <div className="absolute -bottom-1 w-6 h-1 rounded-full bg-primary glow-primary animate-in" />
+            )}
           </Link>
         );
       })}
