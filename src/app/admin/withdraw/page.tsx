@@ -1,45 +1,82 @@
+
 "use client";
 
-import { useApp, WithdrawStatus } from '@/lib/store';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatDate, formatCurrency } from '@/lib/utils-app';
-import { Check, X, Wallet, Clock, User } from 'lucide-react';
+import { Check, X, Wallet, User, Clock } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
+import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
+import { collection, query, orderBy, limit, doc, updateDoc, increment, serverTimestamp } from 'firebase/firestore';
 
 export default function AdminWithdrawPage() {
-  const { state, dispatch } = useApp();
+  const { user } = useUser();
+  const db = useFirestore();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<'pending' | 'history'>('pending');
 
-  const allRequests = [...state.withdrawals].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  const pendingRequests = allRequests.filter(r => r.status === 'Pending');
-  const filteredRequests = activeTab === 'pending' ? pendingRequests : allRequests;
+  const profileRef = useMemoFirebase(() => user ? doc(db, 'userProfiles', user.uid) : null, [db, user]);
+  const { data: profile } = useDoc(profileRef);
+  const isAdmin = profile?.role === 'Admin';
 
-  const handleAction = (withdrawalId: string, status: WithdrawStatus) => {
-    dispatch({ type: 'PROCESS_WITHDRAWAL', payload: { withdrawalId, status } });
-    toast({ title: "Berhasil", description: `Withdrawal ${status === 'Disetujui' ? 'disetujui' : 'ditolak'}.` });
+  const withdrawalsQuery = useMemoFirebase(() => {
+    if (!isAdmin) return null;
+    return query(collection(db, 'withdrawalRequests'), orderBy('createdAt', 'desc'), limit(100));
+  }, [db, isAdmin]);
+
+  const { data: withdrawals, isLoading } = useCollection(withdrawalsQuery);
+  const { data: allUsers } = useCollection(useMemoFirebase(() => isAdmin ? query(collection(db, 'userProfiles'), limit(500)) : null, [db, isAdmin]));
+
+  const filteredRequests = (withdrawals || []).filter(r => 
+    activeTab === 'pending' ? r.status === 'Pending' : true
+  );
+
+  const handleAction = async (requestId: string, userId: string, amount: number, fee: number, status: 'Disetujui' | 'Ditolak') => {
+    try {
+      const requestRef = doc(db, 'withdrawalRequests', requestId);
+      const userRef = doc(db, 'userProfiles', userId);
+
+      if (status === 'Disetujui') {
+        // Potong saldo user (amount + fee)
+        await updateDoc(userRef, {
+          balance: increment(-(amount + fee)),
+          updatedAt: serverTimestamp()
+        });
+      }
+
+      await updateDoc(requestRef, { 
+        status,
+        processedAt: serverTimestamp()
+      });
+
+      toast({ title: "Berhasil", description: `Permintaan WD telah ${status}.` });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Gagal", description: "Terjadi kesalahan saat memproses data." });
+    }
   };
 
+  if (isLoading) return <div className="p-20 text-center animate-pulse font-black uppercase tracking-widest">Memuat Data WD...</div>;
+  if (!isAdmin) return <div className="p-20 text-center opacity-20 font-black uppercase">Akses Ditolak</div>;
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in">
       <div className="space-y-2">
-        <h1 className="text-2xl font-bold">Manajemen Penarikan</h1>
-        <p className="text-muted-foreground text-sm">Setujui atau tolak permintaan penarikan dana.</p>
+        <h1 className="text-3xl font-black tracking-tight">Manajemen WD</h1>
+        <p className="text-muted-foreground text-sm font-medium uppercase tracking-widest">Validasi penarikan dana pengguna.</p>
       </div>
 
-      <div className="flex bg-white/5 p-1 rounded-xl">
+      <div className="flex glass-card p-1.5 rounded-2xl">
         <button 
           onClick={() => setActiveTab('pending')}
-          className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'pending' ? 'neon-gradient text-background glow-primary' : 'text-muted-foreground'}`}
+          className={`flex-1 py-3 text-xs font-black rounded-xl transition-all ${activeTab === 'pending' ? 'neon-gradient text-white glow-primary' : 'text-muted-foreground'}`}
         >
-          PENDING ({pendingRequests.length})
+          PENDING
         </button>
         <button 
           onClick={() => setActiveTab('history')}
-          className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'history' ? 'neon-gradient text-background glow-primary' : 'text-muted-foreground'}`}
+          className={`flex-1 py-3 text-xs font-black rounded-xl transition-all ${activeTab === 'history' ? 'neon-gradient text-white glow-primary' : 'text-muted-foreground'}`}
         >
           RIWAYAT
         </button>
@@ -47,62 +84,62 @@ export default function AdminWithdrawPage() {
 
       <div className="space-y-3">
         {filteredRequests.length === 0 ? (
-          <div className="text-center py-20 opacity-50">
-            <Wallet size={48} className="mx-auto mb-4" />
-            <p>Tidak ada data penarikan.</p>
+          <div className="text-center py-20 opacity-20">
+            <Wallet size={64} className="mx-auto mb-4" />
+            <p className="text-lg font-black uppercase">Tidak ada permintaan</p>
           </div>
         ) : (
           filteredRequests.map((req) => {
-            const user = state.users.find(u => u.id === req.userId);
+            const reqUser = allUsers?.find(u => u.id === req.userId);
             return (
-              <Card key={req.id} className="glass-card border-white/5">
-                <CardContent className="p-4 space-y-4">
+              <Card key={req.id} className="glass-card border-none rounded-[1.5rem] overflow-hidden group">
+                <CardContent className="p-5 space-y-4">
                   <div className="flex justify-between items-start">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center">
-                        <User size={20} className="text-muted-foreground" />
+                      <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-muted-foreground group-hover:text-primary transition-colors">
+                        <User size={20} />
                       </div>
                       <div>
-                        <p className="text-sm font-bold truncate w-32">{user?.email.split('@')[0]}</p>
-                        <p className="text-[10px] text-muted-foreground">{formatDate(req.createdAt)}</p>
+                        <p className="text-sm font-black">{reqUser?.email.split('@')[0] || 'User'}</p>
+                        <p className="text-[10px] text-muted-foreground font-bold uppercase">{req.createdAt?.seconds ? formatDate(new Date(req.createdAt.seconds * 1000).toISOString()) : 'Baru saja'}</p>
                       </div>
                     </div>
-                    <Badge variant={req.status === 'Disetujui' ? 'default' : req.status === 'Ditolak' ? 'destructive' : 'secondary'} className="text-[10px]">
+                    <Badge variant={req.status === 'Disetujui' ? 'default' : req.status === 'Ditolak' ? 'destructive' : 'secondary'} className="h-6 px-3 rounded-lg text-[10px] font-black uppercase">
                       {req.status}
                     </Badge>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4 py-2 border-y border-white/5">
+                  <div className="grid grid-cols-2 gap-4 py-3 border-y border-white/5">
                     <div>
-                      <p className="text-[9px] uppercase font-bold text-muted-foreground">Jumlah Tarik</p>
-                      <p className="text-sm font-bold text-primary">{formatCurrency(req.amount)}</p>
+                      <p className="text-[8px] font-black uppercase text-muted-foreground mb-1">Jumlah</p>
+                      <p className="text-sm font-black text-primary">{formatCurrency(req.amount)}</p>
                     </div>
                     <div>
-                      <p className="text-[9px] uppercase font-bold text-muted-foreground">Metode</p>
-                      <p className="text-sm font-bold">{req.method}</p>
+                      <p className="text-[8px] font-black uppercase text-muted-foreground mb-1">Metode</p>
+                      <p className="text-sm font-black">{req.method}</p>
                     </div>
                   </div>
 
                   <div className="flex justify-between items-center">
-                    <div className="text-[10px] text-muted-foreground">
-                      Total Potong: <span className="font-bold">{formatCurrency(req.totalDeduction)}</span>
+                    <div className="text-[10px] font-bold text-muted-foreground uppercase">
+                      Potongan: <span className="text-foreground">{formatCurrency(req.fee)}</span>
                     </div>
                     {req.status === 'Pending' && (
                       <div className="flex gap-2">
                         <Button 
                           size="sm" 
-                          variant="destructive" 
-                          className="h-8 px-3 text-[10px]"
-                          onClick={() => handleAction(req.id, 'Ditolak')}
+                          variant="ghost"
+                          className="h-9 px-4 text-[10px] font-black text-destructive rounded-xl hover:bg-destructive/10"
+                          onClick={() => handleAction(req.id, req.userId, req.amount, req.fee, 'Ditolak')}
                         >
-                          <X size={12} className="mr-1" /> Tolak
+                          TOLAK
                         </Button>
                         <Button 
                           size="sm" 
-                          className="h-8 px-3 text-[10px] neon-gradient text-background"
-                          onClick={() => handleAction(req.id, 'Disetujui')}
+                          className="h-9 px-4 text-[10px] font-black neon-gradient text-background rounded-xl glow-primary"
+                          onClick={() => handleAction(req.id, req.userId, req.amount, req.fee, 'Disetujui')}
                         >
-                          <Check size={12} className="mr-1" /> Setujui
+                          SETUJUI
                         </Button>
                       </div>
                     )}
