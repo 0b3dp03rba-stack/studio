@@ -3,7 +3,9 @@
 
 import React, { createContext, useContext, ReactNode } from 'react';
 
-// Simplified Store as data now comes from Firestore hooks
+// File ini dikosongkan karena aplikasi sekarang 100% menggunakan Firestore Hooks
+// untuk manajemen data real-time, menghilangkan kebutuhan akan state lokal manual.
+
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   return (
     <>{children}</>
@@ -11,5 +13,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 };
 
 export const useApp = () => {
-  return {}; // Legacy support for any lingering calls
+  return {
+    state: {
+      users: [],
+      messages: [],
+      currentUser: null,
+    },
+    dispatch: () => {}
+  }; 
 };

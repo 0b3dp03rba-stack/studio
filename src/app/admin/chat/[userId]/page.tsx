@@ -2,25 +2,39 @@
 "use client";
 
 import { useState, useRef, useEffect, use } from 'react';
-import { useApp, Message } from '@/lib/store';
+import { useUser, useFirestore, useCollection, useDoc, useMemoFirebase } from '@/firebase';
+import { collection, query, where, orderBy, limit, addDoc, serverTimestamp, doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Send, User, ChevronLeft } from 'lucide-react';
 import { format } from 'date-fns';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 
 export default function AdminChatDetailPage({ params }: { params: Promise<{ userId: string }> }) {
   const { userId } = use(params);
-  const { state, dispatch } = useApp();
+  const { user: adminUser } = useUser();
+  const db = useFirestore();
   const [text, setText] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
-  const router = useRouter();
 
-  const user = state.users.find(u => u.id === userId);
-  const chatMessages = state.messages.filter(
-    m => (m.senderId === state.currentUser?.id && m.receiverId === userId) ||
-         (m.senderId === userId && m.receiverId === state.currentUser?.id)
+  const { data: targetUser } = useDoc(useMemoFirebase(() => doc(db, 'userProfiles', userId), [db, userId]));
+
+  const messagesQuery = useMemoFirebase(() => 
+    query(
+      collection(db, 'messages'),
+      where('senderId', 'in', [userId, adminUser?.uid]),
+      orderBy('createdAt', 'asc'),
+      limit(100)
+    ), [db, userId, adminUser]
+  );
+  
+  const { data: rawMessages } = useCollection(messagesQuery);
+
+  // Filter manual untuk memastikan hanya chat antara admin ini dan user tersebut
+  const chatMessages = (rawMessages || []).filter(m => 
+    (m.senderId === userId && m.receiverId === 'admin-system') ||
+    (m.senderId === adminUser?.uid && m.receiverId === userId) ||
+    (m.senderId === userId && m.receiverId === adminUser?.uid)
   );
 
   useEffect(() => {
@@ -29,23 +43,21 @@ export default function AdminChatDetailPage({ params }: { params: Promise<{ user
     }
   }, [chatMessages]);
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!text.trim() || !user || !state.currentUser) return;
+    if (!text.trim() || !adminUser || !userId) return;
 
-    const newMessage: Message = {
-      id: `msg-${Date.now()}`,
-      senderId: state.currentUser.id,
-      receiverId: user.id,
+    await addDoc(collection(db, 'messages'), {
+      senderId: adminUser.uid,
+      receiverId: userId,
       text: text.trim(),
-      createdAt: new Date().toISOString(),
-    };
+      createdAt: serverTimestamp(),
+    });
 
-    dispatch({ type: 'SEND_MESSAGE', payload: newMessage });
     setText('');
   };
 
-  if (!user) return <div>User not found</div>;
+  if (!targetUser) return <div className="p-20 text-center animate-pulse">Memuat Profil...</div>;
 
   return (
     <div className="flex flex-col h-[calc(100vh-10rem)] animate-in">
@@ -57,7 +69,7 @@ export default function AdminChatDetailPage({ params }: { params: Promise<{ user
           <User size={20} />
         </div>
         <div>
-          <h1 className="text-sm font-black uppercase tracking-widest">{user.email.split('@')[0]}</h1>
+          <h1 className="text-sm font-black uppercase tracking-widest">{targetUser.email.split('@')[0]}</h1>
           <p className="text-[10px] font-bold text-primary uppercase">User Platform</p>
         </div>
       </div>
@@ -67,7 +79,7 @@ export default function AdminChatDetailPage({ params }: { params: Promise<{ user
         className="flex-1 overflow-y-auto space-y-4 px-1 pb-4 scrollbar-hide"
       >
         {chatMessages.map((msg) => {
-          const isMe = msg.senderId === state.currentUser?.id;
+          const isMe = msg.senderId === adminUser?.uid;
           return (
             <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
               <div className={`max-w-[85%] space-y-1`}>
@@ -79,7 +91,7 @@ export default function AdminChatDetailPage({ params }: { params: Promise<{ user
                   {msg.text}
                 </div>
                 <p className={`text-[8px] font-bold text-muted-foreground uppercase px-1 ${isMe ? 'text-right' : 'text-left'}`}>
-                  {format(new Date(msg.createdAt), 'HH:mm')}
+                  {msg.createdAt?.seconds ? format(new Date(msg.createdAt.seconds * 1000), 'HH:mm') : '...'}
                 </p>
               </div>
             </div>

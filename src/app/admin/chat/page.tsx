@@ -1,43 +1,49 @@
 
 "use client";
 
-import { useApp } from '@/lib/store';
+import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
+import { collection, query, where, orderBy, limit } from 'firebase/firestore';
 import { Card, CardContent } from '@/components/ui/card';
 import { User, MessageCircle, ChevronRight, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 
 export default function AdminChatListPage() {
-  const { state } = useApp();
+  const db = useFirestore();
+  const { user: currentUser } = useUser();
 
-  // Get unique users who have sent messages or we have sent to
-  const chatUserIds = Array.from(new Set(
-    state.messages.map(m => m.senderId === state.currentUser?.id ? m.receiverId : m.senderId)
-  ));
+  // Ambil daftar user untuk ditampilkan di list chat
+  const usersQuery = useMemoFirebase(() => 
+    query(collection(db, 'userProfiles'), where('role', '==', 'User'), limit(100)), 
+    [db]
+  );
+  const { data: users, isLoading } = useCollection(usersQuery);
 
-  const usersInChat = state.users.filter(u => chatUserIds.includes(u.id) && u.role === 'User');
+  // Ambil semua pesan terakhir untuk indikator (opsional, untuk MVP kita list user saja)
+  const messagesQuery = useMemoFirebase(() => 
+    query(collection(db, 'messages'), orderBy('createdAt', 'desc'), limit(100)), 
+    [db]
+  );
+  const { data: messages } = useCollection(messagesQuery);
+
+  if (isLoading) return <div className="p-20 text-center animate-pulse font-black uppercase">Memuat Chat...</div>;
 
   return (
     <div className="space-y-6 animate-in">
       <div className="space-y-2">
         <h1 className="text-3xl font-black tracking-tight">Live Support</h1>
-        <p className="text-muted-foreground text-sm font-medium uppercase tracking-widest">Daftar percakapan dengan pengguna.</p>
+        <p className="text-muted-foreground text-sm font-medium uppercase tracking-widest">Pusat bantuan pengguna.</p>
       </div>
 
       <div className="space-y-3">
-        {usersInChat.length === 0 ? (
+        {!users || users.length === 0 ? (
           <div className="text-center py-20 opacity-20">
             <MessageCircle size={64} className="mx-auto mb-4" />
-            <p className="text-lg font-black uppercase tracking-widest">Belum ada chat masuk</p>
+            <p className="text-lg font-black uppercase tracking-widest">Belum ada pengguna</p>
           </div>
         ) : (
-          usersInChat.map((user) => {
-            const userMessages = state.messages.filter(
-              m => (m.senderId === user.id && m.receiverId === state.currentUser?.id) ||
-                   (m.senderId === state.currentUser?.id && m.receiverId === user.id)
-            ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
-            const lastMsg = userMessages[0];
+          users.map((user) => {
+            const lastMsg = (messages || []).find(m => m.senderId === user.id || m.receiverId === user.id);
 
             return (
               <Link key={user.id} href={`/admin/chat/${user.id}`}>
@@ -51,12 +57,12 @@ export default function AdminChatListPage() {
                         <p className="text-sm font-black truncate">{user.email.split('@')[0]}</p>
                         {lastMsg && (
                           <span className="text-[9px] font-bold text-muted-foreground flex items-center gap-1 uppercase">
-                            <Clock size={10} /> {format(new Date(lastMsg.createdAt), 'HH:mm')}
+                            <Clock size={10} /> {lastMsg.createdAt?.seconds ? format(new Date(lastMsg.createdAt.seconds * 1000), 'HH:mm') : 'Baru'}
                           </span>
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground truncate opacity-70 font-medium">
-                        {lastMsg ? lastMsg.text : 'Mulai percakapan...'}
+                        {lastMsg ? lastMsg.text : 'Klik untuk mulai chat...'}
                       </p>
                     </div>
                     <ChevronRight size={18} className="text-muted-foreground group-hover:text-primary transition-colors" />

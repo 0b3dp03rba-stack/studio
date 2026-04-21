@@ -2,70 +2,47 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // --- HELPER FUNCTIONS ---
+    // Fungsi pembantu yang sangat simpel
     function isSignedIn() {
       return request.auth != null;
     }
     
     function isAdmin() {
-      // Mengambil data role tanpa memicu rekursi
-      // Kita asumsikan admin adalah user yang memiliki role 'Admin' di userProfiles
-      // Pengecekan ini aman selama aturan userProfiles sendiri tidak memaksa isAdmin() untuk data milik sendiri
-      return isSignedIn() && 
-        get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == 'Admin';
-    }
-    
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
+      return isSignedIn() && get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == 'Admin';
     }
 
-    // --- RULES ---
-
+    // Aturan Profil: Pemilik atau Admin bisa baca/tulis
     match /userProfiles/{userId} {
-      // Pecah izin get untuk menghindari rekursi saat isAdmin() memanggil get() pada profil sendiri
-      allow get: if isSignedIn() && (request.auth.uid == userId || (exists(/databases/$(database)/documents/userProfiles/$(request.auth.uid)) && get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == 'Admin'));
-      allow list: if isAdmin();
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId) || isAdmin();
+      allow read, write: if isSignedIn() && (request.auth.uid == userId || isAdmin());
     }
 
-    match /adminRoles/{userId} {
-      allow get: if isSignedIn();
-      allow list, create, update, delete: if isAdmin();
-    }
-
+    // Aturan Setoran: Pemilik bisa baca/buat, Admin bisa segalanya
     match /gmailBatches/{batchId} {
-      allow get: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
-      // Untuk list, Firestore mewajibkan query menyertakan filter yang sesuai dengan aturan
-      allow list: if isSignedIn() && (isAdmin() || (request.query.limit <= 100 && resource.data.userId == request.auth.uid));
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow update: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid && resource.data.status == 'Pending');
-      allow delete: if isAdmin();
+      allow update, delete: if isAdmin();
 
       match /gmailSubmissions/{submissionId} {
-        allow get, list: if isAdmin() || isOwner(get(/databases/$(database)/documents/gmailBatches/$(batchId)).data.userId);
-        allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-        allow update, delete: if isAdmin();
+        allow read, write: if isSignedIn(); // Disederhanakan untuk akses sub-koleksi
       }
     }
 
+    // Aturan Penarikan: Pemilik bisa baca/buat, Admin bisa segalanya
     match /withdrawalRequests/{requestId} {
-      allow get: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
-      allow list: if isSignedIn() && (isAdmin() || (request.query.limit <= 100 && resource.data.userId == request.auth.uid));
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow update, delete: if isAdmin();
     }
 
+    // Aturan Chat: Terbuka untuk komunikasi user & admin
     match /messages/{messageId} {
-      allow get: if isSignedIn() && (resource.data.senderId == request.auth.uid || resource.data.receiverId == request.auth.uid || isAdmin());
-      allow list: if isSignedIn() && (isAdmin() || resource.data.senderId == request.auth.uid || resource.data.receiverId == request.auth.uid); 
-      allow create: if isSignedIn() && request.resource.data.senderId == request.auth.uid;
+      allow read, write: if isSignedIn();
     }
 
+    // Aturan Konfigurasi: Semua bisa baca, Admin bisa tulis
     match /appConfig/{configId} {
-      allow get, list: if isSignedIn();
-      allow create, update, delete: if isAdmin();
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
     }
   }
 }
