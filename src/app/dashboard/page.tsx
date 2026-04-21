@@ -1,9 +1,8 @@
 
 "use client";
 
-import { useApp } from '@/lib/store';
 import { Card, CardContent } from '@/components/ui/card';
-import { AlertCircle, CheckCircle2, Clock, XCircle, TrendingUp, Bell, ShieldCheck, Play } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Clock, TrendingUp, Bell, ShieldCheck } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils-app';
 import { useUser, useDoc, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, where, limit, orderBy } from 'firebase/firestore';
@@ -12,15 +11,12 @@ export default function UserDashboard() {
   const { user } = useUser();
   const db = useFirestore();
   
-  // Fetch User Profile for Balance
   const profileRef = useMemoFirebase(() => user ? doc(db, 'userProfiles', user.uid) : null, [db, user]);
   const { data: profile } = useDoc(profileRef);
 
-  // Fetch App Config for Rates, Rules, Announcements
   const configRef = useMemoFirebase(() => doc(db, 'appConfig', 'singletonConfig'), [db]);
   const { data: config } = useDoc(configRef);
 
-  // Fetch User Submissions Stats
   const submissionsQuery = useMemoFirebase(() => 
     user ? query(
       collection(db, 'gmailBatches'), 
@@ -34,7 +30,7 @@ export default function UserDashboard() {
 
   const stats = {
     pending: (batches || []).filter(b => b.status === 'Pending').length,
-    approved: profile?.balance || 0,
+    balance: profile?.balance || 0,
   };
 
   return (
@@ -49,7 +45,7 @@ export default function UserDashboard() {
           <div className="flex justify-between items-start mb-6">
             <div className="space-y-1">
               <p className="text-white/70 text-xs font-bold uppercase tracking-[0.2em]">Saldo Tersedia</p>
-              <h2 className="text-4xl font-black">{formatCurrency(profile?.balance || 0)}</h2>
+              <h2 className="text-4xl font-black">{formatCurrency(stats.balance)}</h2>
             </div>
             <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-md border border-white/20">
               <TrendingUp size={24} />
@@ -58,7 +54,7 @@ export default function UserDashboard() {
           <div className="flex gap-6 mt-10 pt-6 border-t border-white/10">
             <div className="flex-1">
               <p className="text-[10px] uppercase font-black text-white/50 tracking-widest">Rate Gmail</p>
-              <p className="text-xl font-black">{formatCurrency(config?.gmailRate || 6000)}<span className="text-xs font-medium opacity-70"> / akun</span></p>
+              <p className="text-xl font-black">{formatCurrency(config?.gmailRate || 0)}<span className="text-xs font-medium opacity-70"> / akun</span></p>
             </div>
           </div>
         </CardContent>
@@ -87,22 +83,28 @@ export default function UserDashboard() {
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        {[
-          { label: 'Batch Pending', val: stats.pending, icon: Clock, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
-          { label: 'Total Saldo', val: formatCurrency(profile?.balance || 0), icon: CheckCircle2, color: 'text-primary', bg: 'bg-primary/10' },
-        ].map((s, i) => (
-          <Card key={i} className="glass-card border-none rounded-[1.5rem] hover:scale-[1.02] transition-all">
-            <CardContent className="p-5 space-y-3">
-              <div className={`w-8 h-8 ${s.bg} ${s.color} rounded-xl flex items-center justify-center`}>
-                <s.icon size={18} />
-              </div>
-              <div>
-                <div className="text-xl font-black">{typeof s.val === 'string' ? s.val : s.val}</div>
-                <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">{s.label}</div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+        <Card className="glass-card border-none rounded-[1.5rem] hover:scale-[1.02] transition-all">
+          <CardContent className="p-5 space-y-3">
+            <div className="w-8 h-8 bg-yellow-500/10 text-yellow-500 rounded-xl flex items-center justify-center">
+              <Clock size={18} />
+            </div>
+            <div>
+              <div className="text-xl font-black">{stats.pending}</div>
+              <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Batch Pending</div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="glass-card border-none rounded-[1.5rem] hover:scale-[1.02] transition-all">
+          <CardContent className="p-5 space-y-3">
+            <div className="w-8 h-8 bg-primary/10 text-primary rounded-xl flex items-center justify-center">
+              <CheckCircle2 size={18} />
+            </div>
+            <div>
+              <div className="text-xl font-black">{formatCurrency(stats.balance)}</div>
+              <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Total Saldo</div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="space-y-4">

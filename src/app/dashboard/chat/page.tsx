@@ -2,22 +2,39 @@
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
-import { useApp, Message } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
-import { Send, User, ShieldCheck } from 'lucide-react';
+import { Send, ShieldCheck } from 'lucide-react';
 import { format } from 'date-fns';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, where, orderBy, limit, addDoc, serverTimestamp } from 'firebase/firestore';
 
 export default function UserChatPage() {
-  const { state, dispatch } = useApp();
+  const { user } = useUser();
+  const db = useFirestore();
   const [text, setText] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const admin = state.users.find(u => u.role === 'Admin');
-  const chatMessages = state.messages.filter(
-    m => (m.senderId === state.currentUser?.id && m.receiverId === admin?.id) ||
-         (m.senderId === admin?.id && m.receiverId === state.currentUser?.id)
+  // Get Admin ID (assume first admin role for now or a generic 'admin' ID)
+  // In a real system, you'd fetch the active support admin ID
+  const adminId = 'admin-system'; 
+
+  const messagesQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(
+      collection(db, 'messages'),
+      where('senderId', 'in', [user.uid, adminId]),
+      orderBy('createdAt', 'asc'),
+      limit(100)
+    );
+  }, [db, user]);
+
+  const { data: rawMessages } = useCollection(messagesQuery);
+  
+  // Filter messages manually to ensure it's only between this user and support
+  const chatMessages = (rawMessages || []).filter(m => 
+    (m.senderId === user?.uid && m.receiverId === adminId) ||
+    (m.senderId === adminId && m.receiverId === user?.uid)
   );
 
   useEffect(() => {
@@ -28,17 +45,15 @@ export default function UserChatPage() {
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!text.trim() || !admin || !state.currentUser) return;
+    if (!text.trim() || !user) return;
 
-    const newMessage: Message = {
-      id: `msg-${Date.now()}`,
-      senderId: state.currentUser.id,
-      receiverId: admin.id,
+    addDoc(collection(db, 'messages'), {
+      senderId: user.uid,
+      receiverId: adminId,
       text: text.trim(),
-      createdAt: new Date().toISOString(),
-    };
-
-    dispatch({ type: 'SEND_MESSAGE', payload: newMessage });
+      createdAt: serverTimestamp(),
+    });
+    
     setText('');
   };
 
@@ -68,7 +83,7 @@ export default function UserChatPage() {
           </div>
         ) : (
           chatMessages.map((msg) => {
-            const isMe = msg.senderId === state.currentUser?.id;
+            const isMe = msg.senderId === user?.uid;
             return (
               <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[80%] space-y-1`}>
@@ -80,7 +95,7 @@ export default function UserChatPage() {
                     {msg.text}
                   </div>
                   <p className={`text-[8px] font-bold text-muted-foreground uppercase px-1 ${isMe ? 'text-right' : 'text-left'}`}>
-                    {format(new Date(msg.createdAt), 'HH:mm')}
+                    {msg.createdAt?.seconds ? format(new Date(msg.createdAt.seconds * 1000), 'HH:mm') : '...'}
                   </p>
                 </div>
               </div>
