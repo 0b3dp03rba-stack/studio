@@ -15,6 +15,7 @@ export type User = {
   balance: number;
   bankName?: string;
   bankAccount?: string;
+  bankAccountName?: string;
 };
 
 export type SubmissionStatus = 'Pending' | 'Proses' | 'Disetujui' | 'Ditolak';
@@ -115,7 +116,8 @@ const initialUsers: User[] = [
     role: 'User',
     balance: 0,
     bankName: 'DANA',
-    bankAccount: '08123456789'
+    bankAccount: '08123456789',
+    bankAccountName: 'User Tester'
   }
 ];
 
@@ -134,7 +136,7 @@ type Action =
   | { type: 'LOGIN'; payload: User }
   | { type: 'LOGOUT' }
   | { type: 'REGISTER'; payload: User }
-  | { type: 'UPDATE_PROFILE'; payload: { bankName: string; bankAccount: string } }
+  | { type: 'UPDATE_PROFILE'; payload: { bankName: string; bankAccount: string; bankAccountName: string } }
   | { type: 'SUBMIT_BATCH'; payload: Batch }
   | { type: 'PROCESS_GMAIL'; payload: { batchId: string; gmailId: string; status: SubmissionStatus } }
   | { type: 'CREATE_WITHDRAWAL'; payload: WithdrawalRequest }

@@ -18,7 +18,7 @@ export default function BottomNav() {
   const userNav = [
     { label: 'Home', icon: LayoutDashboard, href: '/dashboard' },
     { label: 'Setor', icon: Send, href: '/dashboard/setor' },
-    { label: 'Chat', icon: MessageCircle, href: '/dashboard/chat' },
+    { label: 'Withdraw', icon: Wallet, href: '/dashboard/withdraw' },
     { label: 'History', icon: History, href: '/dashboard/riwayat' },
     { label: 'Profil', icon: User, href: '/dashboard/profil' },
   ];
@@ -27,7 +27,7 @@ export default function BottomNav() {
     { label: 'Panel', icon: LayoutDashboard, href: '/admin' },
     { label: 'Setoran', icon: FileText, href: '/admin/setoran' },
     { label: 'Chat', icon: MessageCircle, href: '/admin/chat' },
-    { label: 'Users', icon: Users, href: '/admin/users' },
+    { label: 'Withdraw', icon: Wallet, href: '/admin/withdraw' },
     { label: 'System', icon: Settings, href: '/admin/settings' },
   ];
 
