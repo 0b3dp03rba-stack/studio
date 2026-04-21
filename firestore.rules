@@ -30,7 +30,7 @@ service cloud.firestore {
 
     match /gmailBatches/{batchId} {
       allow get: if isAdmin() || isOwner(resource.data.userId);
-      allow list: if isAdmin() || (isSignedIn() && request.query.limit <= 100);
+      allow list: if isAdmin() || (isSignedIn() && (resource.data.userId == request.auth.uid || request.query.limit <= 100));
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow update: if isAdmin() || (isOwner(resource.data.userId) && resource.data.status == 'Pending');
       allow delete: if isAdmin();
@@ -45,7 +45,7 @@ service cloud.firestore {
 
     match /withdrawalRequests/{requestId} {
       allow get: if isAdmin() || isOwner(resource.data.userId);
-      allow list: if isAdmin() || (isSignedIn() && request.query.limit <= 100);
+      allow list: if isAdmin() || (isSignedIn() && (resource.data.userId == request.auth.uid || request.query.limit <= 100));
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow update: if isAdmin();
       allow delete: if isAdmin();
@@ -53,7 +53,7 @@ service cloud.firestore {
 
     match /messages/{messageId} {
       allow get: if isSignedIn() && (isOwner(resource.data.senderId) || isOwner(resource.data.receiverId) || isAdmin());
-      allow list: if isSignedIn(); // Queries must be filtered by senderId/receiverId
+      allow list: if isSignedIn() && (request.query.limit <= 100); 
       allow create: if isSignedIn() && isOwner(request.resource.data.senderId);
     }
 
@@ -63,16 +63,6 @@ service cloud.firestore {
     }
 
     match /paymentMethods/{methodId} {
-      allow get, list: if isSignedIn();
-      allow create, update, delete: if isAdmin();
-    }
-
-    match /rules/{ruleId} {
-      allow get, list: if isSignedIn();
-      allow create, update, delete: if isAdmin();
-    }
-
-    match /announcements/{announcementId} {
       allow get, list: if isSignedIn();
       allow create, update, delete: if isAdmin();
     }

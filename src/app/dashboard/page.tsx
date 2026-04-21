@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { AlertCircle, CheckCircle2, Clock, XCircle, TrendingUp, Bell, ShieldCheck, Play } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils-app';
 import { useUser, useDoc, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, collection, query, where } from 'firebase/firestore';
+import { doc, collection, query, where, limit, orderBy } from 'firebase/firestore';
 
 export default function UserDashboard() {
   const { user } = useUser();
@@ -20,16 +20,21 @@ export default function UserDashboard() {
   const configRef = useMemoFirebase(() => doc(db, 'appConfig', 'singletonConfig'), [db]);
   const { data: config } = useDoc(configRef);
 
-  // Fetch User Submissions Stats (We'd normally use a cloud function for efficiency, but for MVP we'll query)
+  // Fetch User Submissions Stats
   const submissionsQuery = useMemoFirebase(() => 
-    user ? query(collection(db, 'gmailBatches'), where('userId', '==', user.uid)) : null,
+    user ? query(
+      collection(db, 'gmailBatches'), 
+      where('userId', '==', user.uid),
+      orderBy('createdAt', 'desc'),
+      limit(50)
+    ) : null,
     [db, user]
   );
   const { data: batches } = useCollection(submissionsQuery);
 
   const stats = {
     pending: batches?.filter(b => b.status === 'Pending').length || 0,
-    approved: profile?.balance || 0, // In real app, we track item counts
+    approved: profile?.balance || 0,
   };
 
   return (
