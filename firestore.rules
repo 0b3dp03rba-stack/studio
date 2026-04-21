@@ -2,8 +2,8 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Aturan super simpel sesuai permintaan: Asal login, boleh baca dan tulis apa saja.
-    // Logika siapa yang boleh akses apa (Admin vs User) dikelola di level aplikasi (Next.js).
+    // Aturan paling simpel: Asal pengguna sudah login, mereka boleh baca dan tulis apa saja.
+    // Logika hak akses (siapa yang boleh melihat apa) dikelola sepenuhnya di level aplikasi (Next.js Layouts).
     match /{document=**} {
       allow read, write: if request.auth != null;
     }

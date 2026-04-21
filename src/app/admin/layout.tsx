@@ -15,7 +15,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const profileRef = useMemoFirebase(() => 
     user ? doc(db, 'userProfiles', user.uid) : null, 
-    [db, user]
+    [db, user?.uid]
   );
   const { data: profile, isLoading: isProfileLoading } = useDoc(profileRef);
 
@@ -29,10 +29,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
   }, [user, isUserLoading, profile, isProfileLoading, router]);
 
+  // Loading state yang lebih cakep
   if (isUserLoading || isProfileLoading || !user || !profile || profile.role !== 'Admin') {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-background gap-4">
+        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin shadow-lg shadow-primary/20"></div>
+        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/50">Memvalidasi Akses Admin...</p>
       </div>
     );
   }
