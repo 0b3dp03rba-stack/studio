@@ -1,7 +1,7 @@
+
 "use client";
 
 import { useState, useMemo } from 'react';
-import { useApp, Batch } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
@@ -9,76 +9,77 @@ import { useToast } from '@/hooks/use-toast';
 import { validateGmailFormat, formatCurrency } from '@/lib/utils-app';
 import { Send, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { collection, addDoc, serverTimestamp, doc, writeBatch } from 'firebase/firestore';
 
 export default function SetorPage() {
   const [input, setInput] = useState('');
-  const { state, dispatch } = useApp();
-  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { user } = useUser();
+  const db = useFirestore();
   const router = useRouter();
+  const { toast } = useToast();
 
-  // Real-time calculation
+  const configRef = useMemoFirebase(() => doc(db, 'appConfig', 'singletonConfig'), [db]);
+  const { data: config } = useDoc(configRef);
+
   const stats = useMemo(() => {
     const { items } = validateGmailFormat(input);
+    const rate = config?.gmailRate || 6000;
     return {
       validCount: items.length,
-      estimation: items.length * state.settings.gmailRate
+      estimation: items.length * rate
     };
-  }, [input, state.settings.gmailRate]);
+  }, [input, config]);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    if (!user) return;
     const { items, errors } = validateGmailFormat(input);
 
     if (errors.length > 0) {
-      toast({ 
-        variant: "destructive", 
-        title: "Format Salah", 
-        description: errors[0] 
-      });
+      toast({ variant: "destructive", title: "Format Salah", description: errors[0] });
       return;
     }
 
     if (items.length === 0) {
-      toast({ 
-        variant: "destructive", 
-        title: "Input Kosong", 
-        description: "Silakan masukkan data Gmail." 
+      toast({ variant: "destructive", title: "Input Kosong", description: "Silakan masukkan data Gmail." });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // 1. Create Batch Document
+      const batchRef = await addDoc(collection(db, 'gmailBatches'), {
+        userId: user.uid,
+        createdAt: serverTimestamp(),
+        status: 'Pending',
+        totalCount: items.length
       });
-      return;
+
+      // 2. Add individual submissions using a Firestore Batch for efficiency
+      const firebaseBatch = writeBatch(db);
+      items.forEach((item) => {
+        const submissionRef = doc(collection(db, `gmailBatches/${batchRef.id}/gmailSubmissions`));
+        firebaseBatch.set(submissionRef, {
+          batchId: batchRef.id,
+          userId: user.uid,
+          email: item.email,
+          password: item.pass,
+          status: 'Pending',
+          createdAt: serverTimestamp()
+        });
+      });
+
+      await firebaseBatch.commit();
+      
+      toast({ title: "Berhasil", description: `${items.length} Gmail telah disetorkan.` });
+      setInput('');
+      router.push('/dashboard/riwayat');
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Gagal", description: error.message || "Terjadi kesalahan saat mengirim." });
+    } finally {
+      setIsSubmitting(false);
     }
-
-    // Check duplicates within the batch
-    const emails = items.map(i => i.email);
-    const hasInternalDupes = new Set(emails).size !== emails.length;
-    if (hasInternalDupes) {
-      toast({ variant: "destructive", title: "Gagal", description: "Ada email duplikat di input Anda." });
-      return;
-    }
-
-    // Check duplicates in existing global batches
-    const existingEmails = new Set(state.batches.flatMap(b => b.items.map(i => i.email)));
-    const hasGlobalDupes = items.some(i => existingEmails.has(i.email));
-    if (hasGlobalDupes) {
-      toast({ variant: "destructive", title: "Gagal", description: "Satu atau lebih email sudah pernah disetor sebelumnya." });
-      return;
-    }
-
-    const newBatch: Batch = {
-      id: `batch-${Date.now()}`,
-      userId: state.currentUser!.id,
-      createdAt: new Date().toISOString(),
-      status: 'Pending',
-      items: items.map(item => ({
-        id: `mail-${Math.random().toString(36).substr(2, 9)}`,
-        email: item.email,
-        pass: item.pass,
-        status: 'Pending'
-      }))
-    };
-
-    dispatch({ type: 'SUBMIT_BATCH', payload: newBatch });
-    toast({ title: "Berhasil", description: `${items.length} Gmail telah disetorkan.` });
-    setInput('');
-    router.push('/dashboard/riwayat');
   };
 
   const currentDate = new Intl.DateTimeFormat('id-ID', {
@@ -89,7 +90,6 @@ export default function SetorPage() {
 
   return (
     <div className="space-y-6 animate-in">
-      {/* Header Card - Matched with Dashboard Neon Gradient */}
       <div className="relative overflow-hidden rounded-[2rem] neon-gradient p-8 text-background shadow-xl glow-primary">
         <div className="relative z-10 space-y-4">
           <div className="flex items-center gap-3">
@@ -110,16 +110,14 @@ export default function SetorPage() {
             </div>
             <div className="bg-background/10 backdrop-blur-md rounded-2xl p-3 border border-background/10">
               <p className="text-[8px] font-bold text-background/50 uppercase mb-1">Rate / email</p>
-              <span className="text-xs font-black">{formatCurrency(state.settings.gmailRate)}</span>
+              <span className="text-xs font-black">{formatCurrency(config?.gmailRate || 6000)}</span>
             </div>
           </div>
         </div>
-        {/* Decorative Circles */}
         <div className="absolute -top-12 -right-12 w-40 h-40 bg-white/10 rounded-full blur-3xl" />
         <div className="absolute -bottom-12 -left-12 w-32 h-32 bg-white/5 rounded-full blur-2xl" />
       </div>
 
-      {/* Rules Section */}
       <Card className="glass-card border-none rounded-[1.5rem] overflow-hidden">
         <CardContent className="p-6 space-y-4">
           <div className="flex items-center gap-2 text-primary font-bold text-sm">
@@ -127,7 +125,7 @@ export default function SetorPage() {
             <span>Aturan Setoran</span>
           </div>
           <ul className="space-y-2">
-            {state.settings.rules.map((rule, i) => (
+            {(config?.rules || []).map((rule: string, i: number) => (
               <li key={i} className="text-xs text-muted-foreground font-medium flex gap-3 leading-relaxed">
                 <span className="text-primary/40">•</span>
                 <span>{rule}</span>
@@ -137,7 +135,6 @@ export default function SetorPage() {
         </CardContent>
       </Card>
 
-      {/* Input Section */}
       <Card className="glass-card border-none rounded-[1.5rem]">
         <CardContent className="p-6 space-y-4">
           <h3 className="font-black text-xs uppercase tracking-widest text-muted-foreground">Daftar Gmail (bulk)</h3>
@@ -161,10 +158,11 @@ export default function SetorPage() {
 
           <Button 
             onClick={handleSubmit} 
+            disabled={isSubmitting || !input}
             className="w-full h-14 neon-gradient text-background font-black glow-primary rounded-[1.25rem] text-md group active:scale-95 transition-all"
           >
             <CheckCircle2 size={20} className="mr-2 group-hover:rotate-12 transition-transform" />
-            Kirim Setoran
+            {isSubmitting ? "Mengirim..." : "Kirim Setoran"}
           </Button>
         </CardContent>
       </Card>

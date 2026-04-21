@@ -1,7 +1,7 @@
+
 "use client";
 
-import { useState } from 'react';
-import { useApp } from '@/lib/store';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,28 +9,38 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { Mail } from 'lucide-react';
 import Link from 'next/link';
+import { useAuth, useUser } from '@/firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { state, dispatch } = useApp();
+  const [isLoading, setIsLoading] = useState(false);
+  const auth = useAuth();
+  const { user } = useUser();
   const router = useRouter();
   const { toast } = useToast();
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    const user = state.users.find(u => u.email === email && u.password === password);
-    
+  useEffect(() => {
     if (user) {
-      dispatch({ type: 'LOGIN', payload: user });
-      toast({ title: "Login Berhasil", description: `Selamat datang kembali, ${user.role}!` });
-      router.push(user.role === 'Admin' ? '/admin' : '/dashboard');
-    } else {
+      router.push('/dashboard');
+    }
+  }, [user, router]);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      toast({ title: "Login Berhasil", description: "Selamat datang kembali!" });
+    } catch (error: any) {
       toast({ 
         variant: "destructive", 
         title: "Login Gagal", 
-        description: "Email atau password salah." 
+        description: error.message || "Email atau password salah." 
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -67,8 +77,12 @@ export default function LoginPage() {
                 className="bg-white/5 border-white/10 h-12"
               />
             </div>
-            <Button type="submit" className="w-full h-12 neon-gradient text-background font-bold text-lg glow-primary mt-4">
-              Masuk
+            <Button 
+              type="submit" 
+              disabled={isLoading}
+              className="w-full h-12 neon-gradient text-background font-bold text-lg glow-primary mt-4"
+            >
+              {isLoading ? "Memproses..." : "Masuk"}
             </Button>
             <p className="text-center text-sm text-muted-foreground mt-4">
               Belum punya akun? <Link href="/register" className="text-primary hover:underline">Daftar sekarang</Link>

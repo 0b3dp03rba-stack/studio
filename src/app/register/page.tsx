@@ -1,7 +1,7 @@
+
 "use client";
 
 import { useState } from 'react';
-import { useApp } from '@/lib/store';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,16 +9,22 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { Mail } from 'lucide-react';
 import Link from 'next/link';
+import { useAuth, useFirestore } from '@/firebase';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const { state, dispatch } = useApp();
+  const [isLoading, setIsLoading] = useState(false);
+  
+  const auth = useAuth();
+  const db = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (password !== confirmPassword) {
@@ -26,22 +32,32 @@ export default function RegisterPage() {
       return;
     }
 
-    if (state.users.some(u => u.email === email)) {
-      toast({ variant: "destructive", title: "Gagal", description: "Email sudah terdaftar." });
-      return;
+    setIsLoading(true);
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // Create User Profile in Firestore
+      await setDoc(doc(db, 'userProfiles', user.id), {
+        id: user.id,
+        email: user.email,
+        role: 'User',
+        balance: 0,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+
+      toast({ title: "Berhasil", description: "Akun Anda telah dibuat. Silakan login." });
+      router.push('/dashboard');
+    } catch (error: any) {
+      toast({ 
+        variant: "destructive", 
+        title: "Pendaftaran Gagal", 
+        description: error.message || "Terjadi kesalahan saat mendaftar." 
+      });
+    } finally {
+      setIsLoading(false);
     }
-
-    const newUser = {
-      id: `u-${Date.now()}`,
-      email,
-      password,
-      role: 'User' as const,
-      balance: 0,
-    };
-
-    dispatch({ type: 'REGISTER', payload: newUser });
-    toast({ title: "Berhasil", description: "Akun Anda telah dibuat. Silakan login." });
-    router.push('/login');
   };
 
   return (
@@ -81,8 +97,12 @@ export default function RegisterPage() {
               required
               className="bg-white/5 border-white/10 h-12"
             />
-            <Button type="submit" className="w-full h-12 neon-gradient text-background font-bold text-lg glow-primary mt-4">
-              Daftar
+            <Button 
+              type="submit" 
+              disabled={isLoading}
+              className="w-full h-12 neon-gradient text-background font-bold text-lg glow-primary mt-4"
+            >
+              {isLoading ? "Mendaftar..." : "Daftar"}
             </Button>
             <p className="text-center text-sm text-muted-foreground mt-4">
               Sudah punya akun? <Link href="/login" className="text-primary hover:underline">Login disini</Link>
