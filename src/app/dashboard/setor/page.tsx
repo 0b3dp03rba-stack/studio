@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { validateGmailFormat, formatCurrency } from '@/lib/utils-app';
-import { Send, AlertCircle, CheckCircle2, Info } from 'lucide-react';
+import { Send, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function SetorPage() {
@@ -89,47 +89,47 @@ export default function SetorPage() {
 
   return (
     <div className="space-y-6 animate-in">
-      {/* Header Card - Custom Gradient */}
-      <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#8E2DE2] to-[#4A00E0] p-8 text-white shadow-xl glow-primary">
+      {/* Header Card - Matched with Dashboard Neon Gradient */}
+      <div className="relative overflow-hidden rounded-[2rem] neon-gradient p-8 text-background shadow-xl glow-primary">
         <div className="relative z-10 space-y-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-white/20 rounded-xl backdrop-blur-md">
-              <Send size={20} className="text-white" />
+            <div className="p-2 bg-background/20 rounded-xl backdrop-blur-md border border-background/20">
+              <Send size={20} className="text-background" />
             </div>
             <h1 className="text-2xl font-black tracking-tight">Setor Gmail</h1>
           </div>
-          <p className="text-white/70 text-[10px] font-black uppercase tracking-[0.2em]">SETORAN {currentDate}</p>
+          <p className="text-background/70 text-[10px] font-black uppercase tracking-[0.2em]">SETORAN {currentDate}</p>
           
           <div className="grid grid-cols-2 gap-4 pt-2">
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/10">
-              <p className="text-[8px] font-bold text-white/50 uppercase mb-1">Status</p>
+            <div className="bg-background/10 backdrop-blur-md rounded-2xl p-3 border border-background/10">
+              <p className="text-[8px] font-bold text-background/50 uppercase mb-1">Status</p>
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                <div className="w-2 h-2 rounded-full bg-background animate-pulse" />
                 <span className="text-xs font-black uppercase">OPEN</span>
               </div>
             </div>
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/10">
-              <p className="text-[8px] font-bold text-white/50 uppercase mb-1">Rate / email</p>
+            <div className="bg-background/10 backdrop-blur-md rounded-2xl p-3 border border-background/10">
+              <p className="text-[8px] font-bold text-background/50 uppercase mb-1">Rate / email</p>
               <span className="text-xs font-black">{formatCurrency(state.settings.gmailRate)}</span>
             </div>
           </div>
         </div>
         {/* Decorative Circles */}
         <div className="absolute -top-12 -right-12 w-40 h-40 bg-white/10 rounded-full blur-3xl" />
-        <div className="absolute -bottom-12 -left-12 w-32 h-32 bg-primary/20 rounded-full blur-2xl" />
+        <div className="absolute -bottom-12 -left-12 w-32 h-32 bg-white/5 rounded-full blur-2xl" />
       </div>
 
       {/* Rules Section */}
       <Card className="glass-card border-none rounded-[1.5rem] overflow-hidden">
         <CardContent className="p-6 space-y-4">
-          <div className="flex items-center gap-2 text-yellow-500 font-bold text-sm">
+          <div className="flex items-center gap-2 text-primary font-bold text-sm">
             <AlertCircle size={18} />
             <span>Aturan Setoran</span>
           </div>
           <ul className="space-y-2">
             {state.settings.rules.map((rule, i) => (
               <li key={i} className="text-xs text-muted-foreground font-medium flex gap-3 leading-relaxed">
-                <span className="text-muted-foreground/40">•</span>
+                <span className="text-primary/40">•</span>
                 <span>{rule}</span>
               </li>
             ))}
