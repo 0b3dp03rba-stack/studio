@@ -1,84 +1,95 @@
 "use client";
 
-import { useApp } from '@/lib/store';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/utils-app';
-import { Mail, Wallet, Users, Clock, CheckCircle2, XCircle } from 'lucide-react';
+import { Mail, Wallet, Users, Clock } from 'lucide-react';
+import { useFirestore, useCollection, useMemoFirebase, useDoc, useUser } from '@/firebase';
+import { collection, query, limit, doc } from 'firebase/firestore';
 
 export default function AdminDashboard() {
-  const { state } = useApp();
-  
-  const totalGmails = state.batches.flatMap(b => b.items).length;
-  const pendingGmails = state.batches.flatMap(b => b.items).filter(i => i.status === 'Pending').length;
-  const approvedGmails = state.batches.flatMap(b => b.items).filter(i => i.status === 'Disetujui').length;
-  
-  const pendingWithdrawals = state.withdrawals.filter(w => w.status === 'Pending').length;
-  const totalUsers = state.users.length;
+  const { user } = useUser();
+  const db = useFirestore();
+
+  // Admin Verification
+  const profileRef = useMemoFirebase(() => user ? doc(db, 'userProfiles', user.uid) : null, [db, user]);
+  const { data: profile } = useDoc(profileRef);
+  const isAdmin = profile?.role === 'Admin';
+
+  const { data: batches } = useCollection(useMemoFirebase(() => isAdmin ? collection(db, 'gmailBatches') : null, [db, isAdmin]));
+  const { data: withdrawals } = useCollection(useMemoFirebase(() => isAdmin ? collection(db, 'withdrawalRequests') : null, [db, isAdmin]));
+  const { data: allUsers } = useCollection(useMemoFirebase(() => isAdmin ? query(collection(db, 'userProfiles'), limit(500)) : null, [db, isAdmin]));
+  const { data: config } = useDoc(useMemoFirebase(() => doc(db, 'appConfig', 'singletonConfig'), [db]));
+
+  if (!isAdmin) return <div className="p-20 text-center opacity-20 font-black uppercase tracking-widest">Akses Ditolak</div>;
+
+  const totalGmails = (batches || []).reduce((acc, b) => acc + (b.totalCount || 0), 0);
+  const pendingWithdrawals = (withdrawals || []).filter(w => w.status === 'Pending').length;
+  const totalUserCount = (allUsers || []).filter(u => u.role === 'User').length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in">
       <div className="space-y-2">
-        <h1 className="text-2xl font-bold">Admin Panel</h1>
-        <p className="text-muted-foreground text-sm">Monitor seluruh aktivitas platform.</p>
+        <h1 className="text-3xl font-black tracking-tight">Admin Panel</h1>
+        <p className="text-muted-foreground text-sm font-medium uppercase tracking-widest">Monitor seluruh aktivitas platform.</p>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <Card className="glass-card border-white/5 border-l-4 border-l-primary">
-          <CardContent className="p-4 space-y-2">
-            <Mail size={18} className="text-primary" />
-            <div className="text-2xl font-bold">{totalGmails}</div>
-            <div className="text-[10px] text-muted-foreground uppercase font-bold">Total Setoran</div>
+        <Card className="glass-card border-none rounded-[1.5rem] relative overflow-hidden group">
+          <CardContent className="p-5 space-y-3">
+            <Mail size={20} className="text-primary group-hover:scale-110 transition-transform" />
+            <div>
+              <div className="text-2xl font-black">{totalGmails}</div>
+              <div className="text-[10px] text-muted-foreground uppercase font-black tracking-tighter">Total Akun Masuk</div>
+            </div>
           </CardContent>
         </Card>
-        <Card className="glass-card border-white/5 border-l-4 border-l-secondary">
-          <CardContent className="p-4 space-y-2">
-            <Clock size={18} className="text-secondary" />
-            <div className="text-2xl font-bold">{pendingGmails}</div>
-            <div className="text-[10px] text-muted-foreground uppercase font-bold">Gmail Pending</div>
+        <Card className="glass-card border-none rounded-[1.5rem] relative overflow-hidden group">
+          <CardContent className="p-5 space-y-3">
+            <Clock size={20} className="text-secondary group-hover:scale-110 transition-transform" />
+            <div>
+              <div className="text-2xl font-black">{(batches || []).filter(b => b.status === 'Pending').length}</div>
+              <div className="text-[10px] text-muted-foreground uppercase font-black tracking-tighter">Batch Pending</div>
+            </div>
           </CardContent>
         </Card>
-        <Card className="glass-card border-white/5 border-l-4 border-l-primary">
-          <CardContent className="p-4 space-y-2">
-            <Wallet size={18} className="text-primary" />
-            <div className="text-2xl font-bold">{pendingWithdrawals}</div>
-            <div className="text-[10px] text-muted-foreground uppercase font-bold">Withdrawal Pending</div>
+        <Card className="glass-card border-none rounded-[1.5rem] relative overflow-hidden group">
+          <CardContent className="p-5 space-y-3">
+            <Wallet size={20} className="text-primary group-hover:scale-110 transition-transform" />
+            <div>
+              <div className="text-2xl font-black">{pendingWithdrawals}</div>
+              <div className="text-[10px] text-muted-foreground uppercase font-black tracking-tighter">WD Pending</div>
+            </div>
           </CardContent>
         </Card>
-        <Card className="glass-card border-white/5 border-l-4 border-l-secondary">
-          <CardContent className="p-4 space-y-2">
-            <Users size={18} className="text-secondary" />
-            <div className="text-2xl font-bold">{totalUsers}</div>
-            <div className="text-[10px] text-muted-foreground uppercase font-bold">Total User</div>
+        <Card className="glass-card border-none rounded-[1.5rem] relative overflow-hidden group">
+          <CardContent className="p-5 space-y-3">
+            <Users size={20} className="text-secondary group-hover:scale-110 transition-transform" />
+            <div>
+              <div className="text-2xl font-black">{totalUserCount}</div>
+              <div className="text-[10px] text-muted-foreground uppercase font-black tracking-tighter">Total Pengguna</div>
+            </div>
           </CardContent>
         </Card>
       </div>
 
       <div className="space-y-3">
-        <h3 className="font-bold">Informasi Akun Admin</h3>
-        <Card className="glass-card border-white/5">
-          <CardContent className="p-4 space-y-3">
+        <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground px-1">Parameter Aktif</h3>
+        <Card className="glass-card border-none rounded-[1.5rem]">
+          <CardContent className="p-5 space-y-3">
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Admin Rate</span>
-              <span className="font-bold text-primary">{formatCurrency(state.settings.gmailRate)}</span>
+              <span className="text-muted-foreground font-bold">Rate Gmail</span>
+              <span className="font-black text-primary">{formatCurrency(config?.gmailRate || 0)}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Min. WD</span>
-              <span className="font-bold">{formatCurrency(state.settings.minWithdraw)}</span>
+              <span className="text-muted-foreground font-bold">Min. WD</span>
+              <span className="font-black">{formatCurrency(config?.minWithdraw || 0)}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Biaya Admin</span>
-              <span className="font-bold">{formatCurrency(state.settings.adminFee)}</span>
+              <span className="text-muted-foreground font-bold">Admin Fee</span>
+              <span className="font-black">{formatCurrency(config?.adminFee || 0)}</span>
             </div>
           </CardContent>
         </Card>
-      </div>
-
-      <div className="p-4 bg-primary/10 border border-primary/20 rounded-2xl flex flex-col gap-2">
-        <div className="flex items-center gap-2 text-primary font-bold">
-          <CheckCircle2 size={18} />
-          <span>Quick Actions</span>
-        </div>
-        <p className="text-xs text-primary/80">Silakan buka menu Setoran atau Withdraw untuk memproses permintaan user yang tertunda.</p>
       </div>
     </div>
   );

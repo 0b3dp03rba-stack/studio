@@ -1,19 +1,23 @@
-
 "use client";
 
-import { useApp } from '@/lib/store';
-import { LayoutDashboard, Send, Wallet, History, User, FileText, Users, Settings, MessageCircle } from 'lucide-react';
+import { LayoutDashboard, Send, Wallet, History, User, FileText, Settings, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
 
 export default function BottomNav() {
-  const { state } = useApp();
+  const { user } = useUser();
+  const db = useFirestore();
   const pathname = usePathname();
 
-  if (!state.currentUser) return null;
+  const profileRef = useMemoFirebase(() => user ? doc(db, 'userProfiles', user.uid) : null, [db, user]);
+  const { data: profile } = useDoc(profileRef);
 
-  const isAdmin = state.currentUser.role === 'Admin';
+  if (!user) return null;
+
+  const isAdmin = profile?.role === 'Admin';
 
   const userNav = [
     { label: 'Home', icon: LayoutDashboard, href: '/dashboard' },

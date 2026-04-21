@@ -1,20 +1,22 @@
 "use client";
 
-import { useApp } from '@/lib/store';
 import { LogOut, Mail } from 'lucide-react';
 import { Button } from './ui/button';
 import { useRouter } from 'next/navigation';
+import { useAuth, useUser } from '@/firebase';
+import { signOut } from 'firebase/auth';
 
 export default function Header() {
-  const { state, dispatch } = useApp();
+  const { user } = useUser();
+  const auth = useAuth();
   const router = useRouter();
 
-  const handleLogout = () => {
-    dispatch({ type: 'LOGOUT' });
+  const handleLogout = async () => {
+    await signOut(auth);
     router.push('/login');
   };
 
-  if (!state.currentUser) return null;
+  if (!user) return null;
 
   return (
     <header className="sticky top-0 w-full h-16 glass-card px-4 flex items-center justify-between z-40 border-b border-white/5">

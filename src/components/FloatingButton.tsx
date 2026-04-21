@@ -1,15 +1,21 @@
 "use client";
 
-import { useApp } from '@/lib/store';
 import { Plane } from 'lucide-react';
+import { useFirestore, useDoc, useMemoFirebase, useUser } from '@/firebase';
+import { doc } from 'firebase/firestore';
 
 export default function FloatingButton() {
-  const { state } = useApp();
-  if (!state.currentUser) return null;
+  const { user } = useUser();
+  const db = useFirestore();
+  
+  const configRef = useMemoFirebase(() => doc(db, 'appConfig', 'singletonConfig'), [db]);
+  const { data: config } = useDoc(configRef);
+
+  if (!user) return null;
 
   return (
     <a 
-      href={state.settings.floatingBtnLink} 
+      href={config?.floatingBtnLink || "#"} 
       target="_blank" 
       rel="noopener noreferrer" 
       className="floating-btn glow-primary"
