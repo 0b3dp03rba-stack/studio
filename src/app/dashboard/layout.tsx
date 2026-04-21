@@ -1,25 +1,42 @@
+
 "use client";
 
-import { useApp } from '@/lib/store';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import Header from '@/components/Header';
 import BottomNav from '@/components/BottomNav';
 import FloatingButton from '@/components/FloatingButton';
+import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
 
 export default function UserLayout({ children }: { children: React.ReactNode }) {
-  const { state } = useApp();
+  const { user, isUserLoading } = useUser();
+  const db = useFirestore();
   const router = useRouter();
 
+  const profileRef = useMemoFirebase(() => 
+    user ? doc(db, 'userProfiles', user.uid) : null, 
+    [db, user]
+  );
+  const { data: profile, isLoading: isProfileLoading } = useDoc(profileRef);
+
   useEffect(() => {
-    if (!state.currentUser) {
+    if (isUserLoading || isProfileLoading) return;
+
+    if (!user) {
       router.push('/login');
-    } else if (state.currentUser.role === 'Admin') {
+    } else if (profile && profile.role === 'Admin') {
       router.push('/admin');
     }
-  }, [state.currentUser, router]);
+  }, [user, isUserLoading, profile, isProfileLoading, router]);
 
-  if (!state.currentUser) return null;
+  if (isUserLoading || isProfileLoading || !user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
