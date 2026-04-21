@@ -33,7 +33,7 @@ export default function UserDashboard() {
   const { data: batches } = useCollection(submissionsQuery);
 
   const stats = {
-    pending: batches?.filter(b => b.status === 'Pending').length || 0,
+    pending: (batches || []).filter(b => b.status === 'Pending').length,
     approved: profile?.balance || 0,
   };
 
@@ -70,7 +70,7 @@ export default function UserDashboard() {
         <h3 className="font-black text-xs uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
           <Bell size={14} className="text-secondary" /> Pengumuman
         </h3>
-        {config?.announcements?.length > 0 ? (
+        {config?.announcements && config.announcements.length > 0 ? (
           <div className="space-y-3">
             {config.announcements.map((ann: string, i: number) => (
               <div key={i} className="flex gap-4 glass-card p-5 rounded-[1.5rem] items-start hover:bg-white/10 transition-all group">
@@ -97,7 +97,7 @@ export default function UserDashboard() {
                 <s.icon size={18} />
               </div>
               <div>
-                <div className="text-xl font-black">{s.val}</div>
+                <div className="text-xl font-black">{typeof s.val === 'string' ? s.val : s.val}</div>
                 <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">{s.label}</div>
               </div>
             </CardContent>

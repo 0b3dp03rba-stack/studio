@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
@@ -15,10 +15,20 @@ import { collection, addDoc, serverTimestamp, doc, writeBatch } from 'firebase/f
 export default function SetorPage() {
   const [input, setInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentDate, setCurrentDate] = useState('');
   const { user } = useUser();
   const db = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
+
+  useEffect(() => {
+    // Avoid hydration mismatch by setting date after mount
+    setCurrentDate(new Intl.DateTimeFormat('id-ID', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    }).format(new Date()));
+  }, []);
 
   const configRef = useMemoFirebase(() => doc(db, 'appConfig', 'singletonConfig'), [db]);
   const { data: config } = useDoc(configRef);
@@ -82,12 +92,6 @@ export default function SetorPage() {
     }
   };
 
-  const currentDate = new Intl.DateTimeFormat('id-ID', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric'
-  }).format(new Date());
-
   return (
     <div className="space-y-6 animate-in">
       <div className="relative overflow-hidden rounded-[2rem] neon-gradient p-8 text-background shadow-xl glow-primary">
@@ -98,7 +102,7 @@ export default function SetorPage() {
             </div>
             <h1 className="text-2xl font-black tracking-tight">Setor Gmail</h1>
           </div>
-          <p className="text-background/70 text-[10px] font-black uppercase tracking-[0.2em]">SETORAN {currentDate}</p>
+          <p className="text-background/70 text-[10px] font-black uppercase tracking-[0.2em]">SETORAN {currentDate || '...'}</p>
           
           <div className="grid grid-cols-2 gap-4 pt-2">
             <div className="bg-background/10 backdrop-blur-md rounded-2xl p-3 border border-background/10">
