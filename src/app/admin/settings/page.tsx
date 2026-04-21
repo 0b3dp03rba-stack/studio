@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -6,10 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Trash2, Plus, Sparkles, Wand2, CreditCard, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Trash2, Plus, Sparkles, Wand2, CreditCard, ToggleLeft, ToggleRight, LayoutDashboard, FileText, Bell } from 'lucide-react';
 import { generateContentForAdmin } from '@/ai/flows/admin-genai-content-creator-flow';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 
 export default function AdminSettingsPage() {
   const { state, dispatch } = useApp();
@@ -52,12 +54,14 @@ export default function AdminSettingsPage() {
     if (!newRule) return;
     dispatch({ type: 'ADD_RULE', payload: newRule });
     setNewRule('');
+    toast({ title: "Berhasil", description: "Peraturan ditambahkan." });
   };
 
   const handleAddAnn = () => {
     if (!newAnn) return;
     dispatch({ type: 'ADD_ANNOUNCEMENT', payload: newAnn });
     setNewAnn('');
+    toast({ title: "Berhasil", description: "Pengumuman diterbitkan." });
   };
 
   const generateWithAi = async () => {
@@ -82,39 +86,45 @@ export default function AdminSettingsPage() {
     <div className="space-y-6">
       <div className="space-y-2">
         <h1 className="text-2xl font-bold">Pengaturan Sistem</h1>
-        <p className="text-muted-foreground text-sm">Konfigurasi variabel dan konten platform.</p>
+        <p className="text-muted-foreground text-sm">Konfigurasi variabel, metode pembayaran, dan konten platform.</p>
       </div>
 
       <Tabs defaultValue="general" className="w-full">
         <TabsList className="grid w-full grid-cols-2 mb-4 glass-card p-1">
-          <TabsTrigger value="general" className="data-[state=active]:neon-gradient data-[state=active]:text-background">Umum</TabsTrigger>
+          <TabsTrigger value="general" className="data-[state=active]:neon-gradient data-[state=active]:text-background">Umum & Pembayaran</TabsTrigger>
           <TabsTrigger value="content" className="data-[state=active]:neon-gradient data-[state=active]:text-background">Konten & AI</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general" className="space-y-6">
           <Card className="glass-card border-white/5">
-            <CardContent className="p-4 space-y-4">
+            <CardHeader>
+              <CardTitle className="text-sm flex items-center gap-2">
+                <LayoutDashboard size={16} /> Parameter Sistem
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div className="space-y-2">
                 <label className="text-xs font-bold uppercase text-muted-foreground">Rate Gmail (Per Akun)</label>
                 <Input type="number" value={gmailRate} onChange={(e) => setGmailRate(parseInt(e.target.value))} className="bg-white/5 border-white/10" />
               </div>
-              <div className="space-y-2">
-                <label className="text-xs font-bold uppercase text-muted-foreground">Min Withdraw</label>
-                <Input type="number" value={minWithdraw} onChange={(e) => setMinWithdraw(parseInt(e.target.value))} className="bg-white/5 border-white/10" />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase text-muted-foreground">Min Withdraw</label>
+                  <Input type="number" value={minWithdraw} onChange={(e) => setMinWithdraw(parseInt(e.target.value))} className="bg-white/5 border-white/10" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase text-muted-foreground">Biaya Admin</label>
+                  <Input type="number" value={adminFee} onChange={(e) => setAdminFee(parseInt(e.target.value))} className="bg-white/5 border-white/10" />
+                </div>
               </div>
               <div className="space-y-2">
-                <label className="text-xs font-bold uppercase text-muted-foreground">Biaya Admin</label>
-                <Input type="number" value={adminFee} onChange={(e) => setAdminFee(parseInt(e.target.value))} className="bg-white/5 border-white/10" />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-bold uppercase text-muted-foreground">Link Tombol Melayang</label>
+                <label className="text-xs font-bold uppercase text-muted-foreground">Link Tombol Melayang (CS)</label>
                 <Input value={floatingBtn} onChange={(e) => setFloatingBtn(e.target.value)} className="bg-white/5 border-white/10" />
               </div>
-              <Button onClick={handleUpdateGeneral} className="w-full neon-gradient text-background font-bold glow-primary">Simpan Perubahan</Button>
+              <Button onClick={handleUpdateGeneral} className="w-full neon-gradient text-background font-bold glow-primary">Simpan Parameter</Button>
             </CardContent>
           </Card>
 
-          {/* Payment Methods Management */}
           <div className="space-y-3">
             <h3 className="font-bold text-sm uppercase text-muted-foreground tracking-widest flex items-center gap-2">
               <CreditCard size={14} /> Metode Pembayaran
@@ -126,9 +136,9 @@ export default function AdminSettingsPage() {
                 onChange={(e) => setNewPayment(e.target.value)} 
                 className="bg-white/5 border-white/10 h-10 text-xs" 
               />
-              <Button size="icon" onClick={handleAddPayment} className="h-10 w-10 neon-gradient text-background"><Plus size={18} /></Button>
+              <Button size="icon" onClick={handleAddPayment} className="h-10 w-10 neon-gradient text-background shrink-0"><Plus size={18} /></Button>
             </div>
-            <div className="space-y-2">
+            <div className="grid grid-cols-1 gap-2">
               {state.settings.paymentMethods.map((method) => (
                 <div key={method.name} className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5">
                   <div className="flex flex-col">
@@ -146,7 +156,7 @@ export default function AdminSettingsPage() {
                       size="icon" 
                       variant="ghost" 
                       onClick={() => dispatch({ type: 'DELETE_PAYMENT_METHOD', payload: method.name })} 
-                      className="text-destructive h-8 w-8"
+                      className="text-destructive h-8 w-8 hover:bg-destructive/10"
                     >
                       <Trash2 size={14} />
                     </Button>
@@ -158,58 +168,70 @@ export default function AdminSettingsPage() {
         </TabsContent>
 
         <TabsContent value="content" className="space-y-6">
-          {/* AI Creator Tool */}
-          <Card className="border border-primary/20 bg-primary/5 glow-primary">
-            <CardHeader>
+          <Card className="border border-primary/20 bg-primary/5 glow-primary overflow-hidden">
+            <CardHeader className="bg-primary/10">
               <CardTitle className="text-sm font-bold flex items-center gap-2">
                 <Sparkles size={16} className="text-primary" />
-                AI Content Creator
+                AI Content Assistant
               </CardTitle>
-              <CardDescription className="text-[10px]">Gunakan AI untuk membuat draf peraturan atau pengumuman.</CardDescription>
+              <CardDescription className="text-[10px]">Gunakan AI untuk membuat draf konten profesional dalam Bahasa Indonesia.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex gap-2">
+            <CardContent className="space-y-4 pt-4">
+              <div className="flex bg-white/5 p-1 rounded-lg">
                 <Button 
                   size="sm" 
-                  variant={aiType === 'Rules' ? 'default' : 'outline'}
+                  variant={aiType === 'Rules' ? 'default' : 'ghost'}
                   onClick={() => setAiType('Rules')}
-                  className={aiType === 'Rules' ? 'flex-1 h-8 text-[10px] bg-primary text-background' : 'flex-1 h-8 text-[10px]'}
-                >Peraturan</Button>
+                  className={`flex-1 h-8 text-[10px] ${aiType === 'Rules' ? 'bg-primary text-background' : 'text-muted-foreground'}`}
+                >Rules</Button>
                 <Button 
                   size="sm" 
-                  variant={aiType === 'Announcements' ? 'default' : 'outline'}
+                  variant={aiType === 'Announcements' ? 'default' : 'ghost'}
                   onClick={() => setAiType('Announcements')}
-                  className={aiType === 'Announcements' ? 'flex-1 h-8 text-[10px] bg-primary text-background' : 'flex-1 h-8 text-[10px]'}
-                >Pengumuman</Button>
+                  className={`flex-1 h-8 text-[10px] ${aiType === 'Announcements' ? 'bg-primary text-background' : 'text-muted-foreground'}`}
+                >Announcements</Button>
               </div>
-              <Input 
-                placeholder="Tema atau kata kunci..." 
-                value={aiKeywords}
-                onChange={(e) => setAiKeywords(e.target.value)}
-                className="bg-white/5 border-white/10 h-9 text-xs"
-              />
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-muted-foreground uppercase">Kata Kunci / Tema</label>
+                <Input 
+                  placeholder="Contoh: Akun gmail lama, limit harian, event hari raya..." 
+                  value={aiKeywords}
+                  onChange={(e) => setAiKeywords(e.target.value)}
+                  className="bg-white/5 border-white/10 h-10 text-xs"
+                />
+              </div>
               <Button 
                 onClick={generateWithAi} 
                 disabled={isAiLoading || !aiKeywords} 
-                className="w-full h-9 bg-white text-background hover:bg-white/90 text-xs font-bold"
+                className="w-full h-10 bg-white text-background hover:bg-white/90 text-xs font-bold"
               >
-                {isAiLoading ? "Sedang Memproses..." : <><Wand2 size={14} className="mr-2"/> Generate Draft AI</>}
+                {isAiLoading ? "Sedang Memproses AI..." : <><Wand2 size={14} className="mr-2"/> Generate Draft AI</>}
               </Button>
             </CardContent>
           </Card>
 
-          {/* Manual Rules */}
-          <div className="space-y-3">
-            <h3 className="font-bold text-sm uppercase text-muted-foreground tracking-widest">Peraturan Platform</h3>
-            <div className="flex gap-2">
-              <Input placeholder="Tambah peraturan baru..." value={newRule} onChange={(e) => setNewRule(e.target.value)} className="bg-white/5 border-white/10 h-10 text-xs" />
-              <Button size="icon" onClick={handleAddRule} className="h-10 w-10 neon-gradient text-background"><Plus size={18} /></Button>
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-muted-foreground">
+              <FileText size={16} /> Peraturan Platform
+            </div>
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                <Textarea 
+                  placeholder="Tulis peraturan baru (AI akan memindahkan draf kesini)..." 
+                  value={newRule} 
+                  onChange={(e) => setNewRule(e.target.value)} 
+                  className="bg-white/5 border-white/10 h-20 text-xs resize-none" 
+                />
+              </div>
+              <Button onClick={handleAddRule} disabled={!newRule} className="w-full h-9 neon-gradient text-background text-xs font-bold">
+                <Plus size={14} className="mr-2" /> Tambah Peraturan
+              </Button>
             </div>
             <div className="space-y-2">
               {state.settings.rules.map((r, i) => (
-                <div key={i} className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5">
-                  <p className="text-xs flex-1 pr-4">{r}</p>
-                  <Button size="icon" variant="ghost" onClick={() => dispatch({ type: 'DELETE_RULE', payload: i })} className="text-destructive h-8 w-8">
+                <div key={i} className="flex items-start justify-between p-3 bg-white/5 rounded-xl border border-white/5 group">
+                  <p className="text-xs flex-1 pr-4 leading-relaxed">{r}</p>
+                  <Button size="icon" variant="ghost" onClick={() => dispatch({ type: 'DELETE_RULE', payload: i })} className="text-destructive h-8 w-8 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Trash2 size={14} />
                   </Button>
                 </div>
@@ -217,18 +239,28 @@ export default function AdminSettingsPage() {
             </div>
           </div>
 
-          {/* Manual Announcements */}
-          <div className="space-y-3">
-            <h3 className="font-bold text-sm uppercase text-muted-foreground tracking-widest">Pengumuman Dashboard</h3>
-            <div className="flex gap-2">
-              <Input placeholder="Tambah pengumuman..." value={newAnn} onChange={(e) => setNewAnn(e.target.value)} className="bg-white/5 border-white/10 h-10 text-xs" />
-              <Button size="icon" onClick={handleAddAnn} className="h-10 w-10 neon-gradient text-background"><Plus size={18} /></Button>
+          <div className="space-y-4 border-t border-white/5 pt-6">
+            <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-muted-foreground">
+              <Bell size={16} /> Pengumuman Dashboard
+            </div>
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                <Textarea 
+                  placeholder="Tulis pengumuman baru..." 
+                  value={newAnn} 
+                  onChange={(e) => setNewAnn(e.target.value)} 
+                  className="bg-white/5 border-white/10 h-20 text-xs resize-none" 
+                />
+              </div>
+              <Button onClick={handleAddAnn} disabled={!newAnn} className="w-full h-9 neon-gradient text-background text-xs font-bold">
+                <Bell size={14} className="mr-2" /> Posting Pengumuman
+              </Button>
             </div>
             <div className="space-y-2">
               {state.settings.announcements.map((a, i) => (
-                <div key={i} className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5">
-                  <p className="text-xs flex-1 pr-4">{a}</p>
-                  <Button size="icon" variant="ghost" onClick={() => dispatch({ type: 'DELETE_ANNOUNCEMENT', payload: i })} className="text-destructive h-8 w-8">
+                <div key={i} className="flex items-start justify-between p-3 bg-white/5 rounded-xl border border-white/5 group">
+                  <p className="text-xs flex-1 pr-4 leading-relaxed font-medium text-primary/90">{a}</p>
+                  <Button size="icon" variant="ghost" onClick={() => dispatch({ type: 'DELETE_ANNOUNCEMENT', payload: i })} className="text-destructive h-8 w-8 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Trash2 size={14} />
                   </Button>
                 </div>

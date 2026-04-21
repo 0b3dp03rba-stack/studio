@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
@@ -78,8 +79,16 @@ const initialSettings: AppSettings = {
     { name: 'BCA', enabled: true },
   ],
   floatingBtnLink: 'https://t.me/your_telegram',
-  rules: ['1 Gmail = 1 baris', 'Format email|password', 'Dilarang kirim gmail duplikat'],
-  announcements: ['Selamat datang di GmailKu! Platform setoran gmail terpercaya.'],
+  rules: [
+    'Format pengiriman: email|password (satu akun per baris)',
+    'Hanya menerima akun Gmail fresh atau umur tertentu sesuai instruksi admin',
+    'Dilarang mengirimkan data yang sudah pernah disetorkan sebelumnya',
+    'Admin berhak menolak akun yang tidak valid atau bermasalah'
+  ],
+  announcements: [
+    'Selamat datang di GmailKu! Platform setoran gmail terpercaya dengan sistem otomatis.',
+    'Pencairan dana diproses maksimal 1x24 jam pada hari kerja.'
+  ],
 };
 
 const initialUsers: User[] = [
@@ -252,7 +261,7 @@ function reducer(state: AppState, action: Action): AppState {
     case 'DELETE_RULE':
       return { ...state, settings: { ...state.settings, rules: state.settings.rules.filter((_, i) => i !== action.payload) } };
     case 'ADD_ANNOUNCEMENT':
-      return { ...state, settings: { ...state.settings, announcements: [...state.settings.announcements, action.payload] } };
+      return { ...state, settings: { ...state.settings, announcements: [action.payload, ...state.settings.announcements] } };
     case 'DELETE_ANNOUNCEMENT':
       return { ...state, settings: { ...state.settings, announcements: state.settings.announcements.filter((_, i) => i !== action.payload) } };
     default:

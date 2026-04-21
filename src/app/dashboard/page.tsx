@@ -1,8 +1,9 @@
+
 "use client";
 
 import { useApp } from '@/lib/store';
 import { Card, CardContent } from '@/components/ui/card';
-import { AlertCircle, CheckCircle2, Clock, XCircle, TrendingUp, Send } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Clock, XCircle, TrendingUp, Send, Bell, ShieldCheck } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils-app';
 
 export default function UserDashboard() {
@@ -48,14 +49,21 @@ export default function UserDashboard() {
 
       {/* Announcements */}
       <div className="space-y-3">
-        {state.settings.announcements.map((ann, i) => (
-          <div key={i} className="flex gap-3 bg-white/5 border border-white/10 p-4 rounded-2xl items-start">
-            <div className="mt-1">
-              <AlertCircle size={18} className="text-secondary" />
+        <h3 className="font-bold text-sm uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+          <Bell size={14} className="text-secondary" /> Pengumuman Terbaru
+        </h3>
+        {state.settings.announcements.length > 0 ? (
+          state.settings.announcements.map((ann, i) => (
+            <div key={i} className="flex gap-3 bg-white/5 border border-white/10 p-4 rounded-2xl items-start group hover:bg-white/10 transition-colors">
+              <div className="mt-1">
+                <AlertCircle size={18} className="text-secondary" />
+              </div>
+              <p className="text-sm leading-relaxed">{ann}</p>
             </div>
-            <p className="text-sm leading-relaxed">{ann}</p>
-          </div>
-        ))}
+          ))
+        ) : (
+          <p className="text-xs text-muted-foreground italic px-2">Tidak ada pengumuman hari ini.</p>
+        )}
       </div>
 
       {/* Stats Grid */}
@@ -104,15 +112,21 @@ export default function UserDashboard() {
 
       {/* Rules */}
       <div className="space-y-3">
-        <h3 className="font-bold text-lg">Peraturan Platform</h3>
-        <ul className="space-y-2">
-          {state.settings.rules.map((rule, i) => (
-            <li key={i} className="flex gap-2 text-sm text-muted-foreground">
-              <span className="text-primary font-bold">•</span>
-              {rule}
-            </li>
-          ))}
-        </ul>
+        <h3 className="font-bold text-sm uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+          <ShieldCheck size={14} className="text-primary" /> Peraturan Platform
+        </h3>
+        <Card className="glass-card border-white/5">
+          <CardContent className="p-4">
+            <ul className="space-y-3">
+              {state.settings.rules.map((rule, i) => (
+                <li key={i} className="flex gap-3 text-sm text-muted-foreground leading-relaxed">
+                  <span className="text-primary font-bold shrink-0 mt-0.5">•</span>
+                  <span>{rule}</span>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
