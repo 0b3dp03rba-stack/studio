@@ -26,7 +26,7 @@
         "id": { "type": "string" },
         "userId": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" },
-        "status": { "type": "string", "enum": ["Pending", "Selesai"] },
+        "status": { "type": "string", "enum": ["Pending", "Proses", "Selesai"] },
         "totalCount": { "type": "number" }
       },
       "required": ["id", "userId", "createdAt", "status", "totalCount"]
