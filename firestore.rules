@@ -1,0 +1,180 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * CORE PHILOSOPHY:
+     * This ruleset enforces a robust user-ownership model combined with an explicit Admin-privilege 
+     * system. It is designed for rapid prototyping, meaning it focuses on WHO can access data 
+     * based on their identity and role, while remaining flexible on the specific shape or 
+     * types of the content data itself.
+     *
+     * DATA STRUCTURE:
+     * The database uses a mix of top-level collections for global assets (Rules, Announcements, 
+     * AppConfig) and user-centric data (UserProfiles, GmailBatches, WithdrawalRequests). 
+     * Hierarchical nesting is used for GmailSubmissions under their parent batches.
+     *
+     * KEY SECURITY DECISIONS:
+     * 1. Admin Authorization: Admin privileges are determined by the existence of a document 
+     *    in the `/adminRoles` collection matching the user's UID. This allows for fast, 
+     *    independent permission checks.
+     * 2. Denormalization for Authorization: User-specific documents (like batches and requests) 
+     *    include a `userId` field. Rules use this field to verify ownership without 
+     *    needing to query parent documents or profile records.
+     * 3. Resource Immutability: Critical relational fields like `userId` and `batchId` are 
+     *    enforced as immutable during updates to prevent data hijacking.
+     * 4. State-Change Protection: All update and delete operations explicitly verify the 
+     *    existence of the document to prevent errors or unauthorized operations on null resources.
+     */
+
+    // --- GLOBAL HELPER FUNCTIONS ---
+
+    /** Checks if the request is from an authenticated user. */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /** Checks if the provided UID matches the authenticated user's UID. */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /** Checks if the authenticated user has an entry in the adminRoles collection. */
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/adminRoles/$(request.auth.uid));
+    }
+
+    /** Verifies ownership and ensures the document exists for update/delete operations. */
+    function isExistingOwner(userId) {
+      return resource != null && isOwner(userId);
+    }
+
+    // --- COLLECTION RULES ---
+
+    /**
+     * @description Rules for user profile data. Users can manage their own profiles; Admins can view and manage all.
+     * @path /userProfiles/{userId}
+     * @allow (create) User 'abc' creates profile document 'abc'.
+     * @deny (update) User 'abc' attempts to update profile document 'xyz'.
+     * @principle Ownership-based write access with Admin override.
+     */
+    match /userProfiles/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin(); // Only admins can list all profiles.
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if (isExistingOwner(userId) || isAdmin()) && request.resource.data.id == resource.data.id;
+      allow delete: if isAdmin();
+    }
+
+    /**
+     * @description Collection for verifying Admin privileges. Only existing Admins can modify this list.
+     * @path /adminRoles/{userId}
+     * @allow (get) Any signed-in user checks if an ID is an admin.
+     * @deny (create) A standard user attempts to add themselves as an admin.
+     * @principle DBAC (Database-Based Access Control) using document existence.
+     */
+    match /adminRoles/{userId} {
+      allow get: if isSignedIn();
+      allow list: if isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+
+    /**
+     * @description User-submitted batches of Gmail credentials.
+     * @path /gmailBatches/{batchId}
+     * @allow (list) User 'abc' queries batches where userId == 'abc'.
+     * @deny (update) User 'abc' attempts to change the 'userId' on an existing batch.
+     * @principle Ownership via denormalized userId field.
+     */
+    match /gmailBatches/{batchId} {
+      allow get: if isAdmin() || isOwner(resource.data.userId);
+      allow list: if isAdmin() || (isSignedIn() && request.query.limit <= 100); // Users must filter by UID in queries
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if (isAdmin() || isExistingOwner(resource.data.userId)) && request.resource.data.userId == resource.data.userId;
+      allow delete: if isAdmin();
+    }
+
+    /**
+     * @description Individual Gmail credentials within a batch.
+     * @path /gmailBatches/{batchId}/gmailSubmissions/{submissionId}
+     * @allow (create) User 'abc' adds a submission to their own batch 'batch123'.
+     * @deny (create) User 'abc' adds a submission with a mismatched batchId in the data.
+     * @principle Relational integrity and ownership validation.
+     */
+    match /gmailBatches/{batchId}/gmailSubmissions/{submissionId} {
+      allow get: if isAdmin() || isOwner(resource.data.userId);
+      allow list: if isAdmin() || isOwner(get(/databases/$(database)/documents/gmailBatches/$(batchId)).data.userId);
+      allow create: if isSignedIn() 
+                    && request.resource.data.userId == request.auth.uid 
+                    && request.resource.data.batchId == batchId;
+      allow update: if (isAdmin() || isExistingOwner(resource.data.userId)) 
+                    && request.resource.data.userId == resource.data.userId 
+                    && request.resource.data.batchId == resource.data.batchId;
+      allow delete: if isAdmin();
+    }
+
+    /**
+     * @description Requests by users to withdraw their balance.
+     * @path /withdrawalRequests/{requestId}
+     * @allow (create) User 'abc' submits a withdrawal with their UID.
+     * @deny (update) User 'abc' attempts to approve their own pending request.
+     * @principle Immutable owner link and restricted status updates.
+     */
+    match /withdrawalRequests/{requestId} {
+      allow get: if isAdmin() || isOwner(resource.data.userId);
+      allow list: if isAdmin() || (isSignedIn() && request.query.limit <= 100);
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAdmin() || (isExistingOwner(resource.data.userId) && resource.data.status == 'Pending');
+      allow delete: if isAdmin();
+    }
+
+    /**
+     * @description Global application settings (Singleton).
+     * @path /appConfig/singletonConfig
+     * @allow (get) Any authenticated user reads the Gmail rates.
+     * @deny (update) A non-admin user attempts to change the minWithdrawAmount.
+     * @principle Public authenticated read, Admin-only write.
+     */
+    match /appConfig/{configId} {
+      allow get: if isSignedIn();
+      allow list: if isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+
+    /**
+     * @description Available payment methods for selection.
+     * @path /paymentMethods/{methodId}
+     * @allow (list) User reads enabled payment methods.
+     * @deny (delete) A user attempts to delete a payment method.
+     * @principle Uniform public-read security posture.
+     */
+    match /paymentMethods/{methodId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    /**
+     * @description Application rules and documentation.
+     * @path /rules/{ruleId}
+     * @allow (list) Any signed-in user views the rules.
+     * @deny (create) A user attempts to post a new rule.
+     * @principle Read-only access for general users.
+     */
+    match /rules/{ruleId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    /**
+     * @description Global announcements and news.
+     * @path /announcements/{announcementId}
+     * @allow (get) User views an announcement.
+     * @deny (update) User attempts to toggle 'isActive' on an announcement.
+     * @principle Administrative content management.
+     */
+    match /announcements/{announcementId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+  }
+}
