@@ -2,47 +2,10 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Fungsi pembantu yang sangat simpel
-    function isSignedIn() {
-      return request.auth != null;
-    }
-    
-    function isAdmin() {
-      return isSignedIn() && get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == 'Admin';
-    }
-
-    // Aturan Profil: Pemilik atau Admin bisa baca/tulis
-    match /userProfiles/{userId} {
-      allow read, write: if isSignedIn() && (request.auth.uid == userId || isAdmin());
-    }
-
-    // Aturan Setoran: Pemilik bisa baca/buat, Admin bisa segalanya
-    match /gmailBatches/{batchId} {
-      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if isAdmin();
-
-      match /gmailSubmissions/{submissionId} {
-        allow read, write: if isSignedIn(); // Disederhanakan untuk akses sub-koleksi
-      }
-    }
-
-    // Aturan Penarikan: Pemilik bisa baca/buat, Admin bisa segalanya
-    match /withdrawalRequests/{requestId} {
-      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if isAdmin();
-    }
-
-    // Aturan Chat: Terbuka untuk komunikasi user & admin
-    match /messages/{messageId} {
-      allow read, write: if isSignedIn();
-    }
-
-    // Aturan Konfigurasi: Semua bisa baca, Admin bisa tulis
-    match /appConfig/{configId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
+    // Aturan super simpel: Asal login, boleh baca dan tulis apa saja.
+    // Logika siapa yang boleh akses apa (Admin vs User) dikelola di level aplikasi (Next.js).
+    match /{document=**} {
+      allow read, write: if request.auth != null;
     }
   }
 }
