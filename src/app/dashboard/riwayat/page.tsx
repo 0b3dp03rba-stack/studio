@@ -1,9 +1,10 @@
+
 "use client";
 
 import { useApp } from '@/lib/store';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatDate } from '@/lib/utils-app';
-import { CheckCircle2, Clock, XCircle, ChevronRight, History } from 'lucide-react';
+import { CheckCircle2, Clock, XCircle, ChevronRight, History, Play } from 'lucide-react';
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
@@ -44,9 +45,9 @@ export default function RiwayatPage() {
                   </div>
                   <p className="text-[10px] text-muted-foreground">{formatDate(batch.createdAt)}</p>
                   <div className="flex gap-3 text-[10px] mt-1">
-                    <span className="flex items-center gap-1 text-primary"><CheckCircle2 size={10} /> {batch.items.filter(i => i.status === 'Disetujui').length}</span>
-                    <span className="flex items-center gap-1 text-destructive"><XCircle size={10} /> {batch.items.filter(i => i.status === 'Ditolak').length}</span>
-                    <span className="flex items-center gap-1 text-muted-foreground"><Clock size={10} /> {batch.items.filter(i => i.status === 'Pending').length}</span>
+                    <span className="flex items-center gap-1 text-primary" title="Approved"><CheckCircle2 size={10} /> {batch.items.filter(i => i.status === 'Disetujui').length}</span>
+                    <span className="flex items-center gap-1 text-secondary" title="Processing"><Play size={10} /> {batch.items.filter(i => i.status === 'Proses').length}</span>
+                    <span className="flex items-center gap-1 text-destructive" title="Rejected"><XCircle size={10} /> {batch.items.filter(i => i.status === 'Ditolak').length}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -79,6 +80,7 @@ export default function RiwayatPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   {item.status === 'Pending' && <Badge variant="secondary" className="text-[9px]">Pending</Badge>}
+                  {item.status === 'Proses' && <Badge className="bg-secondary/20 text-secondary border-none text-[9px]">Proses</Badge>}
                   {item.status === 'Disetujui' && <Badge className="bg-primary/20 text-primary border-primary/20 text-[9px]">Approved</Badge>}
                   {item.status === 'Ditolak' && <Badge variant="destructive" className="text-[9px]">Rejected</Badge>}
                 </div>

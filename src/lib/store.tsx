@@ -17,7 +17,7 @@ export type User = {
   bankAccount?: string;
 };
 
-export type SubmissionStatus = 'Pending' | 'Disetujui' | 'Ditolak';
+export type SubmissionStatus = 'Pending' | 'Proses' | 'Disetujui' | 'Ditolak';
 
 export type GmailItem = {
   id: string;
@@ -165,7 +165,7 @@ function reducer(state: AppState, action: Action): AppState {
           const updatedItems = batch.items.map(item =>
             item.id === action.payload.gmailId ? { ...item, status: action.payload.status } : item
           );
-          const isSelesai = updatedItems.every(i => i.status !== 'Pending');
+          const isSelesai = updatedItems.every(i => i.status === 'Disetujui' || i.status === 'Ditolak');
           return { ...batch, items: updatedItems, status: isSelesai ? 'Selesai' : 'Pending' };
         }
         return batch;

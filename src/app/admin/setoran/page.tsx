@@ -1,9 +1,10 @@
+
 "use client";
 
 import { useApp, SubmissionStatus } from '@/lib/store';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatDate } from '@/lib/utils-app';
-import { Check, X, Copy, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Check, X, Copy, Clock, Play, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -16,12 +17,15 @@ export default function AdminSetoranPage() {
   const [activeTab, setActiveTab] = useState<'pending' | 'all'>('pending');
 
   const allBatches = [...state.batches].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  const pendingBatches = allBatches.filter(b => b.status === 'Pending');
+  const pendingBatches = allBatches.filter(b => b.items.some(i => i.status === 'Pending' || i.status === 'Proses'));
   const filteredBatches = activeTab === 'pending' ? pendingBatches : allBatches;
 
   const handleAction = (batchId: string, gmailId: string, status: SubmissionStatus) => {
     dispatch({ type: 'PROCESS_GMAIL', payload: { batchId, gmailId, status } });
-    toast({ title: "Berhasil", description: `Gmail ${status === 'Disetujui' ? 'disetujui' : 'ditolak'}.` });
+    toast({ 
+      title: status, 
+      description: `Gmail ${status === 'Proses' ? 'sedang diproses' : status === 'Disetujui' ? 'disetujui' : 'ditolak'}.` 
+    });
   };
 
   const copyToClipboard = (text: string) => {
@@ -29,12 +33,12 @@ export default function AdminSetoranPage() {
     toast({ title: "Copied!", description: "Data berhasil disalin ke clipboard." });
   };
 
-  const copyGmailBatch = (batch: any, type: 'all-pending' | 'all-valid') => {
+  const copyGmailBatch = (batch: any, type: 'proses' | 'all') => {
     let toCopy = '';
-    if (type === 'all-pending') {
-      toCopy = batch.items.filter((i: any) => i.status === 'Pending').map((i: any) => `${i.email}|${i.pass}`).join('\n');
+    if (type === 'proses') {
+      toCopy = batch.items.filter((i: any) => i.status === 'Proses').map((i: any) => `${i.email}|${i.pass}`).join('\n');
     } else {
-      toCopy = batch.items.filter((i: any) => i.status !== 'Ditolak').map((i: any) => `${i.email}|${i.pass}`).join('\n');
+      toCopy = batch.items.map((i: any) => `${i.email}|${i.pass}`).join('\n');
     }
     
     if (!toCopy) {
@@ -56,7 +60,7 @@ export default function AdminSetoranPage() {
           onClick={() => setActiveTab('pending')}
           className={`flex-1 py-3 text-xs font-black rounded-xl transition-all ${activeTab === 'pending' ? 'neon-gradient text-white glow-primary' : 'text-muted-foreground'}`}
         >
-          PENDING ({pendingBatches.length})
+          AKTIF ({pendingBatches.length})
         </button>
         <button 
           onClick={() => setActiveTab('all')}
@@ -70,7 +74,7 @@ export default function AdminSetoranPage() {
         {filteredBatches.length === 0 ? (
           <div className="text-center py-20 opacity-30">
             <Clock size={64} className="mx-auto mb-4" />
-            <p className="text-lg font-bold">Belum ada setoran.</p>
+            <p className="text-lg font-bold">Belum ada setoran aktif.</p>
           </div>
         ) : (
           <Accordion type="single" collapsible className="space-y-4">
@@ -100,10 +104,10 @@ export default function AdminSetoranPage() {
                   </AccordionTrigger>
                   <AccordionContent className="p-0 border-t border-white/5 bg-white/5">
                     <div className="p-4 flex gap-3 overflow-x-auto">
-                      <Button size="sm" variant="outline" className="text-[10px] h-9 px-4 rounded-xl font-bold bg-white/5" onClick={() => copyGmailBatch(batch, 'all-pending')}>
-                        <Copy size={14} className="mr-2" /> Copy Pending
+                      <Button size="sm" variant="outline" className="text-[10px] h-9 px-4 rounded-xl font-bold bg-white/5 border-primary/20 text-primary" onClick={() => copyGmailBatch(batch, 'proses')}>
+                        <Copy size={14} className="mr-2" /> Copy Status Proses
                       </Button>
-                      <Button size="sm" variant="outline" className="text-[10px] h-9 px-4 rounded-xl font-bold bg-white/5" onClick={() => copyGmailBatch(batch, 'all-valid')}>
+                      <Button size="sm" variant="outline" className="text-[10px] h-9 px-4 rounded-xl font-bold bg-white/5" onClick={() => copyGmailBatch(batch, 'all')}>
                         <Copy size={14} className="mr-2" /> Copy All
                       </Button>
                     </div>
@@ -115,12 +119,23 @@ export default function AdminSetoranPage() {
                             <p className="text-xs font-mono text-muted-foreground truncate opacity-70">{item.pass}</p>
                           </div>
                           <div className="flex gap-2">
-                            {item.status === 'Pending' ? (
+                            {item.status === 'Pending' && (
+                              <Button 
+                                size="icon" 
+                                className="h-10 w-10 rounded-xl bg-secondary/20 text-secondary hover:bg-secondary hover:text-white transition-all"
+                                onClick={() => handleAction(batch.id, item.id, 'Proses')}
+                                title="Mulai Proses"
+                              >
+                                <Play size={18} />
+                              </Button>
+                            )}
+                            {(item.status === 'Pending' || item.status === 'Proses') && (
                               <>
                                 <Button 
                                   size="icon" 
                                   className="h-10 w-10 rounded-xl bg-primary/20 text-primary hover:bg-primary hover:text-black transition-all"
                                   onClick={() => handleAction(batch.id, item.id, 'Disetujui')}
+                                  title="Setujui"
                                 >
                                   <Check size={18} />
                                 </Button>
@@ -128,16 +143,23 @@ export default function AdminSetoranPage() {
                                   size="icon" 
                                   className="h-10 w-10 rounded-xl bg-destructive/20 text-destructive hover:bg-destructive hover:text-white transition-all"
                                   onClick={() => handleAction(batch.id, item.id, 'Ditolak')}
+                                  title="Tolak"
                                 >
                                   <X size={18} />
                                 </Button>
                               </>
-                            ) : (
+                            )}
+                            {(item.status === 'Disetujui' || item.status === 'Ditolak') && (
                               <Badge 
                                 variant={item.status === 'Disetujui' ? 'default' : 'destructive'} 
                                 className="h-7 px-3 rounded-lg text-[9px] font-black uppercase"
                               >
                                 {item.status}
+                              </Badge>
+                            )}
+                            {item.status === 'Proses' && (
+                              <Badge className="h-7 px-3 rounded-lg text-[9px] font-black uppercase bg-secondary/20 text-secondary border-none">
+                                Proses
                               </Badge>
                             )}
                           </div>

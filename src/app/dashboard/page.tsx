@@ -1,8 +1,9 @@
+
 "use client";
 
 import { useApp } from '@/lib/store';
 import { Card, CardContent } from '@/components/ui/card';
-import { AlertCircle, CheckCircle2, Clock, XCircle, TrendingUp, Send, Bell, ShieldCheck } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Clock, XCircle, TrendingUp, Send, Bell, ShieldCheck, Play } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils-app';
 
 export default function UserDashboard() {
@@ -13,6 +14,7 @@ export default function UserDashboard() {
   const stats = {
     total: userItems.length,
     pending: userItems.filter(i => i.status === 'Pending').length,
+    processing: userItems.filter(i => i.status === 'Proses').length,
     approved: userItems.filter(i => i.status === 'Disetujui').length,
     rejected: userItems.filter(i => i.status === 'Ditolak').length,
   };
@@ -73,9 +75,9 @@ export default function UserDashboard() {
       <div className="grid grid-cols-2 gap-4">
         {[
           { label: 'Pending', val: stats.pending, icon: Clock, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
+          { label: 'Proses', val: stats.processing, icon: Play, color: 'text-secondary', bg: 'bg-secondary/10' },
           { label: 'Approved', val: stats.approved, icon: CheckCircle2, color: 'text-primary', bg: 'bg-primary/10' },
           { label: 'Rejected', val: stats.rejected, icon: XCircle, color: 'text-destructive', bg: 'bg-destructive/10' },
-          { label: 'Total', val: stats.total, icon: Send, color: 'text-secondary', bg: 'bg-secondary/10' },
         ].map((s, i) => (
           <Card key={i} className="glass-card border-none rounded-[1.5rem] hover:scale-[1.02] transition-all">
             <CardContent className="p-5 space-y-3">
