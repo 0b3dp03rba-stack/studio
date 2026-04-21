@@ -15,6 +15,7 @@ export default function RiwayatPage() {
   const db = useFirestore();
   const [selectedBatch, setSelectedBatch] = useState<any>(null);
 
+  // Pastikan query menyertakan filter userId agar sesuai dengan aturan keamanan (isOwner)
   const batchesQuery = useMemoFirebase(() => 
     user ? query(
       collection(db, 'gmailBatches'), 

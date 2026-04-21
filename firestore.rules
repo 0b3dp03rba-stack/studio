@@ -9,8 +9,11 @@ service cloud.firestore {
     }
     
     function isAdmin() {
-      // Mengambil data role langsung dari userProfiles
-      return isSignedIn() && get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == 'Admin';
+      // Mengambil data role tanpa memicu rekursi
+      // Kita asumsikan admin adalah user yang memiliki role 'Admin' di userProfiles
+      // Pengecekan ini aman selama aturan userProfiles sendiri tidak memaksa isAdmin() untuk data milik sendiri
+      return isSignedIn() && 
+        get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == 'Admin';
     }
     
     function isOwner(userId) {
@@ -20,7 +23,8 @@ service cloud.firestore {
     // --- RULES ---
 
     match /userProfiles/{userId} {
-      allow get: if isOwner(userId) || isAdmin();
+      // Pecah izin get untuk menghindari rekursi saat isAdmin() memanggil get() pada profil sendiri
+      allow get: if isSignedIn() && (request.auth.uid == userId || (exists(/databases/$(database)/documents/userProfiles/$(request.auth.uid)) && get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == 'Admin'));
       allow list: if isAdmin();
       allow create: if isOwner(userId);
       allow update: if isOwner(userId) || isAdmin();
@@ -32,8 +36,8 @@ service cloud.firestore {
     }
 
     match /gmailBatches/{batchId} {
-      allow get: if isSignedIn() && (isAdmin() || resource.data.userId == request.auth.uid);
-      // Memperbolehkan list jika difilter berdasarkan userId sendiri atau jika Admin
+      allow get: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      // Untuk list, Firestore mewajibkan query menyertakan filter yang sesuai dengan aturan
       allow list: if isSignedIn() && (isAdmin() || (request.query.limit <= 100 && resource.data.userId == request.auth.uid));
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow update: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid && resource.data.status == 'Pending');
@@ -47,7 +51,7 @@ service cloud.firestore {
     }
 
     match /withdrawalRequests/{requestId} {
-      allow get: if isSignedIn() && (isAdmin() || resource.data.userId == request.auth.uid);
+      allow get: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
       allow list: if isSignedIn() && (isAdmin() || (request.query.limit <= 100 && resource.data.userId == request.auth.uid));
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow update, delete: if isAdmin();

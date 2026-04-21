@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/utils-app';
 import { Mail, Wallet, Users, Clock } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, useDoc, useUser } from '@/firebase';
-import { collection, query, limit, doc } from 'firebase/firestore';
+import { collection, query, limit, doc, orderBy } from 'firebase/firestore';
 
 export default function AdminDashboard() {
   const { user } = useUser();
@@ -16,12 +16,29 @@ export default function AdminDashboard() {
   const { data: profile } = useDoc(profileRef);
   const isAdmin = profile?.role === 'Admin';
 
-  const { data: batches } = useCollection(useMemoFirebase(() => isAdmin ? collection(db, 'gmailBatches') : null, [db, isAdmin]));
-  const { data: withdrawals } = useCollection(useMemoFirebase(() => isAdmin ? collection(db, 'withdrawalRequests') : null, [db, isAdmin]));
-  const { data: allUsers } = useCollection(useMemoFirebase(() => isAdmin ? query(collection(db, 'userProfiles'), limit(500)) : null, [db, isAdmin]));
-  const { data: config } = useDoc(useMemoFirebase(() => doc(db, 'appConfig', 'singletonConfig'), [db]));
+  // Query dengan limit agar sesuai dengan aturan keamanan dan lebih efisien
+  const batchesQuery = useMemoFirebase(() => 
+    isAdmin ? query(collection(db, 'gmailBatches'), limit(500)) : null, 
+    [db, isAdmin]
+  );
+  const { data: batches } = useCollection(batchesQuery);
 
-  if (!isAdmin) return <div className="p-20 text-center opacity-20 font-black uppercase tracking-widest">Akses Ditolak</div>;
+  const withdrawalsQuery = useMemoFirebase(() => 
+    isAdmin ? query(collection(db, 'withdrawalRequests'), limit(500)) : null, 
+    [db, isAdmin]
+  );
+  const { data: withdrawals } = useCollection(withdrawalsQuery);
+
+  const usersQuery = useMemoFirebase(() => 
+    isAdmin ? query(collection(db, 'userProfiles'), limit(500)) : null, 
+    [db, isAdmin]
+  );
+  const { data: allUsers } = useCollection(usersQuery);
+
+  const configRef = useMemoFirebase(() => doc(db, 'appConfig', 'singletonConfig'), [db]);
+  const { data: config } = useDoc(configRef);
+
+  if (!isAdmin) return <div className="p-20 text-center opacity-20 font-black uppercase tracking-widest">Memvalidasi Akses...</div>;
 
   const totalGmails = (batches || []).reduce((acc, b) => acc + (b.totalCount || 0), 0);
   const pendingWithdrawals = (withdrawals || []).filter(w => w.status === 'Pending').length;
