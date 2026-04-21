@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from 'react';
@@ -7,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Trash2, Plus, Sparkles, Wand2, CreditCard, ToggleLeft, ToggleRight, LayoutDashboard, FileText, Bell } from 'lucide-react';
+import { Trash2, Plus, Sparkles, Wand2, CreditCard, LayoutDashboard, FileText, Bell } from 'lucide-react';
 import { generateContentForAdmin } from '@/ai/flows/admin-genai-content-creator-flow';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
@@ -105,16 +104,31 @@ export default function AdminSettingsPage() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <label className="text-xs font-bold uppercase text-muted-foreground">Rate Gmail (Per Akun)</label>
-                <Input type="number" value={gmailRate} onChange={(e) => setGmailRate(parseInt(e.target.value))} className="bg-white/5 border-white/10" />
+                <Input 
+                  type="number" 
+                  value={isNaN(gmailRate) ? 0 : gmailRate} 
+                  onChange={(e) => setGmailRate(parseInt(e.target.value) || 0)} 
+                  className="bg-white/5 border-white/10" 
+                />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-xs font-bold uppercase text-muted-foreground">Min Withdraw</label>
-                  <Input type="number" value={minWithdraw} onChange={(e) => setMinWithdraw(parseInt(e.target.value))} className="bg-white/5 border-white/10" />
+                  <Input 
+                    type="number" 
+                    value={isNaN(minWithdraw) ? 0 : minWithdraw} 
+                    onChange={(e) => setMinWithdraw(parseInt(e.target.value) || 0)} 
+                    className="bg-white/5 border-white/10" 
+                  />
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-bold uppercase text-muted-foreground">Biaya Admin</label>
-                  <Input type="number" value={adminFee} onChange={(e) => setAdminFee(parseInt(e.target.value))} className="bg-white/5 border-white/10" />
+                  <Input 
+                    type="number" 
+                    value={isNaN(adminFee) ? 0 : adminFee} 
+                    onChange={(e) => setAdminFee(parseInt(e.target.value) || 0)} 
+                    className="bg-white/5 border-white/10" 
+                  />
                 </div>
               </div>
               <div className="space-y-2">

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useApp, WithdrawalRequest } from '@/lib/store';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -64,7 +64,7 @@ export default function WithdrawPage() {
         <p className="text-muted-foreground text-sm">Pilih jumlah dan metode penarikan Anda.</p>
       </div>
 
-      <Card className="glass-card border-none neon-gradient text-background glow-primary overflow-hidden relative">
+      <Card className="neon-gradient text-background border-none glow-primary overflow-hidden relative">
         <CardContent className="p-6">
           <p className="text-[10px] uppercase font-black opacity-60 tracking-widest">Saldo Anda</p>
           <h2 className="text-3xl font-black">{formatCurrency(state.currentUser?.balance || 0)}</h2>
@@ -96,7 +96,7 @@ export default function WithdrawPage() {
             type="number" 
             placeholder="Min 10.000 (Kelipatan 1.000)"
             className="bg-white/5 border-white/10 h-12"
-            value={amount || ''}
+            value={isNaN(amount) || amount === 0 ? '' : amount}
             onChange={(e) => setAmount(parseInt(e.target.value) || 0)}
           />
         </div>
