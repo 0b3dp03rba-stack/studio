@@ -12,6 +12,8 @@ export type User = {
   password?: string;
   role: Role;
   balance: number;
+  bankName?: string;
+  bankAccount?: string;
 };
 
 export type SubmissionStatus = 'Pending' | 'Disetujui' | 'Ditolak';
@@ -94,6 +96,8 @@ const initialUsers: User[] = [
     password: 'password123',
     role: 'User',
     balance: 0,
+    bankName: 'DANA',
+    bankAccount: '08123456789'
   }
 ];
 
@@ -111,11 +115,15 @@ type Action =
   | { type: 'LOGIN'; payload: User }
   | { type: 'LOGOUT' }
   | { type: 'REGISTER'; payload: User }
+  | { type: 'UPDATE_PROFILE'; payload: { bankName: string; bankAccount: string } }
   | { type: 'SUBMIT_BATCH'; payload: Batch }
   | { type: 'PROCESS_GMAIL'; payload: { batchId: string; gmailId: string; status: SubmissionStatus } }
   | { type: 'CREATE_WITHDRAWAL'; payload: WithdrawalRequest }
   | { type: 'PROCESS_WITHDRAWAL'; payload: { withdrawalId: string; status: WithdrawStatus } }
   | { type: 'UPDATE_SETTINGS'; payload: Partial<AppSettings> }
+  | { type: 'ADD_PAYMENT_METHOD'; payload: string }
+  | { type: 'DELETE_PAYMENT_METHOD'; payload: string }
+  | { type: 'TOGGLE_PAYMENT_METHOD'; payload: string }
   | { type: 'ADD_RULE'; payload: string }
   | { type: 'DELETE_RULE'; payload: number }
   | { type: 'ADD_ANNOUNCEMENT'; payload: string }
@@ -131,6 +139,15 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, currentUser: null };
     case 'REGISTER':
       return { ...state, users: [...state.users, action.payload] };
+    case 'UPDATE_PROFILE': {
+      if (!state.currentUser) return state;
+      const updatedUser = { ...state.currentUser, ...action.payload };
+      return {
+        ...state,
+        currentUser: updatedUser,
+        users: state.users.map(u => u.id === updatedUser.id ? updatedUser : u)
+      };
+    }
     case 'SUBMIT_BATCH':
       return { ...state, batches: [action.payload, ...state.batches] };
     case 'PROCESS_GMAIL': {
@@ -145,7 +162,6 @@ function reducer(state: AppState, action: Action): AppState {
         return batch;
       });
 
-      // Recalculate balance for the user whose gmail was processed
       const targetBatch = state.batches.find(b => b.id === action.payload.batchId);
       if (!targetBatch) return { ...state, batches: updatedBatches };
 
@@ -181,8 +197,6 @@ function reducer(state: AppState, action: Action): AppState {
         w.id === action.payload.withdrawalId ? { ...w, status: action.payload.status } : w
       );
 
-      // If approved, the balance deduction is already reflected in the calc above if we use status 'Disetujui'
-      // But we need to update the users array too
       const userId = withdrawal.userId;
       const totalApprovedGmails = state.batches
         .filter(b => b.userId === userId)
@@ -207,6 +221,32 @@ function reducer(state: AppState, action: Action): AppState {
     }
     case 'UPDATE_SETTINGS':
       return { ...state, settings: { ...state.settings, ...action.payload } };
+    case 'ADD_PAYMENT_METHOD':
+      return {
+        ...state,
+        settings: {
+          ...state.settings,
+          paymentMethods: [...state.settings.paymentMethods, { name: action.payload, enabled: true }]
+        }
+      };
+    case 'DELETE_PAYMENT_METHOD':
+      return {
+        ...state,
+        settings: {
+          ...state.settings,
+          paymentMethods: state.settings.paymentMethods.filter(m => m.name !== action.payload)
+        }
+      };
+    case 'TOGGLE_PAYMENT_METHOD':
+      return {
+        ...state,
+        settings: {
+          ...state.settings,
+          paymentMethods: state.settings.paymentMethods.map(m =>
+            m.name === action.payload ? { ...m, enabled: !m.enabled } : m
+          )
+        }
+      };
     case 'ADD_RULE':
       return { ...state, settings: { ...state.settings, rules: [...state.settings.rules, action.payload] } };
     case 'DELETE_RULE':
@@ -229,10 +269,6 @@ const AppContext = createContext<{
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(reducer, initialState);
-
-  useEffect(() => {
-    // Check local storage if needed, for now just in-memory
-  }, []);
 
   return (
     <AppContext.Provider value={{ state, dispatch }}>
