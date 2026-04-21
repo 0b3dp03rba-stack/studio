@@ -18,13 +18,12 @@ export default function UserDashboard() {
   const configRef = useMemoFirebase(() => doc(db, 'appConfig', 'singletonConfig'), [db]);
   const { data: config } = useDoc(configRef);
 
-  // Query sederhana: Ambil batch milik user ini saja
+  // Query sederhana: Ambil batch milik user ini saja tanpa orderBy yang berat dulu untuk menghindari index error
   const submissionsQuery = useMemoFirebase(() => {
     if (!user) return null;
     return query(
       collection(db, 'gmailBatches'), 
       where('userId', '==', user.uid),
-      orderBy('createdAt', 'desc'),
       limit(20)
     );
   }, [db, user]);
