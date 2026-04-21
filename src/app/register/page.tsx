@@ -35,19 +35,19 @@ export default function RegisterPage() {
     setIsLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+      const firebaseUser = userCredential.user;
 
-      // Create User Profile in Firestore
-      await setDoc(doc(db, 'userProfiles', user.id), {
-        id: user.id,
-        email: user.email,
+      // Create User Profile in Firestore using UID
+      await setDoc(doc(db, 'userProfiles', firebaseUser.uid), {
+        id: firebaseUser.uid,
+        email: firebaseUser.email,
         role: 'User',
         balance: 0,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
 
-      toast({ title: "Berhasil", description: "Akun Anda telah dibuat. Silakan login." });
+      toast({ title: "Berhasil", description: "Akun Anda telah dibuat. Selamat datang!" });
       router.push('/dashboard');
     } catch (error: any) {
       toast({ 

@@ -3,9 +3,8 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser, useDoc, useMemoFirebase } from '@/firebase';
+import { useUser, useDoc, useMemoFirebase, useFirestore } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import { useFirestore } from '@/firebase';
 
 export default function Home() {
   const router = useRouter();
@@ -19,12 +18,21 @@ export default function Home() {
   const { data: profile, isLoading: isProfileLoading } = useDoc(profileRef);
 
   useEffect(() => {
-    if (isUserLoading || (user && isProfileLoading)) return;
+    if (isUserLoading) return;
 
     if (!user) {
       router.push('/login');
-    } else if (profile) {
+      return;
+    }
+
+    // Jika sedang memuat profil, tunggu sebentar
+    if (isProfileLoading) return;
+
+    // Arahkan berdasarkan role jika profil ada, jika tidak ada arahkan ke dashboard saja
+    if (profile) {
       router.push(profile.role === 'Admin' ? '/admin' : '/dashboard');
+    } else {
+      router.push('/dashboard');
     }
   }, [user, isUserLoading, profile, isProfileLoading, router]);
 

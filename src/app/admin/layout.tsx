@@ -29,7 +29,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
   }, [user, isUserLoading, profile, isProfileLoading, router]);
 
-  if (isUserLoading || isProfileLoading || !user || profile?.role !== 'Admin') {
+  if (isUserLoading || isProfileLoading || !user || !profile || profile.role !== 'Admin') {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
