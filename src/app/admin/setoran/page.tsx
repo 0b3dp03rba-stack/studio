@@ -10,23 +10,30 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, query, orderBy, limit, doc, updateDoc, serverTimestamp, where, getDocs } from 'firebase/firestore';
 
 export default function AdminSetoranPage() {
+  const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<'pending' | 'all'>('pending');
 
+  // Verify admin status first to avoid permission errors on query
+  const profileRef = useMemoFirebase(() => user ? doc(db, 'userProfiles', user.uid) : null, [db, user]);
+  const { data: profile } = useDoc(profileRef);
+  const isAdmin = profile?.role === 'Admin';
+
   const batchesQuery = useMemoFirebase(() => {
+    if (!isAdmin) return null;
     if (activeTab === 'pending') {
       return query(collection(db, 'gmailBatches'), where('status', '==', 'Pending'), orderBy('createdAt', 'desc'), limit(100));
     }
     return query(collection(db, 'gmailBatches'), orderBy('createdAt', 'desc'), limit(100));
-  }, [db, activeTab]);
+  }, [db, activeTab, isAdmin]);
 
   const { data: batches, isLoading } = useCollection(batchesQuery);
-  const { data: users } = useCollection(useMemoFirebase(() => query(collection(db, 'userProfiles'), limit(500)), [db]));
+  const { data: users } = useCollection(useMemoFirebase(() => isAdmin ? query(collection(db, 'userProfiles'), limit(500)) : null, [db, isAdmin]));
 
   const handleAction = async (batchId: string, gmailId: string, status: SubmissionStatus) => {
     try {
@@ -35,28 +42,15 @@ export default function AdminSetoranPage() {
         status,
         processedAt: serverTimestamp()
       });
-
-      // Update balance if approved (In real production, this should be a Cloud Function)
-      if (status === 'Disetujui') {
-        const batchDoc = batches?.find(b => b.id === batchId);
-        if (batchDoc) {
-          const configDoc = await getDocs(query(collection(db, 'appConfig'), limit(1)));
-          const rate = configDoc.docs[0]?.data()?.gmailRate || 6000;
-          const userRef = doc(db, 'userProfiles', batchDoc.userId);
-          // Note: This is simplified for MVP. Production should use runTransaction.
-        }
-      }
-
       toast({ title: "Berhasil", description: `Gmail diperbarui menjadi ${status}.` });
     } catch (e: any) {
-      toast({ variant: "destructive", title: "Gagal", description: e.message });
+      toast({ variant: "destructive", title: "Gagal", description: "Anda tidak memiliki izin untuk mengubah data ini." });
     }
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast({ title: "Copied!", description: "Data berhasil disalin ke clipboard." });
-  };
+  if (!isAdmin && !isLoading) {
+    return <div className="p-8 text-center text-muted-foreground uppercase font-black tracking-widest opacity-20">Akses Ditolak</div>;
+  }
 
   return (
     <div className="space-y-6 animate-in">
