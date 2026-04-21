@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from 'react';
-import { useApp, Batch, GmailItem } from '@/lib/store';
+import { useApp, Batch } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { validateGmailFormat } from '@/lib/utils-app';
 import { Send, AlertCircle } from 'lucide-react';
@@ -69,7 +69,7 @@ export default function SetorPage() {
     dispatch({ type: 'SUBMIT_BATCH', payload: newBatch });
     toast({ title: "Berhasil", description: `${items.length} Gmail telah disetorkan.` });
     setInput('');
-    router.push('/riwayat');
+    router.push('/dashboard/riwayat');
   };
 
   return (

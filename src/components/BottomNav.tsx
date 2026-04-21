@@ -16,10 +16,10 @@ export default function BottomNav() {
 
   const userNav = [
     { label: 'Dashboard', icon: LayoutDashboard, href: '/dashboard' },
-    { label: 'Setor', icon: Send, href: '/setor' },
-    { label: 'Withdraw', icon: Wallet, href: '/withdraw' },
-    { label: 'Riwayat', icon: History, href: '/riwayat' },
-    { label: 'Profil', icon: User, href: '/profil' },
+    { label: 'Setor', icon: Send, href: '/dashboard/setor' },
+    { label: 'Withdraw', icon: Wallet, href: '/dashboard/withdraw' },
+    { label: 'Riwayat', icon: History, href: '/dashboard/riwayat' },
+    { label: 'Profil', icon: User, href: '/dashboard/profil' },
   ];
 
   const adminNav = [
