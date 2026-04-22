@@ -2,8 +2,9 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Aturan sangat simpel: Asal login (terautentikasi), bebas baca dan tulis.
-    // Keamanan level role (Admin vs User) ditangani di level aplikasi/UI.
+    // Aturan paling simpel: Asal pengguna terautentikasi (login), 
+    // mereka diizinkan untuk membaca dan menulis ke semua dokumen.
+    // Kontrol akses level UI (Admin vs User) ditangani di level aplikasi.
     match /{document=**} {
       allow read, write: if request.auth != null;
     }

@@ -3,7 +3,7 @@
 
 import { useState, useRef, useEffect, use } from 'react';
 import { useUser, useFirestore, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy, limit, addDoc, serverTimestamp, doc } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, addDoc, serverTimestamp, doc, or } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Send, User, ChevronLeft } from 'lucide-react';
@@ -19,23 +19,20 @@ export default function AdminChatDetailPage({ params }: { params: Promise<{ user
 
   const { data: targetUser } = useDoc(useMemoFirebase(() => doc(db, 'userProfiles', userId), [db, userId]));
 
+  // Query pesan antara admin ini dan user spesifik
   const messagesQuery = useMemoFirebase(() => 
     query(
       collection(db, 'messages'),
-      where('senderId', 'in', [userId, adminUser?.uid]),
+      or(
+        where('senderId', '==', userId),
+        where('receiverId', '==', userId)
+      ),
       orderBy('createdAt', 'asc'),
-      limit(100)
-    ), [db, userId, adminUser]
+      limit(200)
+    ), [db, userId]
   );
   
-  const { data: rawMessages } = useCollection(messagesQuery);
-
-  // Filter manual untuk memastikan hanya chat antara admin ini dan user tersebut
-  const chatMessages = (rawMessages || []).filter(m => 
-    (m.senderId === userId && m.receiverId === 'admin-system') ||
-    (m.senderId === adminUser?.uid && m.receiverId === userId) ||
-    (m.senderId === userId && m.receiverId === adminUser?.uid)
-  );
+  const { data: chatMessages, isLoading } = useCollection(messagesQuery);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -47,17 +44,18 @@ export default function AdminChatDetailPage({ params }: { params: Promise<{ user
     e.preventDefault();
     if (!text.trim() || !adminUser || !userId) return;
 
+    const messageText = text.trim();
+    setText('');
+
     await addDoc(collection(db, 'messages'), {
       senderId: adminUser.uid,
       receiverId: userId,
-      text: text.trim(),
+      text: messageText,
       createdAt: serverTimestamp(),
     });
-
-    setText('');
   };
 
-  if (!targetUser) return <div className="p-20 text-center animate-pulse">Memuat Profil...</div>;
+  if (!targetUser) return <div className="p-20 text-center animate-pulse uppercase font-black text-xs">Memuat Profil...</div>;
 
   return (
     <div className="flex flex-col h-[calc(100vh-10rem)] animate-in">
@@ -78,20 +76,22 @@ export default function AdminChatDetailPage({ params }: { params: Promise<{ user
         ref={scrollRef}
         className="flex-1 overflow-y-auto space-y-4 px-1 pb-4 scrollbar-hide"
       >
-        {chatMessages.map((msg) => {
-          const isMe = msg.senderId === adminUser?.uid;
+        {isLoading ? (
+          <div className="text-center py-20 font-black uppercase text-[10px]">Memuat Percakapan...</div>
+        ) : chatMessages?.map((msg) => {
+          const isFromAdmin = msg.senderId === adminUser?.uid;
           return (
-            <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+            <div key={msg.id} className={`flex ${isFromAdmin ? 'justify-end' : 'justify-start'}`}>
               <div className={`max-w-[85%] space-y-1`}>
                 <div className={`p-3 rounded-2xl text-xs font-medium leading-relaxed shadow-lg ${
-                  isMe 
+                  isFromAdmin 
                   ? 'bg-primary text-background rounded-tr-none' 
                   : 'glass-card text-foreground rounded-tl-none border-white/5'
                 }`}>
                   {msg.text}
                 </div>
-                <p className={`text-[8px] font-bold text-muted-foreground uppercase px-1 ${isMe ? 'text-right' : 'text-left'}`}>
-                  {msg.createdAt?.seconds ? format(new Date(msg.createdAt.seconds * 1000), 'HH:mm') : '...'}
+                <p className={`text-[8px] font-bold text-muted-foreground uppercase px-1 ${isFromAdmin ? 'text-right' : 'text-left'}`}>
+                  {msg.createdAt?.seconds ? format(new Date(msg.createdAt.seconds * 1000), 'HH:mm') : 'Baru saja'}
                 </p>
               </div>
             </div>
@@ -101,7 +101,7 @@ export default function AdminChatDetailPage({ params }: { params: Promise<{ user
 
       <form onSubmit={handleSendMessage} className="mt-4 flex gap-2 glass-card p-2 rounded-2xl">
         <Input 
-          placeholder="Tulis balasan..." 
+          placeholder="Balas pesan user..." 
           value={text}
           onChange={(e) => setText(e.target.value)}
           className="bg-transparent border-none focus-visible:ring-0 text-sm font-medium"
