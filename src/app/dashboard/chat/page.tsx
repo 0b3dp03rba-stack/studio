@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Send, ShieldCheck, MessageCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, limit, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, limit, addDoc, serverTimestamp } from 'firebase/firestore';
 
 export default function UserChatPage() {
   const { user } = useUser();
@@ -15,19 +15,18 @@ export default function UserChatPage() {
   const [text, setText] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Gunakan query yang lebih simpel tanpa 'or' yang kompleks untuk menghindari masalah index/permission
-  // Kita ambil semua pesan yang melibatkan user ini
+  // Gunakan query yang paling simpel tanpa filter kompleks untuk menghindari masalah perizinan/indeks
   const messagesQuery = useMemoFirebase(() => {
     if (!user) return null;
     return query(
       collection(db, 'messages'),
-      limit(200) // Ambil yang terbaru saja, filter di memory jika perlu, tapi rules sudah allow all login
+      limit(300) 
     );
   }, [db, user?.uid]);
 
   const { data: allMessages, isLoading } = useCollection(messagesQuery);
 
-  // Filter dan urutkan di sisi klien untuk kestabilan 100%
+  // Filter dan urutkan di sisi klien (memori) untuk kestabilan 100%
   const chatMessages = useMemo(() => {
     if (!allMessages || !user) return [];
     return allMessages
