@@ -39,7 +39,6 @@ export default function AdminWithdrawPage() {
       const userRef = doc(db, 'userProfiles', userId);
 
       if (status === 'Disetujui') {
-        // Potong saldo user (amount + fee)
         await setDoc(userRef, {
           balance: increment(-(amount + fee)),
           updatedAt: serverTimestamp()
@@ -51,20 +50,20 @@ export default function AdminWithdrawPage() {
         processedAt: serverTimestamp()
       }, { merge: true });
 
-      toast({ title: "Berhasil", description: `Permintaan WD telah ${status}.` });
+      toast({ title: "Berhasil", description: `WD telah ${status}.` });
     } catch (e: any) {
-      toast({ variant: "destructive", title: "Gagal", description: "Terjadi kesalahan saat memproses data." });
+      toast({ variant: "destructive", title: "Gagal", description: "Terjadi kesalahan." });
     }
   };
 
-  if (isLoading) return <div className="p-20 text-center animate-pulse font-black uppercase tracking-widest text-[10px] text-primary">Memuat Data WD...</div>;
+  if (isLoading) return <div className="p-20 text-center animate-pulse font-black uppercase text-primary text-[10px]">Memuat WD...</div>;
   if (!isAdmin) return <div className="p-20 text-center opacity-20 font-black uppercase">Akses Ditolak</div>;
 
   return (
     <div className="space-y-6 animate-in">
       <div className="space-y-2">
         <h1 className="text-3xl font-black tracking-tight">Manajemen WD</h1>
-        <p className="text-muted-foreground text-sm font-medium uppercase tracking-widest text-[10px]">Validasi penarikan dana pengguna.</p>
+        <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest">Validasi penarikan dana.</p>
       </div>
 
       <div className="flex glass-card p-1.5 rounded-2xl shadow-inner">
@@ -86,20 +85,20 @@ export default function AdminWithdrawPage() {
         {filteredRequests.length === 0 ? (
           <div className="text-center py-20 opacity-20">
             <Wallet size={64} className="mx-auto mb-4" />
-            <p className="text-lg font-black uppercase tracking-widest">Tidak ada permintaan</p>
+            <p className="text-lg font-black uppercase tracking-widest">Kosong</p>
           </div>
         ) : (
           filteredRequests.map((req) => {
             const reqUser = allUsers?.find(u => u.id === req.userId);
             const userEmail = reqUser?.email || '';
-            const userLabel = userEmail.includes('@') ? userEmail.split('@')[0] : (userEmail || 'User');
+            const userLabel = userEmail?.includes('@') ? userEmail.split('@')[0] : (userEmail || 'User');
 
             return (
               <Card key={req.id} className="glass-card border-none rounded-[2rem] overflow-hidden group shadow-xl">
                 <CardContent className="p-5 space-y-4">
                   <div className="flex justify-between items-start">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-muted-foreground group-hover:neon-gradient group-hover:text-background transition-all shadow-inner">
+                      <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-muted-foreground group-hover:neon-gradient group-hover:text-background transition-all">
                         <User size={20} />
                       </div>
                       <div>
@@ -125,7 +124,7 @@ export default function AdminWithdrawPage() {
 
                   <div className="flex justify-between items-center">
                     <div className="text-[10px] font-bold text-muted-foreground uppercase">
-                      Admin Fee: <span className="text-foreground">{formatCurrency(req.fee)}</span>
+                      Fee: <span className="text-foreground">{formatCurrency(req.fee)}</span>
                     </div>
                     {req.status === 'Pending' && (
                       <div className="flex gap-2">

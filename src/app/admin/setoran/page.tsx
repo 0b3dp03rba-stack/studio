@@ -62,10 +62,8 @@ export default function AdminSetoranPage() {
       const configSnap = await getDoc(configRef);
       const rate = configSnap.exists() ? (configSnap.data().gmailRate || 6000) : 6000;
 
-      // Update submission status
       await setDoc(subRef, { status, processedAt: serverTimestamp() }, { merge: true });
 
-      // If accepted, add to user balance
       if (status === 'Disetujui') {
         await setDoc(userRef, { 
           balance: increment(rate),
@@ -73,7 +71,6 @@ export default function AdminSetoranPage() {
         }, { merge: true });
       }
 
-      // Update local state for immediate feedback
       setExpandedSubmissions(prev => ({
         ...prev,
         [batchId]: prev[batchId]?.map(s => s.id === subId ? { ...s, status } : s) || []
@@ -81,7 +78,6 @@ export default function AdminSetoranPage() {
 
       toast({ title: "Berhasil", description: `Status Gmail diperbarui menjadi ${status}.` });
     } catch (e) {
-      console.error(e);
       toast({ variant: "destructive", title: "Gagal", description: "Gagal memperbarui status Gmail." });
     }
   };
@@ -106,12 +102,12 @@ export default function AdminSetoranPage() {
       }
 
       if (!allText) {
-        toast({ title: "Kosong", description: "Tidak ada data dengan status 'Proses' atau 'Pending' dalam batch proses." });
+        toast({ title: "Kosong", description: "Tidak ada data siap proses." });
         return;
       }
 
       await navigator.clipboard.writeText(allText.trim());
-      toast({ title: "Berhasil", description: "Semua akun siap proses telah disalin ke clipboard." });
+      toast({ title: "Berhasil", description: "Data disalin ke clipboard." });
     } catch (e) {
       toast({ variant: "destructive", title: "Gagal", description: "Gagal menyalin data." });
     } finally {
@@ -125,21 +121,21 @@ export default function AdminSetoranPage() {
         status,
         updatedAt: serverTimestamp()
       }, { merge: true });
-      toast({ title: "Berhasil", description: `Status Batch diperbarui menjadi ${status}.` });
+      toast({ title: "Berhasil", description: `Batch ditandai sebagai ${status}.` });
     } catch (e) {
       toast({ variant: "destructive", title: "Gagal", description: "Gagal memperbarui status batch." });
     }
   };
 
-  if (isLoading) return <div className="p-20 text-center animate-pulse font-black uppercase tracking-widest text-primary text-[10px]">Memuat Database Setoran...</div>;
+  if (isLoading) return <div className="p-20 text-center animate-pulse font-black uppercase text-primary text-[10px]">Memuat Database...</div>;
   if (!isAdmin) return <div className="p-20 text-center opacity-20 font-black uppercase">Akses Ditolak</div>;
 
   return (
     <div className="space-y-6 animate-in">
       <div className="flex justify-between items-end">
         <div className="space-y-2">
-          <h1 className="text-3xl font-black tracking-tighter">Manajemen Setoran</h1>
-          <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.2em] opacity-70">Kelola dan verifikasi gmail masuk.</p>
+          <h1 className="text-3xl font-black tracking-tighter">Setoran Gmail</h1>
+          <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.2em] opacity-70">Manajemen antrean gmail masuk.</p>
         </div>
         <Button 
           onClick={handleCopyProses} 
@@ -167,14 +163,14 @@ export default function AdminSetoranPage() {
         {sortedBatches.length === 0 ? (
           <div className="text-center py-24 glass-card rounded-[2.5rem] opacity-20 border-none">
             <Layers size={64} className="mx-auto mb-4" />
-            <p className="text-lg font-black uppercase tracking-widest">Tidak ada batch {activeTab}</p>
+            <p className="text-lg font-black uppercase tracking-widest">Kosong</p>
           </div>
         ) : (
           <Accordion type="single" collapsible className="space-y-4">
             {sortedBatches.map((batch) => {
               const batchUser = users?.find(u => u.id === batch.userId);
               const userEmail = batchUser?.email || '';
-              const userLabel = userEmail.includes('@') ? userEmail.split('@')[0] : (userEmail || 'User');
+              const userLabel = userEmail?.includes('@') ? userEmail.split('@')[0] : (userEmail || 'User');
               
               return (
                 <AccordionItem 

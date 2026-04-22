@@ -19,7 +19,6 @@ export default function Header() {
 
   if (!user) return null;
 
-  // Branding: Obed Store untuk akun super admin
   const isSuperAdmin = user.email?.toLowerCase() === 'creeppermoment@gmail.com';
 
   return (
@@ -29,11 +28,11 @@ export default function Header() {
           {isSuperAdmin ? <Store size={20} className="text-background" /> : <Mail size={20} className="text-background" />}
         </div>
         <div className="flex flex-col">
-          <span className="font-black text-lg tracking-tighter neon-text leading-none">
+          <span className="font-black text-lg tracking-tighter neon-text leading-none uppercase">
             {isSuperAdmin ? 'Obed Store' : 'GmailKu'}
           </span>
           <span className="text-[8px] font-bold uppercase tracking-[0.2em] text-primary/60 leading-none mt-0.5">
-            {isSuperAdmin ? 'SUPER ADMIN PANEL' : 'Premium Network'}
+            {isSuperAdmin ? 'MANAGEMENT PANEL' : 'Premium Network'}
           </span>
         </div>
       </div>
