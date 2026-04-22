@@ -15,7 +15,7 @@ export default function UserChatPage() {
   const [text, setText] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Menggunakan query yang aman sesuai filter security rules
+  // Query chat: Pesan yang dikirim user atau diterima user
   const messagesQuery = useMemoFirebase(() => {
     if (!user) return null;
     return query(
@@ -46,7 +46,7 @@ export default function UserChatPage() {
 
     addDoc(collection(db, 'messages'), {
       senderId: user.uid,
-      receiverId: 'admin-system',
+      receiverId: 'admin-system', // ID Default untuk Admin
       text: messageText,
       createdAt: serverTimestamp(),
     });
@@ -54,7 +54,7 @@ export default function UserChatPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-10rem)] animate-in">
-      <div className="mb-4 flex items-center gap-3 glass-card p-4 rounded-2xl border-primary/20">
+      <div className="mb-4 flex items-center gap-3 glass-card p-4 rounded-2xl border-primary/20 shadow-xl">
         <div className="w-10 h-10 rounded-full neon-gradient flex items-center justify-center glow-primary">
           <ShieldCheck size={20} className="text-background" />
         </div>
@@ -92,7 +92,7 @@ export default function UserChatPage() {
                     {msg.text}
                   </div>
                   <p className={`text-[8px] font-bold text-muted-foreground uppercase px-1 ${isMe ? 'text-right' : 'text-left'}`}>
-                    {msg.createdAt?.seconds ? format(new Date(msg.createdAt.seconds * 1000), 'HH:mm') : '...'}
+                    {msg.createdAt?.seconds ? format(new Date(msg.createdAt.seconds * 1000), 'HH:mm') : 'Baru saja'}
                   </p>
                 </div>
               </div>

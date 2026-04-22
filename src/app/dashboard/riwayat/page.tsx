@@ -8,33 +8,25 @@ import { ChevronRight, History } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, limit } from 'firebase/firestore';
+import { collection, query, where, limit, orderBy } from 'firebase/firestore';
 
 export default function RiwayatPage() {
   const { user } = useUser();
   const db = useFirestore();
   const [selectedBatch, setSelectedBatch] = useState<any>(null);
 
-  // Filter userId WAJIB ada agar query sinkron dengan security rules (meskipun rules sekarang bebas)
+  // Filter userId agar user hanya melihat data milik mereka sendiri
   const batchesQuery = useMemoFirebase(() => {
     if (!user) return null;
     return query(
       collection(db, 'gmailBatches'), 
       where('userId', '==', user.uid),
+      orderBy('createdAt', 'desc'),
       limit(100)
     );
   }, [db, user?.uid]);
 
   const { data: rawBatches, isLoading } = useCollection(batchesQuery);
-
-  const sortedBatches = useMemo(() => {
-    if (!rawBatches) return [];
-    return [...rawBatches].sort((a, b) => {
-      const timeA = a.createdAt?.seconds || 0;
-      const timeB = b.createdAt?.seconds || 0;
-      return timeB - timeA;
-    });
-  }, [rawBatches]);
 
   return (
     <div className="space-y-6 animate-in">
@@ -48,13 +40,13 @@ export default function RiwayatPage() {
           <div className="flex justify-center py-20">
             <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
           </div>
-        ) : sortedBatches.length === 0 ? (
+        ) : !rawBatches || rawBatches.length === 0 ? (
           <div className="text-center py-20 opacity-20 group">
             <History size={64} className="mx-auto mb-4 group-hover:scale-110 transition-transform" />
             <p className="text-lg font-black uppercase tracking-widest">Belum ada riwayat</p>
           </div>
         ) : (
-          sortedBatches.map((batch) => (
+          rawBatches.map((batch) => (
             <Card 
               key={batch.id} 
               className="glass-card border-none rounded-[1.5rem] hover:bg-white/10 transition-all cursor-pointer group"
@@ -93,22 +85,24 @@ export default function RiwayatPage() {
               <Badge className="font-black text-[10px] h-6 px-3">{selectedBatch?.status}</Badge>
             </DialogTitle>
           </DialogHeader>
-          <div className="mt-6 space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
-                <p className="text-[8px] font-black text-muted-foreground uppercase mb-1">ID Batch</p>
-                <p className="text-xs font-black text-white">{selectedBatch?.id}</p>
+          {selectedBatch && (
+            <div className="mt-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
+                  <p className="text-[8px] font-black text-muted-foreground uppercase mb-1">ID Batch</p>
+                  <p className="text-xs font-black text-white">{selectedBatch.id}</p>
+                </div>
+                <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
+                  <p className="text-[8px] font-black text-muted-foreground uppercase mb-1">Total Akun</p>
+                  <p className="text-xs font-black text-white">{selectedBatch.totalCount} Akun</p>
+                </div>
               </div>
               <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
-                <p className="text-[8px] font-black text-muted-foreground uppercase mb-1">Total Akun</p>
-                <p className="text-xs font-black text-white">{selectedBatch?.totalCount} Akun</p>
+                <p className="text-[8px] font-black text-muted-foreground uppercase mb-1">Dibuat Pada</p>
+                <p className="text-xs font-black text-white">{selectedBatch.createdAt?.seconds ? formatDate(new Date(selectedBatch.createdAt.seconds * 1000).toISOString()) : '-'}</p>
               </div>
             </div>
-            <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
-              <p className="text-[8px] font-black text-muted-foreground uppercase mb-1">Dibuat Pada</p>
-              <p className="text-xs font-black text-white">{selectedBatch?.createdAt?.seconds ? formatDate(new Date(selectedBatch.createdAt.seconds * 1000).toISOString()) : '-'}</p>
-            </div>
-          </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

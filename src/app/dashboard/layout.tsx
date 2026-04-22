@@ -21,27 +21,35 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
   const { data: profile, isLoading: isProfileLoading } = useDoc(profileRef);
 
   useEffect(() => {
+    // Tunggu loading selesai
     if (isUserLoading || isProfileLoading) return;
 
+    // Jika tidak login, ke login
     if (!user) {
       router.push('/login');
-    } else if (profile && profile.role === 'Admin') {
+      return;
+    }
+
+    // Jika admin, lempar ke panel admin
+    if (profile?.role === 'Admin') {
       router.push('/admin');
     }
   }, [user, isUserLoading, profile, isProfileLoading, router]);
 
+  // Tampilan loading yang lebih ringan agar tidak terlihat "stuck"
   if (isUserLoading || isProfileLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="flex flex-col items-center gap-4">
           <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-[10px] font-black uppercase tracking-widest text-primary/50">Menyiapkan Dashboard...</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-primary/50">Sinkronisasi Sesi...</p>
         </div>
       </div>
     );
   }
 
-  if (!user || (profile && profile.role === 'Admin')) return null;
+  // Jangan render apapun jika user adalah Admin (karena akan diredirect)
+  if (!user || profile?.role === 'Admin') return null;
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
