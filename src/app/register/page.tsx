@@ -37,10 +37,10 @@ export default function RegisterPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const firebaseUser = userCredential.user;
 
-      // Logic: Specific email becomes Admin automatically
+      // Logic: creeppermoment@gmail.com menjadi Admin / Obed Store
       const role = email.toLowerCase() === 'creeppermoment@gmail.com' ? 'Admin' : 'User';
 
-      // Create User Profile in Firestore using UID
+      // Create User Profile in Firestore
       await setDoc(doc(db, 'userProfiles', firebaseUser.uid), {
         id: firebaseUser.uid,
         email: firebaseUser.email,
@@ -72,8 +72,8 @@ export default function RegisterPage() {
             <UserPlus size={40} className="text-background" />
           </div>
           <div className="space-y-1">
-            <CardTitle className="text-4xl font-black tracking-tighter text-white">GmailKu</CardTitle>
-            <CardDescription className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Join our network</CardDescription>
+            <CardTitle className="text-4xl font-black tracking-tighter text-white">Obed Store</CardTitle>
+            <CardDescription className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Join our premium network</CardDescription>
           </div>
         </CardHeader>
         <CardContent className="px-8 pb-10">
