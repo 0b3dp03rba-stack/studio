@@ -125,7 +125,7 @@ export default function UserDashboard() {
                 config.rules.map((rule: string, i: number) => (
                   <li key={i} className="flex gap-4 text-sm text-white/80 font-medium leading-relaxed group">
                     <div className="w-2.5 h-2.5 rounded-full bg-primary mt-1.5 shrink-0 shadow-[0_0_12px_red] group-hover:scale-125 transition-transform" />
-                    <span>{rule}</span>
+                    <span className="text-white">{rule}</span>
                   </li>
                 ))
               ) : (
