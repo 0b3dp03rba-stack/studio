@@ -105,6 +105,10 @@
       "schema": { "$ref": "#/backend/entities/ChatMessage" },
       "description": "Pesan chat real-time."
     },
+    "/submittedEmails/{email}": {
+      "schema": { "type": "object" },
+      "description": "Daftar email yang sudah pernah disetor (Global Unique Tracker)."
+    },
     "/appConfig/singletonConfig": {
       "schema": { "type": "object" },
       "description": "Konfigurasi global sistem."

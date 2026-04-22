@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
@@ -6,10 +7,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { validateGmailFormat, formatCurrency } from '@/lib/utils-app';
-import { Send, AlertCircle, CheckCircle2, Lock, Clock } from 'lucide-react';
+import { Send, AlertCircle, CheckCircle2, Lock, Clock, XCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, addDoc, serverTimestamp, doc, writeBatch } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, writeBatch, getDoc } from 'firebase/firestore';
 
 export default function SetorPage() {
   const [input, setInput] = useState('');
@@ -35,10 +36,18 @@ export default function SetorPage() {
 
   const stats = useMemo(() => {
     const { items } = validateGmailFormat(input);
+    
+    // Check for internal duplicates in current input
+    const emails = items.map(i => i.email.toLowerCase());
+    const uniqueEmails = new Set(emails);
+    const internalDuplicates = items.filter((item, index) => emails.indexOf(item.email.toLowerCase()) !== index);
+
     const rate = config?.gmailRate || 6000;
     return {
       validCount: items.length,
-      estimation: items.length * rate
+      uniqueCount: uniqueEmails.size,
+      internalDuplicates,
+      estimation: uniqueEmails.size * rate
     };
   }, [input, config]);
 
@@ -56,8 +65,42 @@ export default function SetorPage() {
       return;
     }
 
+    if (stats.internalDuplicates.length > 0) {
+      toast({ 
+        variant: "destructive", 
+        title: "Duplikasi Terdeteksi", 
+        description: `Ada ${stats.internalDuplicates.length} email ganda dalam input Anda: ${stats.internalDuplicates[0].email}` 
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
+      // Global Duplicate Check
+      // We check each email against /submittedEmails/{email}
+      // Note: For large batches, this could be optimized, but for MVP it ensures safety.
+      const duplicateFound: string[] = [];
+      
+      for (const item of items) {
+        const emailKey = item.email.toLowerCase().trim();
+        const checkRef = doc(db, 'submittedEmails', emailKey);
+        const snap = await getDoc(checkRef);
+        if (snap.exists()) {
+          duplicateFound.push(item.email);
+        }
+      }
+
+      if (duplicateFound.length > 0) {
+        toast({ 
+          variant: "destructive", 
+          title: "Email Sudah Pernah Disetor", 
+          description: `${duplicateFound[0]} dan ${duplicateFound.length - 1} lainnya sudah ada di database.` 
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Proceed with batch creation
       const batchRef = await addDoc(collection(db, 'gmailBatches'), {
         userId: user.uid,
         createdAt: serverTimestamp(),
@@ -66,7 +109,11 @@ export default function SetorPage() {
       });
 
       const firebaseBatch = writeBatch(db);
+      
       items.forEach((item) => {
+        const emailKey = item.email.toLowerCase().trim();
+        
+        // 1. Create Submission Detail
         const submissionRef = doc(collection(db, `gmailBatches/${batchRef.id}/gmailSubmissions`));
         firebaseBatch.set(submissionRef, {
           batchId: batchRef.id,
@@ -74,6 +121,14 @@ export default function SetorPage() {
           email: item.email,
           password: item.pass,
           status: 'Pending',
+          createdAt: serverTimestamp()
+        });
+
+        // 2. Mark as globally submitted to prevent future duplicates
+        const trackerRef = doc(db, 'submittedEmails', emailKey);
+        firebaseBatch.set(trackerRef, {
+          userId: user.uid,
+          batchId: batchRef.id,
           createdAt: serverTimestamp()
         });
       });
@@ -156,6 +211,10 @@ export default function SetorPage() {
                     <span>{rule}</span>
                   </li>
                 ))}
+                <li className="text-[11px] text-primary font-black uppercase flex gap-3 leading-relaxed">
+                   <span className="mt-1">•</span>
+                   <span>Satu akun Gmail hanya bisa disetor satu kali selamanya.</span>
+                </li>
               </ul>
             </CardContent>
           </Card>
@@ -173,24 +232,33 @@ export default function SetorPage() {
                 onChange={(e) => setInput(e.target.value)}
               />
               
-              <div className="flex justify-between items-center p-4 bg-white/[0.03] rounded-2xl border border-white/5">
-                <div className="space-y-0.5">
-                  <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Jumlah Akun</p>
-                  <p className="text-xl font-black text-primary tracking-tighter">{stats.validCount}</p>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center p-4 bg-white/[0.03] rounded-2xl border border-white/5">
+                  <div className="space-y-0.5">
+                    <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Jumlah Akun</p>
+                    <p className="text-xl font-black text-primary tracking-tighter">{stats.validCount}</p>
+                  </div>
+                  <div className="text-right space-y-0.5">
+                    <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Estimasi Saldo</p>
+                    <p className="text-xl font-black text-white tracking-tighter">{formatCurrency(stats.estimation)}</p>
+                  </div>
                 </div>
-                <div className="text-right space-y-0.5">
-                  <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Estimasi Saldo</p>
-                  <p className="text-xl font-black text-white tracking-tighter">{formatCurrency(stats.estimation)}</p>
-                </div>
+
+                {stats.internalDuplicates.length > 0 && (
+                  <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-3 text-red-500">
+                    <XCircle size={16} />
+                    <p className="text-[10px] font-black uppercase">Duplikasi terdeteksi dalam input!</p>
+                  </div>
+                )}
               </div>
 
               <Button 
                 onClick={handleSubmit} 
-                disabled={isSubmitting || !input}
+                disabled={isSubmitting || !input || stats.internalDuplicates.length > 0}
                 className="w-full h-16 neon-gradient text-white font-black glow-primary rounded-[1.5rem] text-sm uppercase tracking-[0.2em] group active:scale-95 transition-all shadow-2xl"
               >
                 <CheckCircle2 size={20} className="mr-3 group-hover:rotate-12 transition-transform" />
-                {isSubmitting ? "PROCESSING..." : "KIRIM SETORAN"}
+                {isSubmitting ? "CHECKING & PROCESSING..." : "KIRIM SETORAN"}
               </Button>
             </CardContent>
           </Card>
