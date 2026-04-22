@@ -1,4 +1,3 @@
-
 "use client";
 
 import { LogOut, Mail, Check, Store } from 'lucide-react';
@@ -30,9 +29,9 @@ export default function Header() {
           ) : (
             <div className="relative flex items-center justify-center">
               <Mail size={22} className="text-primary" />
-              {/* "Cutout" effect using absolute positioning and black background padding */}
-              <div className="absolute -bottom-1.5 -right-1.5 bg-black p-0.5 rounded-sm flex items-center justify-center">
-                <Check size={14} className="text-primary" strokeWidth={5} />
+              {/* "Cutout" effect with background matching */}
+              <div className="absolute -bottom-1 -right-1 bg-black rounded-sm flex items-center justify-center p-0.5">
+                <Check size={12} className="text-primary" strokeWidth={5} />
               </div>
             </div>
           )}
