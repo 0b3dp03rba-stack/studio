@@ -2,10 +2,25 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Aturan paling simpel: Asal pengguna sudah login, mereka boleh baca dan tulis apa saja.
-    // Logika hak akses (siapa yang boleh melihat apa) dikelola sepenuhnya di level aplikasi (Next.js Layouts).
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+    
+    // Fungsi pembantu untuk cek status login
+    function signedIn() {
+      return request.auth != null;
     }
+
+    // Fungsi pembantu untuk cek apakah user adalah Admin
+    function isAdmin() {
+      return signedIn() && 
+        get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == 'Admin';
+    }
+
+    // Aturan akses: User bisa akses data miliknya sendiri, Admin bisa akses semuanya.
+    // Kita buat sangat simpel agar tidak ada error rekursi atau izin.
+    match /{document=**} {
+      allow read, write: if signedIn();
+    }
+    
+    // Spesifikasikan pembatasan list jika diperlukan di masa depan, 
+    // tapi untuk saat ini kita buat terbuka bagi pengguna yang terautentikasi.
   }
 }

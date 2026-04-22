@@ -4,13 +4,13 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { formatDate } from '@/lib/utils-app';
 import { Clock, Copy, Layers, Play } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
-import { collection, query, orderBy, limit, doc, updateDoc, serverTimestamp, where, getDocs } from 'firebase/firestore';
+import { collection, query, limit, doc, updateDoc, serverTimestamp, where, getDocs } from 'firebase/firestore';
 
 export default function AdminSetoranPage() {
   const { user } = useUser();
@@ -26,13 +26,22 @@ export default function AdminSetoranPage() {
   const batchesQuery = useMemoFirebase(() => {
     if (!isAdmin) return null;
     if (activeTab === 'pending') {
-      return query(collection(db, 'gmailBatches'), where('status', '==', 'Pending'), orderBy('createdAt', 'desc'), limit(100));
+      return query(collection(db, 'gmailBatches'), where('status', '==', 'Pending'), limit(100));
     }
-    return query(collection(db, 'gmailBatches'), orderBy('createdAt', 'desc'), limit(100));
+    return query(collection(db, 'gmailBatches'), limit(100));
   }, [db, activeTab, isAdmin]);
 
-  const { data: batches, isLoading } = useCollection(batchesQuery);
+  const { data: rawBatches, isLoading } = useCollection(batchesQuery);
   const { data: users } = useCollection(useMemoFirebase(() => isAdmin ? query(collection(db, 'userProfiles'), limit(500)) : null, [db, isAdmin]));
+
+  const sortedBatches = useMemo(() => {
+    if (!rawBatches) return [];
+    return [...rawBatches].sort((a, b) => {
+      const timeA = a.createdAt?.seconds || 0;
+      const timeB = b.createdAt?.seconds || 0;
+      return timeB - timeA;
+    });
+  }, [rawBatches]);
 
   const handleCopyProses = async () => {
     setIsCopying(true);
@@ -113,14 +122,14 @@ export default function AdminSetoranPage() {
       </div>
 
       <div className="space-y-4">
-        {!batches || batches.length === 0 ? (
+        {sortedBatches.length === 0 ? (
           <div className="text-center py-20 opacity-20">
             <Layers size={64} className="mx-auto mb-4" />
             <p className="text-lg font-black uppercase">Belum ada setoran</p>
           </div>
         ) : (
           <Accordion type="single" collapsible className="space-y-4">
-            {batches.map((batch) => (
+            {sortedBatches.map((batch) => (
               <AccordionItem key={batch.id} value={batch.id} className="border-none">
                 <Card className="glass-card border-none rounded-[1.5rem] overflow-hidden">
                   <AccordionTrigger className="p-5 hover:no-underline [&[data-state=open]>svg]:rotate-180">

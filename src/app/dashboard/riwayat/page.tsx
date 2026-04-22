@@ -1,33 +1,42 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatDate } from '@/lib/utils-app';
 import { ChevronRight, History } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy, limit } from 'firebase/firestore';
+import { collection, query, where, limit } from 'firebase/firestore';
 
 export default function RiwayatPage() {
   const { user } = useUser();
   const db = useFirestore();
   const [selectedBatch, setSelectedBatch] = useState<any>(null);
 
-  // Query dengan filter userId dan orderBy. 
-  // Pastikan index sudah dibuat di Firebase Console jika error index muncul.
+  // Kita hapus orderBy dari query Firestore untuk menghindari error Permission/Index.
+  // Pengurutan akan dilakukan secara manual di memori (useMemo).
   const batchesQuery = useMemoFirebase(() => {
     if (!user) return null;
     return query(
       collection(db, 'gmailBatches'), 
       where('userId', '==', user.uid),
-      orderBy('createdAt', 'desc'),
       limit(100)
     );
   }, [db, user?.uid]);
 
-  const { data: batches, isLoading } = useCollection(batchesQuery);
+  const { data: rawBatches, isLoading } = useCollection(batchesQuery);
+
+  // Urutkan data berdasarkan waktu terbaru di sisi klien
+  const sortedBatches = useMemo(() => {
+    if (!rawBatches) return [];
+    return [...rawBatches].sort((a, b) => {
+      const timeA = a.createdAt?.seconds || 0;
+      const timeB = b.createdAt?.seconds || 0;
+      return timeB - timeA;
+    });
+  }, [rawBatches]);
 
   return (
     <div className="space-y-6 animate-in">
@@ -41,13 +50,13 @@ export default function RiwayatPage() {
           <div className="flex justify-center py-20">
             <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin shadow-lg shadow-primary/20"></div>
           </div>
-        ) : !batches || batches.length === 0 ? (
+        ) : sortedBatches.length === 0 ? (
           <div className="text-center py-20 opacity-20 group">
             <History size={64} className="mx-auto mb-4 group-hover:scale-110 transition-transform" />
             <p className="text-lg font-black uppercase tracking-widest">Belum ada riwayat</p>
           </div>
         ) : (
-          batches.map((batch) => (
+          sortedBatches.map((batch) => (
             <Card 
               key={batch.id} 
               className="glass-card border-none rounded-[1.5rem] hover:bg-white/10 transition-all cursor-pointer active:scale-95 group"
