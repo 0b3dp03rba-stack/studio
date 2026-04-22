@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -44,8 +45,8 @@
     @apply bg-white/[0.03] backdrop-blur-2xl border border-white/5 shadow-2xl;
   }
   .neon-gradient {
-    background: linear-gradient(-45deg, #ff0000, #ff8800, #ffea00, #ff0000);
-    background-size: 400% 400%;
+    background: linear-gradient(-45deg, #ff0000, #ffea00, #ff0000, #ffea00);
+    background-size: 200% 200%;
     @apply animate-flowing-gradient;
   }
   .neon-text-pulse {

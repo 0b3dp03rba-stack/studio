@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Card, CardContent } from '@/components/ui/card';
@@ -37,8 +38,8 @@ export default function UserDashboard() {
         <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.4em]">Dashboard Operasional Utama.</p>
       </div>
 
-      <Card className="neon-gradient border-none overflow-hidden relative rounded-[3rem] group shadow-2xl">
-        <CardContent className="p-10 text-white relative z-10">
+      <Card className="neon-gradient border-none overflow-hidden relative rounded-[2rem] group shadow-2xl">
+        <CardContent className="p-8 text-white relative z-10">
           <div className="flex justify-between items-start mb-8">
             <div className="space-y-3">
               <p className="text-white/70 text-[10px] font-black uppercase tracking-[0.4em]">Total Saldo Tersedia</p>
@@ -83,14 +84,14 @@ export default function UserDashboard() {
             ))}
           </div>
         ) : (
-          <div className="py-12 text-center glass-card rounded-[2.5rem] opacity-30 border-none">
+          <div className="py-12 text-center glass-card rounded-[2rem] opacity-30 border-none">
              <p className="text-[11px] font-black uppercase tracking-widest">Belum ada pembaruan sistem</p>
           </div>
         )}
       </div>
 
       <div className="grid grid-cols-2 gap-5">
-        <Card className="glass-card border-none rounded-[2.5rem] hover:bg-white/10 transition-all shadow-xl group cursor-pointer active:scale-95">
+        <Card className="glass-card border-none rounded-[2rem] hover:bg-white/10 transition-all shadow-xl group cursor-pointer active:scale-95">
           <CardContent className="p-7 space-y-4">
             <div className="w-14 h-14 bg-white/5 text-primary rounded-[1.5rem] flex items-center justify-center shadow-lg group-hover:neon-gradient group-hover:text-white transition-all duration-500">
               <Clock size={28} />
@@ -101,7 +102,7 @@ export default function UserDashboard() {
             </div>
           </CardContent>
         </Card>
-        <Card className="glass-card border-none rounded-[2.5rem] hover:bg-white/10 transition-all shadow-xl group cursor-pointer active:scale-95">
+        <Card className="glass-card border-none rounded-[2rem] hover:bg-white/10 transition-all shadow-xl group cursor-pointer active:scale-95">
           <CardContent className="p-7 space-y-4">
             <div className="w-14 h-14 bg-white/5 text-primary rounded-[1.5rem] flex items-center justify-center shadow-lg group-hover:neon-gradient group-hover:text-white transition-all duration-500">
               <CheckCircle2 size={28} />
@@ -118,7 +119,7 @@ export default function UserDashboard() {
         <h3 className="font-black text-[11px] uppercase tracking-[0.3em] text-white/50 flex items-center gap-2 px-1">
           <ShieldCheck size={16} className="text-primary" /> Aturan Utama Platform
         </h3>
-        <Card className="glass-card border-none rounded-[2.5rem] shadow-2xl relative overflow-hidden">
+        <Card className="glass-card border-none rounded-[2rem] shadow-2xl relative overflow-hidden">
           <CardContent className="p-8">
             <ul className="space-y-6">
               {config?.rules && config.rules.length > 0 ? (
