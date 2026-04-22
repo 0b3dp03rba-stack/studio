@@ -19,20 +19,19 @@ export default function AdminChatDetailPage({ params }: { params: Promise<{ user
 
   const { data: targetUser } = useDoc(useMemoFirebase(() => doc(db, 'userProfiles', userId), [db, userId]));
 
-  // Query simpel untuk menghindari masalah index/permission
+  // Query global messages, filter di memori agar real-time dan stabil
   const messagesQuery = useMemoFirebase(() => 
-    query(collection(db, 'messages'), limit(300)), [db]
+    query(collection(db, 'messages'), limit(500)), [db]
   );
   
   const { data: allMessages, isLoading } = useCollection(messagesQuery);
 
-  // Filter dan urutkan di memory
   const chatMessages = useMemo(() => {
-    if (!allMessages || !userId) return [];
+    if (!allMessages || !userId || !adminUser) return [];
     return allMessages
-      .filter(msg => msg.senderId === userId || msg.receiverId === userId)
+      .filter(msg => (msg.senderId === userId && msg.receiverId === adminUser.uid) || (msg.senderId === adminUser.uid && msg.receiverId === userId))
       .sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
-  }, [allMessages, userId]);
+  }, [allMessages, userId, adminUser]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -78,19 +77,21 @@ export default function AdminChatDetailPage({ params }: { params: Promise<{ user
       >
         {isLoading ? (
           <div className="text-center py-20 font-black uppercase text-[10px] text-muted-foreground/50">Memuat Percakapan...</div>
+        ) : chatMessages.length === 0 ? (
+          <div className="text-center py-20 opacity-20 font-black uppercase text-[10px] tracking-widest">Belum ada pesan.</div>
         ) : chatMessages.map((msg) => {
-          const isFromAdmin = msg.senderId === adminUser?.uid;
+          const isFromMe = msg.senderId === adminUser?.uid;
           return (
-            <div key={msg.id} className={`flex ${isFromAdmin ? 'justify-end' : 'justify-start'}`}>
+            <div key={msg.id} className={`flex ${isFromMe ? 'justify-end' : 'justify-start'}`}>
               <div className={`max-w-[85%] space-y-1`}>
                 <div className={`p-3 rounded-2xl text-xs font-medium leading-relaxed shadow-lg ${
-                  isFromAdmin 
+                  isFromMe 
                   ? 'bg-primary text-background rounded-tr-none' 
                   : 'glass-card text-foreground rounded-tl-none border-white/5'
                 }`}>
                   {msg.text}
                 </div>
-                <p className={`text-[8px] font-bold text-muted-foreground uppercase px-1 ${isFromAdmin ? 'text-right' : 'text-left'}`}>
+                <p className={`text-[8px] font-bold text-muted-foreground uppercase px-1 ${isFromMe ? 'text-right' : 'text-left'}`}>
                   {msg.createdAt?.seconds ? format(new Date(msg.createdAt.seconds * 1000), 'HH:mm') : 'Baru saja'}
                 </p>
               </div>

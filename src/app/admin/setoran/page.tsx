@@ -58,22 +58,26 @@ export default function AdminSetoranPage() {
       const configSnap = await getDoc(configRef);
       const rate = configSnap.exists() ? (configSnap.data().gmailRate || 6000) : 6000;
 
+      // Update submission status
       await setDoc(subRef, { status, processedAt: serverTimestamp() }, { merge: true });
 
+      // If accepted, add to user balance. Using setDoc with merge for reliability
       if (status === 'Disetujui') {
-        await updateDoc(userRef, { 
+        await setDoc(userRef, { 
           balance: increment(rate),
           updatedAt: serverTimestamp() 
-        });
+        }, { merge: true });
       }
 
+      // Update local state for immediate feedback
       setExpandedSubmissions(prev => ({
         ...prev,
-        [batchId]: prev[batchId].map(s => s.id === subId ? { ...s, status } : s)
+        [batchId]: prev[batchId]?.map(s => s.id === subId ? { ...s, status } : s) || []
       }));
 
       toast({ title: "Berhasil", description: `Status Gmail diperbarui menjadi ${status}.` });
     } catch (e) {
+      console.error(e);
       toast({ variant: "destructive", title: "Gagal", description: "Gagal memperbarui status Gmail." });
     }
   };
@@ -91,17 +95,19 @@ export default function AdminSetoranPage() {
         const subSnapshot = await getDocs(subsRef);
         subSnapshot.docs.forEach(doc => {
           const data = doc.data();
-          allText += `${data.email}|${data.password}\n`;
+          if (data.status === 'Pending' || data.status === 'Proses') {
+            allText += `${data.email}|${data.password}\n`;
+          }
         });
       }
 
       if (!allText) {
-        toast({ title: "Kosong", description: "Tidak ada data dengan status 'Proses'." });
+        toast({ title: "Kosong", description: "Tidak ada data dengan status 'Proses' atau 'Pending' dalam batch proses." });
         return;
       }
 
       await navigator.clipboard.writeText(allText.trim());
-      toast({ title: "Berhasil", description: "Semua akun berstatus 'Proses' telah disalin ke clipboard." });
+      toast({ title: "Berhasil", description: "Semua akun siap proses telah disalin ke clipboard." });
     } catch (e) {
       toast({ variant: "destructive", title: "Gagal", description: "Gagal menyalin data." });
     } finally {
@@ -111,7 +117,6 @@ export default function AdminSetoranPage() {
 
   const handleUpdateBatchStatus = async (batchId: string, status: string) => {
     try {
-      // Gunakan setDoc dengan merge true untuk menghindari error jika dokumen tidak ditemukan via updateDoc
       await setDoc(doc(db, 'gmailBatches', batchId), {
         status,
         updatedAt: serverTimestamp()
