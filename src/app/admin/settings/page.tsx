@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, updateDoc, arrayUnion, arrayRemove, setDoc } from 'firebase/firestore';
+import { doc, setDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 
 export default function AdminSettingsPage() {
   const db = useFirestore();
@@ -70,7 +70,7 @@ export default function AdminSettingsPage() {
     if (!newPayment) return;
     const methods = localConfig.paymentMethods || [];
     const updated = [...methods, { name: newPayment.toUpperCase(), enabled: true }];
-    await updateDoc(configRef, { paymentMethods: updated });
+    await setDoc(configRef, { paymentMethods: updated }, { merge: true });
     setNewPayment('');
     toast({ title: "Berhasil", description: "Metode pembayaran baru ditambahkan." });
   };
@@ -79,24 +79,24 @@ export default function AdminSettingsPage() {
     const updated = localConfig.paymentMethods.map((m: any) => 
       m.name === name ? { ...m, enabled: !m.enabled } : m
     );
-    await updateDoc(configRef, { paymentMethods: updated });
+    await setDoc(configRef, { paymentMethods: updated }, { merge: true });
   };
 
   const deletePayment = async (name: string) => {
     const updated = localConfig.paymentMethods.filter((m: any) => m.name !== name);
-    await updateDoc(configRef, { paymentMethods: updated });
+    await setDoc(configRef, { paymentMethods: updated }, { merge: true });
     toast({ title: "Dihapus", description: "Metode pembayaran telah dihapus." });
   };
 
   const handleAddRule = async () => {
     if (!newRule) return;
-    await updateDoc(configRef, { rules: arrayUnion(newRule) });
+    await setDoc(configRef, { rules: arrayUnion(newRule) }, { merge: true });
     setNewRule('');
   };
 
   const handleAddAnn = async () => {
     if (!newAnn) return;
-    await updateDoc(configRef, { announcements: arrayUnion(newAnn) });
+    await setDoc(configRef, { announcements: arrayUnion(newAnn) }, { merge: true });
     setNewAnn('');
   };
 
@@ -202,7 +202,7 @@ export default function AdminSettingsPage() {
               {(localConfig.rules || []).map((r: string, i: number) => (
                 <div key={i} className="flex items-start justify-between p-4 glass-card rounded-2xl border-none">
                   <p className="text-xs flex-1 leading-relaxed font-medium opacity-80">{r}</p>
-                  <Button size="icon" variant="ghost" onClick={() => updateDoc(configRef, { rules: arrayRemove(r) })} className="text-destructive h-9 w-9 rounded-xl ml-2"><Trash2 size={14} /></Button>
+                  <Button size="icon" variant="ghost" onClick={() => setDoc(configRef, { rules: arrayRemove(r) }, { merge: true })} className="text-destructive h-9 w-9 rounded-xl ml-2"><Trash2 size={14} /></Button>
                 </div>
               ))}
             </div>
@@ -216,7 +216,7 @@ export default function AdminSettingsPage() {
               {(localConfig.announcements || []).map((a: string, i: number) => (
                 <div key={i} className="flex items-start justify-between p-4 glass-card rounded-2xl border-none">
                   <p className="text-xs flex-1 leading-relaxed font-medium opacity-80">{a}</p>
-                  <Button size="icon" variant="ghost" onClick={() => updateDoc(configRef, { announcements: arrayRemove(a) })} className="text-destructive h-9 w-9 rounded-xl ml-2"><Trash2 size={14} /></Button>
+                  <Button size="icon" variant="ghost" onClick={() => setDoc(configRef, { announcements: arrayRemove(a) }, { merge: true })} className="text-destructive h-9 w-9 rounded-xl ml-2"><Trash2 size={14} /></Button>
                 </div>
               ))}
             </div>

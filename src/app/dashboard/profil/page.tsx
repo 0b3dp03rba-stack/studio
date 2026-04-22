@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { User, Mail, Shield, LogOut, Wallet, Save, CreditCard, MessageCircle, ChevronRight, AlertCircle } from 'lucide-react';
+import { User, Mail, Shield, LogOut, Wallet, CreditCard, MessageCircle, ChevronRight, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useRouter } from 'next/navigation';
@@ -124,18 +124,18 @@ export default function ProfilPage() {
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-muted-foreground uppercase">Bank / E-Wallet</label>
                   <Select onValueChange={setBankName} value={bankName}>
-                    <SelectTrigger className="bg-white/5 border-white/10 h-11 text-xs rounded-xl focus:ring-primary">
+                    <SelectTrigger className="bg-white/5 border-white/10 h-11 text-xs rounded-xl focus:ring-primary relative z-10">
                       <SelectValue placeholder="Pilih Metode" />
                     </SelectTrigger>
                     <SelectContent className="bg-[#1a1a1a] border-white/10 text-white z-[100]">
                       {enabledMethods.length > 0 ? (
                         enabledMethods.map((m: any) => (
-                          <SelectItem key={m.name} value={m.name} className="focus:bg-primary focus:text-background font-black uppercase text-[10px] py-2">
+                          <SelectItem key={m.name} value={m.name} className="focus:bg-primary focus:text-background font-black uppercase text-[10px] py-2 cursor-pointer">
                             {m.name}
                           </SelectItem>
                         ))
                       ) : (
-                        <div className="p-2 text-[8px] font-black uppercase opacity-50 text-center">Belum ada metode aktif</div>
+                        <div className="p-4 text-[10px] font-black uppercase opacity-50 text-center">Belum ada metode WD aktif</div>
                       )}
                     </SelectContent>
                   </Select>
@@ -145,14 +145,14 @@ export default function ProfilPage() {
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-muted-foreground uppercase">Nomor Rekening / HP</label>
-                  <Input value={bankAccount} onChange={(e) => setBankAccount(e.target.value)} className="bg-white/5 h-11 text-xs rounded-xl" />
+                  <Input value={bankAccount} onChange={(e) => setBankAccount(e.target.value)} className="bg-white/5 h-11 text-xs rounded-xl border-white/10" />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-muted-foreground uppercase">Nama Pemilik Rekening</label>
-                  <Input value={bankAccountName} onChange={(e) => setBankAccountName(e.target.value)} className="bg-white/5 h-11 text-xs rounded-xl" />
+                  <Input value={bankAccountName} onChange={(e) => setBankAccountName(e.target.value)} className="bg-white/5 h-11 text-xs rounded-xl border-white/10" />
                 </div>
                 <div className="flex gap-2 pt-2">
-                  <Button variant="outline" onClick={() => setIsEditing(false)} className="flex-1 h-11 text-xs font-bold rounded-xl">BATAL</Button>
+                  <Button variant="outline" onClick={() => setIsEditing(false)} className="flex-1 h-11 text-xs font-bold rounded-xl border-white/10">BATAL</Button>
                   <Button onClick={handleSaveProfile} className="flex-1 h-11 text-xs neon-gradient text-background font-black rounded-xl">SIMPAN</Button>
                 </div>
               </div>

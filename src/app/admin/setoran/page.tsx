@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
-import { collection, query, limit, doc, updateDoc, serverTimestamp, where, getDocs, increment } from 'firebase/firestore';
+import { collection, query, limit, doc, updateDoc, serverTimestamp, where, getDocs, increment, getDoc } from 'firebase/firestore';
 
 export default function AdminSetoranPage() {
   const { user } = useUser();
@@ -58,13 +58,16 @@ export default function AdminSetoranPage() {
       const userRef = doc(db, 'userProfiles', userId);
       
       const configRef = doc(db, 'appConfig', 'singletonConfig');
-      const configSnap = await getDocs(query(configRef)); // This is a singleton, but getDoc is better. Just use fallback for now.
-      const rate = 6000; // Fallback rate
+      const configSnap = await getDoc(configRef);
+      const rate = configSnap.exists() ? (configSnap.data().gmailRate || 6000) : 6000;
 
       await updateDoc(subRef, { status, processedAt: serverTimestamp() });
 
       if (status === 'Disetujui') {
-        await updateDoc(userRef, { balance: increment(rate) });
+        await updateDoc(userRef, { 
+          balance: increment(rate),
+          updatedAt: serverTimestamp() 
+        });
       }
 
       setExpandedSubmissions(prev => ({
