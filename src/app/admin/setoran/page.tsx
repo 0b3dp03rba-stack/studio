@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
-import { collection, query, limit, doc, updateDoc, serverTimestamp, where, getDocs, increment, getDoc, setDoc } from 'firebase/firestore';
+import { collection, query, limit, doc, serverTimestamp, where, getDocs, getDoc, setDoc, increment } from 'firebase/firestore';
 
 export default function AdminSetoranPage() {
   const { user } = useUser();
@@ -43,10 +43,14 @@ export default function AdminSetoranPage() {
 
   const fetchSubmissions = async (batchId: string) => {
     if (expandedSubmissions[batchId]) return;
-    const q = query(collection(db, `gmailBatches/${batchId}/gmailSubmissions`));
-    const snapshot = await getDocs(q);
-    const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-    setExpandedSubmissions(prev => ({ ...prev, [batchId]: data }));
+    try {
+      const q = query(collection(db, `gmailBatches/${batchId}/gmailSubmissions`));
+      const snapshot = await getDocs(q);
+      const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+      setExpandedSubmissions(prev => ({ ...prev, [batchId]: data }));
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const handleUpdateSubmissionStatus = async (batchId: string, subId: string, status: string, userId: string) => {
@@ -58,10 +62,10 @@ export default function AdminSetoranPage() {
       const configSnap = await getDoc(configRef);
       const rate = configSnap.exists() ? (configSnap.data().gmailRate || 6000) : 6000;
 
-      // Update submission status
+      // Update submission status using setDoc merge for safety
       await setDoc(subRef, { status, processedAt: serverTimestamp() }, { merge: true });
 
-      // If accepted, add to user balance. Using setDoc with merge for reliability
+      // If accepted, add to user balance
       if (status === 'Disetujui') {
         await setDoc(userRef, { 
           balance: increment(rate),
@@ -167,101 +171,108 @@ export default function AdminSetoranPage() {
           </div>
         ) : (
           <Accordion type="single" collapsible className="space-y-4">
-            {sortedBatches.map((batch) => (
-              <AccordionItem 
-                key={batch.id} 
-                value={batch.id} 
-                className="border-none"
-                onClick={() => fetchSubmissions(batch.id)}
-              >
-                <Card className="glass-card border-none rounded-[2rem] overflow-hidden shadow-2xl">
-                  <AccordionTrigger className="p-5 hover:no-underline [&[data-state=open]>svg]:rotate-180">
-                    <div className="flex items-center justify-between w-full pr-4 text-left">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-black text-[10px] uppercase text-primary">#{batch.id.slice(0, 8)}</span>
-                          <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1"><User size={10}/> {users?.find(u => u.id === batch.userId)?.email.split('@')[0] || 'User'}</span>
+            {sortedBatches.map((batch) => {
+              const batchUser = users?.find(u => u.id === batch.userId);
+              const userLabel = batchUser?.email?.split('@')[0] || 'User';
+              
+              return (
+                <AccordionItem 
+                  key={batch.id} 
+                  value={batch.id} 
+                  className="border-none"
+                  onClick={() => fetchSubmissions(batch.id)}
+                >
+                  <Card className="glass-card border-none rounded-[2rem] overflow-hidden shadow-2xl">
+                    <AccordionTrigger className="p-5 hover:no-underline [&[data-state=open]>svg]:rotate-180">
+                      <div className="flex items-center justify-between w-full pr-4 text-left">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-black text-[10px] uppercase text-primary">#{batch.id.slice(0, 8)}</span>
+                            <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
+                              <User size={10}/> {userLabel}
+                            </span>
+                          </div>
+                          <p className="text-[8px] font-black text-muted-foreground uppercase opacity-50 tracking-widest">{batch.createdAt?.seconds ? formatDate(new Date(batch.createdAt.seconds * 1000).toISOString()) : 'Baru saja'}</p>
                         </div>
-                        <p className="text-[8px] font-black text-muted-foreground uppercase opacity-50 tracking-widest">{batch.createdAt?.seconds ? formatDate(new Date(batch.createdAt.seconds * 1000).toISOString()) : 'Baru saja'}</p>
-                      </div>
-                      <div className="text-right flex items-center gap-4">
-                        <div className="space-y-0.5">
-                          <p className="text-2xl font-black leading-none tracking-tighter">{batch.totalCount}</p>
-                          <p className="text-[8px] font-black uppercase text-muted-foreground tracking-widest">Akun</p>
+                        <div className="text-right flex items-center gap-4">
+                          <div className="space-y-0.5">
+                            <p className="text-2xl font-black leading-none tracking-tighter">{batch.totalCount}</p>
+                            <p className="text-[8px] font-black uppercase text-muted-foreground tracking-widest">Akun</p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="p-0 border-t border-white/5 bg-white/5">
-                    <div className="p-5 space-y-6">
-                       <div className="grid grid-cols-2 gap-3">
-                        <Button 
-                          onClick={() => handleUpdateBatchStatus(batch.id, 'Proses')}
-                          disabled={batch.status === 'Proses'}
-                          variant="secondary"
-                          className="h-12 text-[10px] font-black uppercase rounded-2xl bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 border-none shadow-lg active:scale-95 disabled:opacity-50"
-                        >
-                          <Play size={14} className="mr-2" /> Tandai Proses
-                        </Button>
-                        <Button 
-                          onClick={() => handleUpdateBatchStatus(batch.id, 'Selesai')}
-                          disabled={batch.status === 'Selesai'}
-                          className="h-12 text-[10px] font-black uppercase rounded-2xl neon-gradient text-background shadow-xl active:scale-95 disabled:opacity-50"
-                        >
-                          <CheckCircle2 size={14} className="mr-2" /> Selesaikan
-                        </Button>
-                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="p-0 border-t border-white/5 bg-white/5">
+                      <div className="p-5 space-y-6">
+                         <div className="grid grid-cols-2 gap-3">
+                          <Button 
+                            onClick={() => handleUpdateBatchStatus(batch.id, 'Proses')}
+                            disabled={batch.status === 'Proses'}
+                            variant="secondary"
+                            className="h-12 text-[10px] font-black uppercase rounded-2xl bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 border-none shadow-lg active:scale-95 disabled:opacity-50"
+                          >
+                            <Play size={14} className="mr-2" /> Tandai Proses
+                          </Button>
+                          <Button 
+                            onClick={() => handleUpdateBatchStatus(batch.id, 'Selesai')}
+                            disabled={batch.status === 'Selesai'}
+                            className="h-12 text-[10px] font-black uppercase rounded-2xl neon-gradient text-background shadow-xl active:scale-95 disabled:opacity-50"
+                          >
+                            <CheckCircle2 size={14} className="mr-2" /> Selesaikan
+                          </Button>
+                        </div>
 
-                      <div className="space-y-3">
-                        <h4 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2 px-1">Daftar Akun Detail</h4>
-                        <div className="space-y-2">
-                          {expandedSubmissions[batch.id] ? (
-                            expandedSubmissions[batch.id].map((sub) => (
-                              <div key={sub.id} className="p-4 bg-black/20 rounded-2xl flex flex-col gap-3 border border-white/5 group hover:border-primary/20 transition-all">
-                                <div className="flex justify-between items-start">
-                                  <div className="min-w-0">
-                                    <p className="text-xs font-black truncate">{sub.email}</p>
-                                    <p className="text-[10px] text-muted-foreground font-mono mt-0.5 opacity-70">PW: {sub.password}</p>
+                        <div className="space-y-3">
+                          <h4 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2 px-1">Daftar Akun Detail</h4>
+                          <div className="space-y-2">
+                            {expandedSubmissions[batch.id] ? (
+                              expandedSubmissions[batch.id].map((sub) => (
+                                <div key={sub.id} className="p-4 bg-black/20 rounded-2xl flex flex-col gap-3 border border-white/5 group hover:border-primary/20 transition-all">
+                                  <div className="flex justify-between items-start">
+                                    <div className="min-w-0">
+                                      <p className="text-xs font-black truncate">{sub.email}</p>
+                                      <p className="text-[10px] text-muted-foreground font-mono mt-0.5 opacity-70">PW: {sub.password}</p>
+                                    </div>
+                                    <Badge variant={sub.status === 'Disetujui' ? 'default' : sub.status === 'Ditolak' ? 'destructive' : 'secondary'} className="text-[8px] px-2 h-5 font-black uppercase">
+                                      {sub.status}
+                                    </Badge>
                                   </div>
-                                  <Badge variant={sub.status === 'Disetujui' ? 'default' : sub.status === 'Ditolak' ? 'destructive' : 'secondary'} className="text-[8px] px-2 h-5 font-black uppercase">
-                                    {sub.status}
-                                  </Badge>
+                                  <div className="flex gap-2">
+                                    <Button 
+                                      size="sm"
+                                      onClick={() => handleUpdateSubmissionStatus(batch.id, sub.id, 'Proses', batch.userId)}
+                                      className="flex-1 h-8 text-[8px] font-black uppercase rounded-xl bg-white/5 hover:bg-white/10"
+                                    >
+                                      PROSES
+                                    </Button>
+                                    <Button 
+                                      size="sm"
+                                      onClick={() => handleUpdateSubmissionStatus(batch.id, sub.id, 'Ditolak', batch.userId)}
+                                      className="flex-1 h-8 text-[8px] font-black uppercase rounded-xl bg-destructive/10 text-destructive hover:bg-destructive/20"
+                                    >
+                                      <XCircle size={12} className="mr-1"/> REJECT
+                                    </Button>
+                                    <Button 
+                                      size="sm"
+                                      onClick={() => handleUpdateSubmissionStatus(batch.id, sub.id, 'Disetujui', batch.userId)}
+                                      className="flex-1 h-8 text-[8px] font-black uppercase rounded-xl bg-primary/10 text-primary hover:bg-primary/20"
+                                    >
+                                      <CheckCircle2 size={12} className="mr-1"/> ACCEPT
+                                    </Button>
+                                  </div>
                                 </div>
-                                <div className="flex gap-2">
-                                  <Button 
-                                    size="sm"
-                                    onClick={() => handleUpdateSubmissionStatus(batch.id, sub.id, 'Proses', batch.userId)}
-                                    className="flex-1 h-8 text-[8px] font-black uppercase rounded-xl bg-white/5 hover:bg-white/10"
-                                  >
-                                    PROSES
-                                  </Button>
-                                  <Button 
-                                    size="sm"
-                                    onClick={() => handleUpdateSubmissionStatus(batch.id, sub.id, 'Ditolak', batch.userId)}
-                                    className="flex-1 h-8 text-[8px] font-black uppercase rounded-xl bg-destructive/10 text-destructive hover:bg-destructive/20"
-                                  >
-                                    <XCircle size={12} className="mr-1"/> REJECT
-                                  </Button>
-                                  <Button 
-                                    size="sm"
-                                    onClick={() => handleUpdateSubmissionStatus(batch.id, sub.id, 'Disetujui', batch.userId)}
-                                    className="flex-1 h-8 text-[8px] font-black uppercase rounded-xl bg-primary/10 text-primary hover:bg-primary/20"
-                                  >
-                                    <CheckCircle2 size={12} className="mr-1"/> ACCEPT
-                                  </Button>
-                                </div>
-                              </div>
-                            ))
-                          ) : (
-                            <p className="text-center py-4 text-[10px] font-black uppercase opacity-20">Memuat rincian...</p>
-                          )}
+                              ))
+                            ) : (
+                              <p className="text-center py-4 text-[10px] font-black uppercase opacity-20">Memuat rincian...</p>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </AccordionContent>
-                </Card>
-              </AccordionItem>
-            ))}
+                    </AccordionContent>
+                  </Card>
+                </AccordionItem>
+              );
+            })}
           </Accordion>
         )}
       </div>

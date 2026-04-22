@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, setDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { doc, setDoc, arrayUnion, arrayRemove, serverTimestamp } from 'firebase/firestore';
 
 export default function AdminSettingsPage() {
   const db = useFirestore();
@@ -57,47 +57,74 @@ export default function AdminSettingsPage() {
   };
 
   const saveGeneral = async () => {
-    await setDoc(configRef, {
-      ...localConfig,
-      gmailRate: Number(localConfig.gmailRate),
-      minWithdraw: Number(localConfig.minWithdraw),
-      adminFee: Number(localConfig.adminFee),
-    }, { merge: true });
-    toast({ title: "Berhasil", description: "Parameter sistem diperbarui." });
+    try {
+      await setDoc(configRef, {
+        ...localConfig,
+        gmailRate: Number(localConfig.gmailRate),
+        minWithdraw: Number(localConfig.minWithdraw),
+        adminFee: Number(localConfig.adminFee),
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+      toast({ title: "Berhasil", description: "Parameter sistem diperbarui." });
+    } catch (e) {
+      toast({ variant: "destructive", title: "Gagal", description: "Gagal menyimpan parameter." });
+    }
   };
 
   const handleAddPayment = async () => {
     if (!newPayment) return;
-    const methods = localConfig.paymentMethods || [];
-    const updated = [...methods, { name: newPayment.toUpperCase(), enabled: true }];
-    await setDoc(configRef, { paymentMethods: updated }, { merge: true });
-    setNewPayment('');
-    toast({ title: "Berhasil", description: "Metode pembayaran baru ditambahkan." });
+    try {
+      const methods = localConfig.paymentMethods || [];
+      const updated = [...methods, { name: newPayment.toUpperCase(), enabled: true }];
+      await setDoc(configRef, { paymentMethods: updated, updatedAt: serverTimestamp() }, { merge: true });
+      setNewPayment('');
+      toast({ title: "Berhasil", description: "Metode pembayaran baru ditambahkan." });
+    } catch (e) {
+      toast({ variant: "destructive", title: "Gagal", description: "Gagal menambah metode." });
+    }
   };
 
   const togglePayment = async (name: string) => {
-    const updated = localConfig.paymentMethods.map((m: any) => 
-      m.name === name ? { ...m, enabled: !m.enabled } : m
-    );
-    await setDoc(configRef, { paymentMethods: updated }, { merge: true });
+    try {
+      const updated = localConfig.paymentMethods.map((m: any) => 
+        m.name === name ? { ...m, enabled: !m.enabled } : m
+      );
+      await setDoc(configRef, { paymentMethods: updated, updatedAt: serverTimestamp() }, { merge: true });
+    } catch (e) {
+      toast({ variant: "destructive", title: "Gagal", description: "Gagal mengubah status." });
+    }
   };
 
   const deletePayment = async (name: string) => {
-    const updated = localConfig.paymentMethods.filter((m: any) => m.name !== name);
-    await setDoc(configRef, { paymentMethods: updated }, { merge: true });
-    toast({ title: "Dihapus", description: "Metode pembayaran telah dihapus." });
+    try {
+      const updated = localConfig.paymentMethods.filter((m: any) => m.name !== name);
+      await setDoc(configRef, { paymentMethods: updated, updatedAt: serverTimestamp() }, { merge: true });
+      toast({ title: "Dihapus", description: "Metode pembayaran telah dihapus." });
+    } catch (e) {
+      toast({ variant: "destructive", title: "Gagal", description: "Gagal menghapus metode." });
+    }
   };
 
   const handleAddRule = async () => {
     if (!newRule) return;
-    await setDoc(configRef, { rules: arrayUnion(newRule) }, { merge: true });
-    setNewRule('');
+    try {
+      await setDoc(configRef, { rules: arrayUnion(newRule), updatedAt: serverTimestamp() }, { merge: true });
+      setNewRule('');
+      toast({ title: "Berhasil", description: "Peraturan ditambahkan." });
+    } catch (e) {
+      toast({ variant: "destructive", title: "Gagal", description: "Gagal menambah peraturan." });
+    }
   };
 
   const handleAddAnn = async () => {
     if (!newAnn) return;
-    await setDoc(configRef, { announcements: arrayUnion(newAnn) }, { merge: true });
-    setNewAnn('');
+    try {
+      await setDoc(configRef, { announcements: arrayUnion(newAnn), updatedAt: serverTimestamp() }, { merge: true });
+      setNewAnn('');
+      toast({ title: "Berhasil", description: "Pengumuman diposting." });
+    } catch (e) {
+      toast({ variant: "destructive", title: "Gagal", description: "Gagal menambah pengumuman." });
+    }
   };
 
   const generateWithAi = async () => {
@@ -202,7 +229,7 @@ export default function AdminSettingsPage() {
               {(localConfig.rules || []).map((r: string, i: number) => (
                 <div key={i} className="flex items-start justify-between p-4 glass-card rounded-2xl border-none">
                   <p className="text-xs flex-1 leading-relaxed font-medium opacity-80">{r}</p>
-                  <Button size="icon" variant="ghost" onClick={() => setDoc(configRef, { rules: arrayRemove(r) }, { merge: true })} className="text-destructive h-9 w-9 rounded-xl ml-2"><Trash2 size={14} /></Button>
+                  <Button size="icon" variant="ghost" onClick={() => setDoc(configRef, { rules: arrayRemove(r), updatedAt: serverTimestamp() }, { merge: true })} className="text-destructive h-9 w-9 rounded-xl ml-2"><Trash2 size={14} /></Button>
                 </div>
               ))}
             </div>
@@ -216,7 +243,7 @@ export default function AdminSettingsPage() {
               {(localConfig.announcements || []).map((a: string, i: number) => (
                 <div key={i} className="flex items-start justify-between p-4 glass-card rounded-2xl border-none">
                   <p className="text-xs flex-1 leading-relaxed font-medium opacity-80">{a}</p>
-                  <Button size="icon" variant="ghost" onClick={() => setDoc(configRef, { announcements: arrayRemove(a) }, { merge: true })} className="text-destructive h-9 w-9 rounded-xl ml-2"><Trash2 size={14} /></Button>
+                  <Button size="icon" variant="ghost" onClick={() => setDoc(configRef, { announcements: arrayRemove(a), updatedAt: serverTimestamp() }, { merge: true })} className="text-destructive h-9 w-9 rounded-xl ml-2"><Trash2 size={14} /></Button>
                 </div>
               ))}
             </div>
