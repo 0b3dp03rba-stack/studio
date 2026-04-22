@@ -6,7 +6,6 @@ import { AlertCircle, CheckCircle2, Clock, TrendingUp, Bell, ShieldCheck } from 
 import { formatCurrency } from '@/lib/utils-app';
 import { useUser, useDoc, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, where, limit } from 'firebase/firestore';
-import { useEffect, useState } from 'react';
 
 export default function UserDashboard() {
   const { user } = useUser();
@@ -18,7 +17,6 @@ export default function UserDashboard() {
   const configRef = useMemoFirebase(() => doc(db, 'appConfig', 'singletonConfig'), [db]);
   const { data: config } = useDoc(configRef);
 
-  // Query sederhana untuk mendapatkan status batch tanpa filter berat
   const submissionsQuery = useMemoFirebase(() => {
     if (!user) return null;
     return query(

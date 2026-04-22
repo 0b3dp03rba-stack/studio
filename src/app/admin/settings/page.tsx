@@ -2,17 +2,17 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Trash2, Plus, Sparkles, Wand2, CreditCard, LayoutDashboard, FileText, Bell } from 'lucide-react';
+import { Trash2, Plus, Sparkles, CreditCard, LayoutDashboard, FileText, Bell } from 'lucide-react';
 import { generateContentForAdmin } from '@/ai/flows/admin-genai-content-creator-flow';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { doc, updateDoc, arrayUnion, arrayRemove, setDoc } from 'firebase/firestore';
 
 export default function AdminSettingsPage() {
   const db = useFirestore();
@@ -30,8 +30,21 @@ export default function AdminSettingsPage() {
   const [isAiLoading, setIsAiLoading] = useState(false);
 
   useEffect(() => {
-    if (config) setLocalConfig(config);
-  }, [config]);
+    if (config) {
+      setLocalConfig(config);
+    } else if (!isLoading) {
+      // Initialize if empty
+      setLocalConfig({
+        gmailRate: 6000,
+        minWithdraw: 10000,
+        adminFee: 500,
+        floatingBtnLink: '',
+        paymentMethods: [],
+        rules: [],
+        announcements: []
+      });
+    }
+  }, [config, isLoading]);
 
   if (isLoading || !localConfig) return <div className="p-20 text-center animate-pulse">Memuat Pengaturan...</div>;
 
@@ -40,12 +53,12 @@ export default function AdminSettingsPage() {
   };
 
   const saveGeneral = async () => {
-    await updateDoc(configRef, {
+    await setDoc(configRef, {
+      ...localConfig,
       gmailRate: Number(localConfig.gmailRate),
       minWithdraw: Number(localConfig.minWithdraw),
       adminFee: Number(localConfig.adminFee),
-      floatingBtnLink: localConfig.floatingBtnLink
-    });
+    }, { merge: true });
     toast({ title: "Berhasil", description: "Parameter sistem diperbarui." });
   };
 

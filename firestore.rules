@@ -2,25 +2,10 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Fungsi pembantu untuk cek status login
-    function signedIn() {
-      return request.auth != null;
-    }
-
-    // Fungsi pembantu untuk cek apakah user adalah Admin
-    function isAdmin() {
-      return signedIn() && 
-        get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == 'Admin';
-    }
-
-    // Aturan akses: User bisa akses data miliknya sendiri, Admin bisa akses semuanya.
-    // Kita buat sangat simpel agar tidak ada error rekursi atau izin.
+    // Aturan sangat simpel: Asal login (terautentikasi), bebas baca dan tulis.
+    // Keamanan level role (Admin vs User) ditangani di level aplikasi/UI.
     match /{document=**} {
-      allow read, write: if signedIn();
+      allow read, write: if request.auth != null;
     }
-    
-    // Spesifikasikan pembatasan list jika diperlukan di masa depan, 
-    // tapi untuk saat ini kita buat terbuka bagi pengguna yang terautentikasi.
   }
 }

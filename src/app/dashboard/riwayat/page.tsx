@@ -15,8 +15,8 @@ export default function RiwayatPage() {
   const db = useFirestore();
   const [selectedBatch, setSelectedBatch] = useState<any>(null);
 
-  // Kita hapus orderBy dari query Firestore untuk menghindari error Permission/Index.
-  // Pengurutan akan dilakukan secara manual di memori (useMemo).
+  // Query sederhana tanpa orderBy untuk menghindari error Index/Permission.
+  // Kita lakukan sorting di sisi klien (memory).
   const batchesQuery = useMemoFirebase(() => {
     if (!user) return null;
     return query(
@@ -107,8 +107,8 @@ export default function RiwayatPage() {
               </div>
             </div>
             <div className="p-6 bg-primary/5 border border-primary/10 rounded-2xl text-center space-y-2">
-              <p className="text-xs font-bold text-muted-foreground">Detail verifikasi tiap akun diproses secara manual oleh tim admin kami.</p>
-              <p className="text-[10px] font-black uppercase text-primary tracking-widest">Estimasi Selesai: 1-24 Jam</p>
+              <p className="text-xs font-bold text-muted-foreground">Verifikasi diproses manual oleh tim admin.</p>
+              <p className="text-[10px] font-black uppercase text-primary tracking-widest">Estimasi: 1-24 Jam</p>
             </div>
           </div>
         </DialogContent>
