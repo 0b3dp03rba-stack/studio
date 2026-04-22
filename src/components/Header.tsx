@@ -32,7 +32,7 @@ export default function Header() {
             {isSuperAdmin ? 'Obed Store' : 'GmailKu'}
           </span>
           <span className="text-[8px] font-bold uppercase tracking-[0.2em] text-primary/60 leading-none mt-0.5">
-            {isSuperAdmin ? 'MANAGEMENT PANEL' : 'Premium Network'}
+            {isSuperAdmin ? 'SUPER ADMIN PANEL' : 'Premium Network'}
           </span>
         </div>
       </div>

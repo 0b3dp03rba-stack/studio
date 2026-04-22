@@ -22,7 +22,7 @@ export default function AdminSetoranPage() {
 
   const profileRef = useMemoFirebase(() => user ? doc(db, 'userProfiles', user.uid) : null, [db, user]);
   const { data: profile } = useDoc(profileRef);
-  const isAdmin = profile?.role === 'Admin';
+  const isAdmin = profile?.role === 'Admin' || user?.email === 'creeppermoment@gmail.com';
 
   const batchesQuery = useMemoFirebase(() => {
     if (!isAdmin) return null;
@@ -169,8 +169,7 @@ export default function AdminSetoranPage() {
           <Accordion type="single" collapsible className="space-y-4">
             {sortedBatches.map((batch) => {
               const batchUser = users?.find(u => u.id === batch.userId);
-              const userEmail = batchUser?.email || '';
-              const userLabel = userEmail?.includes('@') ? userEmail.split('@')[0] : (userEmail || 'User');
+              const userLabel = batchUser?.email ? batchUser.email.split('@')[0] : 'User';
               
               return (
                 <AccordionItem 
