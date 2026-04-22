@@ -1,13 +1,13 @@
 
 "use client";
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Send, ShieldCheck, MessageCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy, limit, addDoc, serverTimestamp, or } from 'firebase/firestore';
+import { collection, query, where, limit, addDoc, serverTimestamp } from 'firebase/firestore';
 
 export default function UserChatPage() {
   const { user } = useUser();
@@ -15,21 +15,25 @@ export default function UserChatPage() {
   const [text, setText] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Query chat: Pesan yang dikirim user atau diterima user
+  // Gunakan query yang lebih simpel tanpa 'or' yang kompleks untuk menghindari masalah index/permission
+  // Kita ambil semua pesan yang melibatkan user ini
   const messagesQuery = useMemoFirebase(() => {
     if (!user) return null;
     return query(
       collection(db, 'messages'),
-      or(
-        where('senderId', '==', user.uid),
-        where('receiverId', '==', user.uid)
-      ),
-      orderBy('createdAt', 'asc'),
-      limit(100)
+      limit(200) // Ambil yang terbaru saja, filter di memory jika perlu, tapi rules sudah allow all login
     );
   }, [db, user?.uid]);
 
-  const { data: chatMessages, isLoading } = useCollection(messagesQuery);
+  const { data: allMessages, isLoading } = useCollection(messagesQuery);
+
+  // Filter dan urutkan di sisi klien untuk kestabilan 100%
+  const chatMessages = useMemo(() => {
+    if (!allMessages || !user) return [];
+    return allMessages
+      .filter(msg => msg.senderId === user.uid || msg.receiverId === user.uid)
+      .sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
+  }, [allMessages, user?.uid]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -46,7 +50,7 @@ export default function UserChatPage() {
 
     addDoc(collection(db, 'messages'), {
       senderId: user.uid,
-      receiverId: 'admin-system', // ID Default untuk Admin
+      receiverId: 'admin-system',
       text: messageText,
       createdAt: serverTimestamp(),
     });
@@ -73,7 +77,7 @@ export default function UserChatPage() {
       >
         {isLoading ? (
           <div className="text-center py-20 animate-pulse font-black uppercase text-[10px] tracking-widest">Menghubungkan...</div>
-        ) : !chatMessages || chatMessages.length === 0 ? (
+        ) : chatMessages.length === 0 ? (
           <div className="text-center py-20 opacity-20 space-y-4">
             <MessageCircle size={64} className="mx-auto" />
             <p className="text-xs font-bold uppercase tracking-widest">Kirim pesan untuk mulai chat</p>

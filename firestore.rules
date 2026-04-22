@@ -2,8 +2,8 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Aturan super simpel: Asal login, bebas akses.
-    // Keamanan role (siapa yang bisa buka menu Admin) ditangani di level aplikasi (NextJS Layout).
+    // Aturan paling simpel: Asal login, bebas akses ke semua dokumen.
+    // Tidak ada lagi pengecekan role yang berbelit di level database.
     match /{document=**} {
       allow read, write: if request.auth != null;
     }

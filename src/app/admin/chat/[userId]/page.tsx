@@ -1,9 +1,9 @@
 
 "use client";
 
-import { useState, useRef, useEffect, use } from 'react';
+import { useState, useRef, useEffect, use, useMemo } from 'react';
 import { useUser, useFirestore, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy, limit, addDoc, serverTimestamp, doc, or } from 'firebase/firestore';
+import { collection, query, limit, addDoc, serverTimestamp, doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Send, User, ChevronLeft } from 'lucide-react';
@@ -19,20 +19,20 @@ export default function AdminChatDetailPage({ params }: { params: Promise<{ user
 
   const { data: targetUser } = useDoc(useMemoFirebase(() => doc(db, 'userProfiles', userId), [db, userId]));
 
-  // Query pesan antara admin dan user spesifik
+  // Query simpel untuk menghindari masalah index/permission
   const messagesQuery = useMemoFirebase(() => 
-    query(
-      collection(db, 'messages'),
-      or(
-        where('senderId', '==', userId),
-        where('receiverId', '==', userId)
-      ),
-      orderBy('createdAt', 'asc'),
-      limit(200)
-    ), [db, userId]
+    query(collection(db, 'messages'), limit(300)), [db]
   );
   
-  const { data: chatMessages, isLoading } = useCollection(messagesQuery);
+  const { data: allMessages, isLoading } = useCollection(messagesQuery);
+
+  // Filter dan urutkan di memory
+  const chatMessages = useMemo(() => {
+    if (!allMessages || !userId) return [];
+    return allMessages
+      .filter(msg => msg.senderId === userId || msg.receiverId === userId)
+      .sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
+  }, [allMessages, userId]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -55,15 +55,15 @@ export default function AdminChatDetailPage({ params }: { params: Promise<{ user
     });
   };
 
-  if (!targetUser) return <div className="p-20 text-center animate-pulse uppercase font-black text-xs">Memuat Profil...</div>;
+  if (!targetUser) return <div className="p-20 text-center animate-pulse uppercase font-black text-xs text-primary/50">Memuat Profil...</div>;
 
   return (
     <div className="flex flex-col h-[calc(100vh-10rem)] animate-in">
-      <div className="mb-4 flex items-center gap-3 glass-card p-4 rounded-2xl border-white/10">
-        <Button variant="ghost" size="icon" asChild className="h-10 w-10 rounded-xl mr-1">
+      <div className="mb-4 flex items-center gap-3 glass-card p-4 rounded-2xl border-white/10 shadow-2xl">
+        <Button variant="ghost" size="icon" asChild className="h-10 w-10 rounded-xl mr-1 hover:bg-white/10">
           <Link href="/admin/chat"><ChevronLeft size={20} /></Link>
         </Button>
-        <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-primary shadow-inner">
+        <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-primary shadow-inner border border-white/5">
           <User size={20} />
         </div>
         <div>
@@ -77,8 +77,8 @@ export default function AdminChatDetailPage({ params }: { params: Promise<{ user
         className="flex-1 overflow-y-auto space-y-4 px-1 pb-4 scrollbar-hide"
       >
         {isLoading ? (
-          <div className="text-center py-20 font-black uppercase text-[10px]">Memuat Percakapan...</div>
-        ) : chatMessages?.map((msg) => {
+          <div className="text-center py-20 font-black uppercase text-[10px] text-muted-foreground/50">Memuat Percakapan...</div>
+        ) : chatMessages.map((msg) => {
           const isFromAdmin = msg.senderId === adminUser?.uid;
           return (
             <div key={msg.id} className={`flex ${isFromAdmin ? 'justify-end' : 'justify-start'}`}>
@@ -99,14 +99,14 @@ export default function AdminChatDetailPage({ params }: { params: Promise<{ user
         })}
       </div>
 
-      <form onSubmit={handleSendMessage} className="mt-4 flex gap-2 glass-card p-2 rounded-2xl">
+      <form onSubmit={handleSendMessage} className="mt-4 flex gap-2 glass-card p-2 rounded-2xl border-white/5">
         <Input 
           placeholder="Balas pesan user..." 
           value={text}
           onChange={(e) => setText(e.target.value)}
           className="bg-transparent border-none focus-visible:ring-0 text-sm font-medium"
         />
-        <Button size="icon" type="submit" className="neon-gradient text-background glow-primary rounded-xl shrink-0">
+        <Button size="icon" type="submit" className="neon-gradient text-background glow-primary rounded-xl shrink-0 active:scale-95 transition-transform">
           <Send size={18} />
         </Button>
       </form>

@@ -21,23 +21,20 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
   const { data: profile, isLoading: isProfileLoading } = useDoc(profileRef);
 
   useEffect(() => {
-    // Tunggu loading selesai
     if (isUserLoading || isProfileLoading) return;
 
-    // Jika tidak login, ke login
     if (!user) {
       router.push('/login');
       return;
     }
 
-    // Jika admin, lempar ke panel admin
     if (profile?.role === 'Admin') {
       router.push('/admin');
     }
   }, [user, isUserLoading, profile, isProfileLoading, router]);
 
-  // Tampilan loading yang lebih ringan agar tidak terlihat "stuck"
-  if (isUserLoading || isProfileLoading) {
+  // Tampilan loading yang lebih cerdas agar tidak stuck
+  if (isUserLoading || (user && isProfileLoading)) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="flex flex-col items-center gap-4">
@@ -48,7 +45,6 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
     );
   }
 
-  // Jangan render apapun jika user adalah Admin (karena akan diredirect)
   if (!user || profile?.role === 'Admin') return null;
 
   return (
