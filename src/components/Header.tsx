@@ -1,3 +1,4 @@
+
 "use client";
 
 import { LogOut, Mail, Store } from 'lucide-react';
@@ -28,7 +29,7 @@ export default function Header() {
         </div>
         <div className="flex flex-col">
           <span className="font-black text-xl tracking-tighter neon-text leading-none uppercase">
-            Obed Store
+            {isSuperAdmin ? 'Obed Store' : 'GmailKu'}
           </span>
           <span className="text-[8px] font-black uppercase tracking-[0.3em] text-primary leading-none mt-1 opacity-80">
             {isSuperAdmin ? 'SUPER ADMIN PANEL' : 'PREMIUM GMAIL NETWORK'}
