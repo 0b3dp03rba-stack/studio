@@ -1,120 +1,64 @@
 
 "use client";
 
-import { useState, useRef, useEffect, useMemo } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Send, ShieldCheck, MessageCircle } from 'lucide-react';
-import { format } from 'date-fns';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, limit, addDoc, serverTimestamp } from 'firebase/firestore';
+import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
+import { collection, query, where, limit } from 'firebase/firestore';
+import { Card, CardContent } from '@/components/ui/card';
+import { ShieldCheck, MessageCircle, ChevronRight, User } from 'lucide-react';
+import Link from 'next/link';
 
-export default function UserChatPage() {
-  const { user } = useUser();
+export default function UserChatListPage() {
   const db = useFirestore();
-  const [text, setText] = useState('');
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const { user: currentUser } = useUser();
 
-  // Gunakan query yang paling simpel tanpa filter kompleks untuk menghindari masalah perizinan/indeks
-  const messagesQuery = useMemoFirebase(() => {
-    if (!user) return null;
-    return query(
-      collection(db, 'messages'),
-      limit(300) 
-    );
-  }, [db, user?.uid]);
+  // Ambil daftar user dengan role Admin agar user bisa memilih admin mana yang diajak chat
+  const adminsQuery = useMemoFirebase(() => 
+    query(collection(db, 'userProfiles'), where('role', '==', 'Admin'), limit(50)), 
+    [db]
+  );
+  const { data: admins, isLoading } = useCollection(adminsQuery);
 
-  const { data: allMessages, isLoading } = useCollection(messagesQuery);
-
-  // Filter dan urutkan di sisi klien (memori) untuk kestabilan 100%
-  const chatMessages = useMemo(() => {
-    if (!allMessages || !user) return [];
-    return allMessages
-      .filter(msg => msg.senderId === user.uid || msg.receiverId === user.uid)
-      .sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
-  }, [allMessages, user?.uid]);
-
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [chatMessages]);
-
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!text.trim() || !user) return;
-
-    const messageText = text.trim();
-    setText('');
-
-    addDoc(collection(db, 'messages'), {
-      senderId: user.uid,
-      receiverId: 'admin-system',
-      text: messageText,
-      createdAt: serverTimestamp(),
-    });
-  };
+  if (isLoading) return <div className="p-20 text-center animate-pulse font-black uppercase text-[10px] tracking-widest text-primary">Mencari Admin Online...</div>;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-10rem)] animate-in">
-      <div className="mb-4 flex items-center gap-3 glass-card p-4 rounded-2xl border-primary/20 shadow-xl">
-        <div className="w-10 h-10 rounded-full neon-gradient flex items-center justify-center glow-primary">
-          <ShieldCheck size={20} className="text-background" />
-        </div>
-        <div>
-          <h1 className="text-sm font-black uppercase tracking-widest">Support Center</h1>
-          <div className="flex items-center gap-1.5">
-            <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-            <p className="text-[10px] font-bold text-muted-foreground uppercase">Live Support Online</p>
-          </div>
-        </div>
+    <div className="space-y-6 animate-in">
+      <div className="space-y-2">
+        <h1 className="text-3xl font-black tracking-tighter">Bantuan Live</h1>
+        <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-[0.2em] opacity-70">Pilih Admin untuk mulai konsultasi.</p>
       </div>
 
-      <div 
-        ref={scrollRef}
-        className="flex-1 overflow-y-auto space-y-4 px-1 pb-4 scrollbar-hide"
-      >
-        {isLoading ? (
-          <div className="text-center py-20 animate-pulse font-black uppercase text-[10px] tracking-widest">Menghubungkan...</div>
-        ) : chatMessages.length === 0 ? (
-          <div className="text-center py-20 opacity-20 space-y-4">
-            <MessageCircle size={64} className="mx-auto" />
-            <p className="text-xs font-bold uppercase tracking-widest">Kirim pesan untuk mulai chat</p>
+      <div className="space-y-3">
+        {!admins || admins.length === 0 ? (
+          <div className="text-center py-20 opacity-20">
+            <ShieldCheck size={64} className="mx-auto mb-4" />
+            <p className="text-lg font-black uppercase tracking-widest">Admin Sedang Offline</p>
           </div>
         ) : (
-          chatMessages.map((msg) => {
-            const isMe = msg.senderId === user?.uid;
-            return (
-              <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[85%] space-y-1`}>
-                  <div className={`p-3 rounded-2xl text-xs font-medium shadow-lg leading-relaxed ${
-                    isMe 
-                    ? 'neon-gradient text-background rounded-tr-none' 
-                    : 'glass-card text-foreground rounded-tl-none border-white/5'
-                  }`}>
-                    {msg.text}
+          admins.map((admin) => (
+            <Link key={admin.id} href={`/dashboard/chat/${admin.id}`}>
+              <Card className="glass-card border-none rounded-2xl hover:bg-white/10 transition-all group mb-3 shadow-xl">
+                <CardContent className="p-4 flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl neon-gradient flex items-center justify-center text-background glow-primary transition-all shadow-xl group-hover:scale-105">
+                    <User size={24} />
                   </div>
-                  <p className={`text-[8px] font-bold text-muted-foreground uppercase px-1 ${isMe ? 'text-right' : 'text-left'}`}>
-                    {msg.createdAt?.seconds ? format(new Date(msg.createdAt.seconds * 1000), 'HH:mm') : 'Baru saja'}
-                  </p>
-                </div>
-              </div>
-            );
-          })
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-black uppercase tracking-tight">Admin {admin.email.split('@')[0]}</p>
+                    <div className="flex items-center gap-1.5">
+                       <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                       <p className="text-[8px] text-muted-foreground uppercase font-black tracking-widest">Tersedia untuk chat</p>
+                    </div>
+                  </div>
+                  <ChevronRight size={18} className="text-muted-foreground group-hover:text-primary transition-colors" />
+                </CardContent>
+              </Card>
+            </Link>
+          ))
         )}
       </div>
-
-      <form onSubmit={handleSendMessage} className="mt-4 flex gap-2 glass-card p-2 rounded-2xl">
-        <Input 
-          placeholder="Tulis pesan ke admin..." 
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          className="bg-transparent border-none focus-visible:ring-0 text-sm font-medium"
-        />
-        <Button size="icon" type="submit" className="neon-gradient text-background glow-primary rounded-xl shrink-0">
-          <Send size={18} />
-        </Button>
-      </form>
+      
+      <div className="p-6 bg-primary/5 rounded-3xl border border-primary/10 mt-10">
+         <p className="text-[9px] font-black uppercase text-center text-muted-foreground leading-relaxed">Peringatan: Admin tidak akan pernah meminta kata sandi akun Anda. Harap berhati-hati saat bertukar informasi sensitif.</p>
+      </div>
     </div>
   );
 }

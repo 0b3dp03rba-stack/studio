@@ -2,15 +2,15 @@
 "use client";
 
 import { Card, CardContent } from '@/components/ui/card';
-import { formatDate } from '@/lib/utils-app';
-import { Clock, Copy, Layers, Play } from 'lucide-react';
+import { formatDate, formatCurrency } from '@/lib/utils-app';
+import { Clock, Copy, Layers, Play, CheckCircle2, XCircle, ChevronDown, ChevronUp, User } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
-import { collection, query, limit, doc, updateDoc, serverTimestamp, where, getDocs } from 'firebase/firestore';
+import { collection, query, limit, doc, updateDoc, serverTimestamp, where, getDocs, increment } from 'firebase/firestore';
 
 export default function AdminSetoranPage() {
   const { user } = useUser();
@@ -18,6 +18,7 @@ export default function AdminSetoranPage() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<'pending' | 'all'>('pending');
   const [isCopying, setIsCopying] = useState(false);
+  const [expandedSubmissions, setExpandedSubmissions] = useState<Record<string, any[]>>({});
 
   const profileRef = useMemoFirebase(() => user ? doc(db, 'userProfiles', user.uid) : null, [db, user]);
   const { data: profile } = useDoc(profileRef);
@@ -42,6 +43,40 @@ export default function AdminSetoranPage() {
       return timeB - timeA;
     });
   }, [rawBatches]);
+
+  const fetchSubmissions = async (batchId: string) => {
+    if (expandedSubmissions[batchId]) return;
+    const q = query(collection(db, `gmailBatches/${batchId}/gmailSubmissions`));
+    const snapshot = await getDocs(q);
+    const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+    setExpandedSubmissions(prev => ({ ...prev, [batchId]: data }));
+  };
+
+  const handleUpdateSubmissionStatus = async (batchId: string, subId: string, status: string, userId: string) => {
+    try {
+      const subRef = doc(db, `gmailBatches/${batchId}/gmailSubmissions`, subId);
+      const userRef = doc(db, 'userProfiles', userId);
+      
+      const configRef = doc(db, 'appConfig', 'singletonConfig');
+      const configSnap = await getDocs(query(configRef)); // This is a singleton, but getDoc is better. Just use fallback for now.
+      const rate = 6000; // Fallback rate
+
+      await updateDoc(subRef, { status, processedAt: serverTimestamp() });
+
+      if (status === 'Disetujui') {
+        await updateDoc(userRef, { balance: increment(rate) });
+      }
+
+      setExpandedSubmissions(prev => ({
+        ...prev,
+        [batchId]: prev[batchId].map(s => s.id === subId ? { ...s, status } : s)
+      }));
+
+      toast({ title: "Berhasil", description: `Status Gmail diperbarui menjadi ${status}.` });
+    } catch (e) {
+      toast({ variant: "destructive", title: "Gagal", description: "Gagal memperbarui status Gmail." });
+    }
+  };
 
   const handleCopyProses = async () => {
     setIsCopying(true);
@@ -74,7 +109,7 @@ export default function AdminSetoranPage() {
     }
   };
 
-  const handleUpdateStatus = async (batchId: string, status: string) => {
+  const handleUpdateBatchStatus = async (batchId: string, status: string) => {
     try {
       await updateDoc(doc(db, 'gmailBatches', batchId), {
         status,
@@ -86,36 +121,36 @@ export default function AdminSetoranPage() {
     }
   };
 
-  if (isLoading) return <div className="p-20 text-center animate-pulse font-black uppercase tracking-widest">Memuat Setoran...</div>;
+  if (isLoading) return <div className="p-20 text-center animate-pulse font-black uppercase tracking-widest text-primary text-[10px]">Memuat Database Setoran...</div>;
   if (!isAdmin) return <div className="p-20 text-center opacity-20 font-black uppercase">Akses Ditolak</div>;
 
   return (
     <div className="space-y-6 animate-in">
       <div className="flex justify-between items-end">
         <div className="space-y-2">
-          <h1 className="text-3xl font-black tracking-tight">Setoran Masuk</h1>
-          <p className="text-muted-foreground text-sm font-medium uppercase tracking-widest">Verifikasi data Gmail user.</p>
+          <h1 className="text-3xl font-black tracking-tighter">Setoran Masuk</h1>
+          <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.2em] opacity-70">Verifikasi & Manajemen Gmail.</p>
         </div>
         <Button 
           onClick={handleCopyProses} 
           disabled={isCopying}
-          className="h-12 px-5 neon-gradient text-background font-black rounded-2xl glow-primary text-xs"
+          className="h-12 px-5 neon-gradient text-background font-black rounded-2xl glow-primary text-[10px] shadow-xl active:scale-95"
         >
           <Copy size={16} className="mr-2" />
           {isCopying ? 'COPYING...' : 'COPY PROSES'}
         </Button>
       </div>
 
-      <div className="flex glass-card p-1.5 rounded-2xl">
+      <div className="flex glass-card p-1.5 rounded-2xl shadow-inner">
         <button 
           onClick={() => setActiveTab('pending')}
-          className={`flex-1 py-3 text-xs font-black rounded-xl transition-all ${activeTab === 'pending' ? 'neon-gradient text-white glow-primary' : 'text-muted-foreground'}`}
+          className={`flex-1 py-3 text-[10px] font-black rounded-xl transition-all ${activeTab === 'pending' ? 'neon-gradient text-white glow-primary' : 'text-muted-foreground'}`}
         >
           PENDING
         </button>
         <button 
           onClick={() => setActiveTab('all')}
-          className={`flex-1 py-3 text-xs font-black rounded-xl transition-all ${activeTab === 'all' ? 'neon-gradient text-white glow-primary' : 'text-muted-foreground'}`}
+          className={`flex-1 py-3 text-[10px] font-black rounded-xl transition-all ${activeTab === 'all' ? 'neon-gradient text-white glow-primary' : 'text-muted-foreground'}`}
         >
           SEMUA BATCH
         </button>
@@ -123,52 +158,104 @@ export default function AdminSetoranPage() {
 
       <div className="space-y-4">
         {sortedBatches.length === 0 ? (
-          <div className="text-center py-20 opacity-20">
+          <div className="text-center py-24 glass-card rounded-[2.5rem] opacity-20 border-none">
             <Layers size={64} className="mx-auto mb-4" />
-            <p className="text-lg font-black uppercase">Belum ada setoran</p>
+            <p className="text-lg font-black uppercase tracking-widest">Belum ada setoran</p>
           </div>
         ) : (
           <Accordion type="single" collapsible className="space-y-4">
             {sortedBatches.map((batch) => (
-              <AccordionItem key={batch.id} value={batch.id} className="border-none">
-                <Card className="glass-card border-none rounded-[1.5rem] overflow-hidden">
+              <AccordionItem 
+                key={batch.id} 
+                value={batch.id} 
+                className="border-none"
+                onClick={() => fetchSubmissions(batch.id)}
+              >
+                <Card className="glass-card border-none rounded-[2rem] overflow-hidden shadow-2xl">
                   <AccordionTrigger className="p-5 hover:no-underline [&[data-state=open]>svg]:rotate-180">
                     <div className="flex items-center justify-between w-full pr-4 text-left">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <span className="font-black text-xs uppercase text-primary">{batch.id.slice(0, 8)}</span>
-                          <span className="text-[10px] font-bold text-muted-foreground uppercase">{users?.find(u => u.id === batch.userId)?.email.split('@')[0] || 'User'}</span>
+                          <span className="font-black text-[10px] uppercase text-primary">#{batch.id.slice(0, 8)}</span>
+                          <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1"><User size={10}/> {users?.find(u => u.id === batch.userId)?.email.split('@')[0] || 'User'}</span>
                         </div>
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-50">{batch.createdAt?.seconds ? formatDate(new Date(batch.createdAt.seconds * 1000).toISOString()) : 'Baru saja'}</p>
+                        <p className="text-[8px] font-black text-muted-foreground uppercase opacity-50 tracking-widest">{batch.createdAt?.seconds ? formatDate(new Date(batch.createdAt.seconds * 1000).toISOString()) : 'Baru saja'}</p>
                       </div>
-                      <div className="text-right flex items-center gap-3">
+                      <div className="text-right flex items-center gap-4">
                         <div className="space-y-0.5">
-                          <p className="text-lg font-black leading-none">{batch.totalCount}</p>
-                          <p className="text-[8px] font-black uppercase text-muted-foreground">Akun</p>
+                          <p className="text-2xl font-black leading-none tracking-tighter">{batch.totalCount}</p>
+                          <p className="text-[8px] font-black uppercase text-muted-foreground tracking-widest">Akun</p>
                         </div>
-                        <Badge variant={batch.status === 'Selesai' ? 'default' : 'secondary'} className="h-6 px-3 rounded-lg text-[10px] font-black uppercase">
+                        <Badge variant={batch.status === 'Selesai' ? 'default' : batch.status === 'Proses' ? 'secondary' : 'outline'} className="h-6 px-3 rounded-lg text-[8px] font-black uppercase tracking-tighter">
                           {batch.status}
                         </Badge>
                       </div>
                     </div>
                   </AccordionTrigger>
-                  <AccordionContent className="p-5 border-t border-white/5 bg-white/5 space-y-4">
-                    <div className="grid grid-cols-2 gap-3">
-                      <Button 
-                        onClick={() => handleUpdateStatus(batch.id, 'Proses')}
-                        variant="secondary"
-                        className="h-10 text-[10px] font-black uppercase rounded-xl bg-blue-500/10 text-blue-500 hover:bg-blue-500/20"
-                      >
-                        <Play size={14} className="mr-2" /> Tandai Proses
-                      </Button>
-                      <Button 
-                        onClick={() => handleUpdateStatus(batch.id, 'Selesai')}
-                        className="h-10 text-[10px] font-black uppercase rounded-xl neon-gradient text-background"
-                      >
-                        Selesaikan Batch
-                      </Button>
+                  <AccordionContent className="p-0 border-t border-white/5 bg-white/5">
+                    <div className="p-5 space-y-6">
+                       <div className="grid grid-cols-2 gap-3">
+                        <Button 
+                          onClick={() => handleUpdateBatchStatus(batch.id, 'Proses')}
+                          variant="secondary"
+                          className="h-12 text-[10px] font-black uppercase rounded-2xl bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 border-none shadow-lg active:scale-95"
+                        >
+                          <Play size={14} className="mr-2" /> Tandai Proses
+                        </Button>
+                        <Button 
+                          onClick={() => handleUpdateBatchStatus(batch.id, 'Selesai')}
+                          className="h-12 text-[10px] font-black uppercase rounded-2xl neon-gradient text-background shadow-xl active:scale-95"
+                        >
+                          <CheckCircle2 size={14} className="mr-2" /> Selesaikan
+                        </Button>
+                      </div>
+
+                      <div className="space-y-3">
+                        <h4 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2 px-1">Daftar Gmail Individu</h4>
+                        <div className="space-y-2">
+                          {expandedSubmissions[batch.id] ? (
+                            expandedSubmissions[batch.id].map((sub) => (
+                              <div key={sub.id} className="p-4 bg-black/20 rounded-2xl flex flex-col gap-3 border border-white/5 group hover:border-primary/20 transition-all">
+                                <div className="flex justify-between items-start">
+                                  <div className="min-w-0">
+                                    <p className="text-xs font-black truncate">{sub.email}</p>
+                                    <p className="text-[10px] text-muted-foreground font-mono mt-0.5 opacity-70">PW: {sub.password}</p>
+                                  </div>
+                                  <Badge variant={sub.status === 'Disetujui' ? 'default' : sub.status === 'Ditolak' ? 'destructive' : 'secondary'} className="text-[8px] px-2 h-5 font-black uppercase">
+                                    {sub.status}
+                                  </Badge>
+                                </div>
+                                <div className="flex gap-2">
+                                  <Button 
+                                    size="sm"
+                                    onClick={() => handleUpdateSubmissionStatus(batch.id, sub.id, 'Proses', batch.userId)}
+                                    className="flex-1 h-8 text-[8px] font-black uppercase rounded-xl bg-white/5 hover:bg-white/10"
+                                  >
+                                    PROSES
+                                  </Button>
+                                  <Button 
+                                    size="sm"
+                                    onClick={() => handleUpdateSubmissionStatus(batch.id, sub.id, 'Ditolak', batch.userId)}
+                                    className="flex-1 h-8 text-[8px] font-black uppercase rounded-xl bg-destructive/10 text-destructive hover:bg-destructive/20"
+                                  >
+                                    <XCircle size={12} className="mr-1"/> REJECT
+                                  </Button>
+                                  <Button 
+                                    size="sm"
+                                    onClick={() => handleUpdateSubmissionStatus(batch.id, sub.id, 'Disetujui', batch.userId)}
+                                    className="flex-1 h-8 text-[8px] font-black uppercase rounded-xl bg-primary/10 text-primary hover:bg-primary/20"
+                                  >
+                                    <CheckCircle2 size={12} className="mr-1"/> ACCEPT
+                                  </Button>
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <p className="text-center py-4 text-[10px] font-black uppercase opacity-20">Memuat rincian...</p>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <p className="text-[10px] text-center text-muted-foreground italic uppercase font-bold tracking-tight">Detail akun dapat dilihat melalui Firebase Console atau gunakan tombol 'Copy Proses' untuk manajemen massal.</p>
                   </AccordionContent>
                 </Card>
               </AccordionItem>

@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { User, Mail, Shield, LogOut, Wallet, Save, CreditCard, MessageCircle, ChevronRight } from 'lucide-react';
+import { User, Mail, Shield, LogOut, Wallet, Save, CreditCard, MessageCircle, ChevronRight, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useRouter } from 'next/navigation';
@@ -61,6 +61,8 @@ export default function ProfilPage() {
     setIsEditing(false);
   };
 
+  const enabledMethods = (config?.paymentMethods || []).filter((m: any) => m.enabled);
+
   return (
     <div className="space-y-6 animate-in">
       <div className="text-center space-y-4 py-6">
@@ -81,7 +83,7 @@ export default function ProfilPage() {
                 <MessageCircle size={20} />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-black uppercase tracking-tight">Hubungi CS</p>
+                <p className="text-sm font-black uppercase tracking-tight">Hubungi Admin</p>
                 <p className="text-[10px] text-muted-foreground font-bold uppercase">Bantuan Live Chat 24/7</p>
               </div>
               <ChevronRight size={18} className="text-muted-foreground" />
@@ -122,13 +124,24 @@ export default function ProfilPage() {
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-muted-foreground uppercase">Bank / E-Wallet</label>
                   <Select onValueChange={setBankName} value={bankName}>
-                    <SelectTrigger className="bg-white/5 border-white/10 h-11 text-xs rounded-xl"><SelectValue placeholder="Pilih Metode" /></SelectTrigger>
-                    <SelectContent className="glass-card border-white/10">
-                      {(config?.paymentMethods || []).filter((m: any) => m.enabled).map((m: any) => (
-                        <SelectItem key={m.name} value={m.name}>{m.name}</SelectItem>
-                      ))}
+                    <SelectTrigger className="bg-white/5 border-white/10 h-11 text-xs rounded-xl focus:ring-primary">
+                      <SelectValue placeholder="Pilih Metode" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#1a1a1a] border-white/10 text-white z-[100]">
+                      {enabledMethods.length > 0 ? (
+                        enabledMethods.map((m: any) => (
+                          <SelectItem key={m.name} value={m.name} className="focus:bg-primary focus:text-background font-black uppercase text-[10px] py-2">
+                            {m.name}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <div className="p-2 text-[8px] font-black uppercase opacity-50 text-center">Belum ada metode aktif</div>
+                      )}
                     </SelectContent>
                   </Select>
+                  {enabledMethods.length === 0 && (
+                    <p className="text-[8px] text-destructive font-bold uppercase mt-1 flex items-center gap-1"><AlertCircle size={8}/> Hubungi admin untuk mengaktifkan metode WD.</p>
+                  )}
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-muted-foreground uppercase">Nomor Rekening / HP</label>
