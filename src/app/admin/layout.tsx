@@ -29,9 +29,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
   }, [user, isUserLoading, profile, isProfileLoading, router]);
 
-  // JANGAN RENDERING CHILDREN (PAGE) SEBELUM ROLE TERKONFIRMASI
-  // Ini mencegah query ilegal dijalankan oleh user yang bukan admin
-  if (isUserLoading || isProfileLoading || !user || !profile || profile.role !== 'Admin') {
+  if (isUserLoading || isProfileLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background gap-4">
         <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
@@ -39,6 +37,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </div>
     );
   }
+
+  if (!user || !profile || profile.role !== 'Admin') return null;
 
   return (
     <div className="flex flex-col min-h-screen bg-background">

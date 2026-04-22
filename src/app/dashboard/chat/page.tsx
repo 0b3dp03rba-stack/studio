@@ -15,7 +15,8 @@ export default function UserChatPage() {
   const [text, setText] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Query pesan yang melibatkan user ini secara eksplisit
+  // Menggunakan query yang lebih sederhana untuk menghindari perlunya indeks komposit manual di awal
+  // Kita ambil semua pesan yang melibatkan user ini
   const messagesQuery = useMemoFirebase(() => {
     if (!user) return null;
     return query(
@@ -25,7 +26,7 @@ export default function UserChatPage() {
         where('receiverId', '==', user.uid)
       ),
       orderBy('createdAt', 'asc'),
-      limit(200)
+      limit(100)
     );
   }, [db, user?.uid]);
 
@@ -92,7 +93,7 @@ export default function UserChatPage() {
                     {msg.text}
                   </div>
                   <p className={`text-[8px] font-bold text-muted-foreground uppercase px-1 ${isMe ? 'text-right' : 'text-left'}`}>
-                    {msg.createdAt?.seconds ? format(new Date(msg.createdAt.seconds * 1000), 'HH:mm') : 'Baru saja'}
+                    {msg.createdAt?.seconds ? format(new Date(msg.createdAt.seconds * 1000), 'HH:mm') : '...'}
                   </p>
                 </div>
               </div>

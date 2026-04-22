@@ -2,9 +2,8 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // ATURAN PALING SEDERHANA: Asal login (authenticated), boleh baca dan tulis.
-    // Tidak ada verifikasi tambahan yang menghambat.
     match /{document=**} {
+      // Aturan paling simpel: asal login, bebas baca tulis.
       allow read, write: if request.auth != null;
     }
   }
