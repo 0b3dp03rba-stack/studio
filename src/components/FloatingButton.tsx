@@ -18,9 +18,9 @@ export default function FloatingButton() {
       href={config?.floatingBtnLink || "#"} 
       target="_blank" 
       rel="noopener noreferrer" 
-      className="floating-btn glow-primary"
+      className="floating-btn shadow-2xl active:scale-95 transition-transform duration-300"
     >
-      <Plane className="rotate-45" size={24} />
+      <Plane className="rotate-45 text-black" size={28} strokeWidth={3} />
     </a>
   );
 }
