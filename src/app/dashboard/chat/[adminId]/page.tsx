@@ -3,7 +3,7 @@
 
 import { useState, useRef, useEffect, use, useMemo } from 'react';
 import { useUser, useFirestore, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, limit, addDoc, serverTimestamp, doc } from 'firebase/firestore';
+import { collection, query, limit, addDoc, serverTimestamp, doc, writeBatch } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Send, User, ChevronLeft, ShieldCheck } from 'lucide-react';
@@ -32,6 +32,23 @@ export default function UserChatDetailPage({ params }: { params: Promise<{ admin
       .sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
   }, [allMessages, user, adminId]);
 
+  // Efek untuk menandai pesan sebagai terbaca saat user membuka chat
+  useEffect(() => {
+    if (!chatMessages.length || !user) return;
+
+    const unreadMessages = chatMessages.filter(
+      msg => msg.receiverId === user.uid && msg.read === false
+    );
+
+    if (unreadMessages.length > 0) {
+      const batch = writeBatch(db);
+      unreadMessages.forEach(msg => {
+        batch.update(doc(db, 'messages', msg.id), { read: true });
+      });
+      batch.commit().catch(e => console.error("Gagal menandai pesan terbaca:", e));
+    }
+  }, [chatMessages, user, db]);
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -49,11 +66,14 @@ export default function UserChatDetailPage({ params }: { params: Promise<{ admin
       senderId: user.uid,
       receiverId: adminId,
       text: messageText,
+      read: false,
       createdAt: serverTimestamp(),
     });
   };
 
   if (!targetAdmin) return <div className="p-20 text-center animate-pulse uppercase font-black text-[10px] text-primary">Menghubungkan ke Admin...</div>;
+
+  const adminName = targetAdmin.email ? targetAdmin.email.split('@')[0] : 'Admin';
 
   return (
     <div className="flex flex-col h-[calc(100vh-10rem)] animate-in">
@@ -65,7 +85,7 @@ export default function UserChatDetailPage({ params }: { params: Promise<{ admin
           <ShieldCheck size={20} />
         </div>
         <div>
-          <h1 className="text-sm font-black uppercase tracking-widest">Admin {targetAdmin.email.split('@')[0]}</h1>
+          <h1 className="text-sm font-black uppercase tracking-widest">Admin {adminName}</h1>
           <div className="flex items-center gap-1.5">
             <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
             <p className="text-[10px] font-bold text-primary uppercase">Online Support</p>

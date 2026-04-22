@@ -2,10 +2,11 @@
 "use client";
 
 import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
-import { collection, query, limit } from 'firebase/firestore';
+import { collection, query, limit, where } from 'firebase/firestore';
 import { Card, CardContent } from '@/components/ui/card';
 import { User, MessageCircle, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
+import { useMemo } from 'react';
 
 export default function AdminChatListPage() {
   const db = useFirestore();
@@ -16,12 +17,25 @@ export default function AdminChatListPage() {
     query(collection(db, 'userProfiles'), limit(200)), 
     [db]
   );
-  const { data: allUsers, isLoading } = useCollection(usersQuery);
+  const { data: allUsers, isLoading: isUsersLoading } = useCollection(usersQuery);
 
-  // Filter agar admin tidak memunculkan dirinya sendiri di daftar chat
-  const chatList = (allUsers || []).filter(u => u.id !== adminUser?.uid);
+  // Ambil semua pesan yang belum dibaca untuk admin ini
+  const unreadQuery = useMemoFirebase(() => 
+    adminUser ? query(
+      collection(db, 'messages'), 
+      where('receiverId', '==', adminUser.uid),
+      where('read', '==', false)
+    ) : null,
+    [db, adminUser]
+  );
+  const { data: unreadMessages } = useCollection(unreadQuery);
 
-  if (isLoading) return <div className="p-20 text-center animate-pulse font-black uppercase text-[10px] tracking-widest text-primary">Memuat Daftar Chat...</div>;
+  const chatList = useMemo(() => {
+    if (!allUsers || !adminUser) return [];
+    return allUsers.filter(u => u.id !== adminUser.uid);
+  }, [allUsers, adminUser]);
+
+  if (isUsersLoading) return <div className="p-20 text-center animate-pulse font-black uppercase text-[10px] tracking-widest text-primary">Memuat Daftar Chat...</div>;
 
   return (
     <div className="space-y-6 animate-in">
@@ -37,25 +51,37 @@ export default function AdminChatListPage() {
             <p className="text-lg font-black uppercase tracking-widest">Belum ada user aktif</p>
           </div>
         ) : (
-          chatList.map((user) => (
-            <Link key={user.id} href={`/admin/chat/${user.id}`}>
-              <Card className="glass-card border-none rounded-2xl hover:bg-white/10 transition-all group mb-3 shadow-xl">
-                <CardContent className="p-4 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-muted-foreground group-hover:neon-gradient group-hover:text-background transition-all shadow-xl">
-                    <User size={24} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-black truncate uppercase tracking-tight">{user.email?.split('@')[0] || 'User'}</p>
-                    <div className="flex items-center gap-1.5">
-                       <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                       <p className="text-[8px] text-muted-foreground uppercase font-black tracking-widest">Siap membalas...</p>
+          chatList.map((user) => {
+            const unreadCount = unreadMessages?.filter(m => m.senderId === user.id).length || 0;
+            const userLabel = user.email ? user.email.split('@')[0] : 'User';
+
+            return (
+              <Link key={user.id} href={`/admin/chat/${user.id}`}>
+                <Card className={`glass-card border-none rounded-2xl hover:bg-white/10 transition-all group mb-3 shadow-xl ${unreadCount > 0 ? 'bg-primary/5 border-l-4 border-l-primary' : ''}`}>
+                  <CardContent className="p-4 flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-muted-foreground group-hover:neon-gradient group-hover:text-background transition-all shadow-xl">
+                      <User size={24} />
                     </div>
-                  </div>
-                  <ChevronRight size={18} className="text-muted-foreground group-hover:text-primary transition-colors" />
-                </CardContent>
-              </Card>
-            </Link>
-          ))
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-black truncate uppercase tracking-tight">{userLabel}</p>
+                      <div className="flex items-center gap-1.5">
+                         <div className={`w-1.5 h-1.5 rounded-full ${unreadCount > 0 ? 'bg-primary animate-pulse' : 'bg-muted'}`} />
+                         <p className="text-[8px] text-muted-foreground uppercase font-black tracking-widest">
+                           {unreadCount > 0 ? `${unreadCount} PESAN BARU` : 'SIAP MEMBALAS...'}
+                         </p>
+                      </div>
+                    </div>
+                    {unreadCount > 0 && (
+                      <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center text-[10px] font-black text-background">
+                        {unreadCount}
+                      </div>
+                    )}
+                    <ChevronRight size={18} className="text-muted-foreground group-hover:text-primary transition-colors" />
+                  </CardContent>
+                </Card>
+              </Link>
+            );
+          })
         )}
       </div>
     </div>
