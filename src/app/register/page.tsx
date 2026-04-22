@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Mail } from 'lucide-react';
+import { Mail, Lock, UserPlus } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth, useFirestore } from '@/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
@@ -37,18 +37,21 @@ export default function RegisterPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const firebaseUser = userCredential.user;
 
+      // Logic: Specific email becomes Admin automatically
+      const role = email.toLowerCase() === 'creeppermoment@gmail.com' ? 'Admin' : 'User';
+
       // Create User Profile in Firestore using UID
       await setDoc(doc(db, 'userProfiles', firebaseUser.uid), {
         id: firebaseUser.uid,
         email: firebaseUser.email,
-        role: 'User',
+        role: role,
         balance: 0,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
 
-      toast({ title: "Berhasil", description: "Akun Anda telah dibuat. Selamat datang!" });
-      router.push('/dashboard');
+      toast({ title: "Berhasil", description: `Akun ${role} telah dibuat. Selamat datang!` });
+      router.push(role === 'Admin' ? '/admin' : '/dashboard');
     } catch (error: any) {
       toast({ 
         variant: "destructive", 
@@ -61,52 +64,75 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-primary/10 via-background to-background">
-      <Card className="w-full max-w-md glass-card border-white/10">
-        <CardHeader className="text-center space-y-4">
-          <div className="mx-auto w-16 h-16 rounded-2xl neon-gradient flex items-center justify-center glow-primary">
-            <Mail size={32} className="text-background" />
+    <div className="min-h-screen flex items-center justify-center p-4 bg-[#131711] bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-primary/10 via-background to-background">
+      <Card className="w-full max-w-md glass-card border-white/5 shadow-2xl relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-1 neon-gradient"></div>
+        <CardHeader className="text-center space-y-4 pt-10">
+          <div className="mx-auto w-20 h-20 rounded-[2rem] neon-gradient flex items-center justify-center glow-primary border-4 border-background/20 group hover:rotate-6 transition-transform">
+            <UserPlus size={40} className="text-background" />
           </div>
-          <CardTitle className="text-3xl font-bold tracking-tight neon-text">GmailKu</CardTitle>
-          <CardDescription>Daftar akun baru</CardDescription>
+          <div className="space-y-1">
+            <CardTitle className="text-4xl font-black tracking-tighter text-white">GmailKu</CardTitle>
+            <CardDescription className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Join our network</CardDescription>
+          </div>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleRegister} className="space-y-4">
-            <Input 
-              type="email" 
-              placeholder="Email" 
-              value={email} 
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="bg-white/5 border-white/10 h-12"
-            />
-            <Input 
-              type="password" 
-              placeholder="Password (Min 6 Karakter)" 
-              value={password} 
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={6}
-              className="bg-white/5 border-white/10 h-12"
-            />
-            <Input 
-              type="password" 
-              placeholder="Konfirmasi Password" 
-              value={confirmPassword} 
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-              className="bg-white/5 border-white/10 h-12"
-            />
+        <CardContent className="px-8 pb-10">
+          <form onSubmit={handleRegister} className="space-y-5">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Email Address</label>
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+                <Input 
+                  type="email" 
+                  placeholder="name@example.com" 
+                  value={email} 
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="bg-white/5 border-white/10 h-14 pl-12 rounded-2xl focus-visible:ring-primary/30"
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Password</label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+                <Input 
+                  type="password" 
+                  placeholder="Min 6 characters" 
+                  value={password} 
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  className="bg-white/5 border-white/10 h-14 pl-12 rounded-2xl focus-visible:ring-primary/30"
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Confirm Password</label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+                <Input 
+                  type="password" 
+                  placeholder="Repeat password" 
+                  value={confirmPassword} 
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  className="bg-white/5 border-white/10 h-14 pl-12 rounded-2xl focus-visible:ring-primary/30"
+                />
+              </div>
+            </div>
             <Button 
               type="submit" 
               disabled={isLoading}
-              className="w-full h-12 neon-gradient text-background font-bold text-lg glow-primary mt-4"
+              className="w-full h-14 neon-gradient text-background font-black text-lg glow-primary mt-4 rounded-2xl group active:scale-95 transition-all"
             >
-              {isLoading ? "Mendaftar..." : "Daftar"}
+              {isLoading ? "MENDAFTAR..." : "DAFTAR SEKARANG"}
             </Button>
-            <p className="text-center text-sm text-muted-foreground mt-4">
-              Sudah punya akun? <Link href="/login" className="text-primary hover:underline">Login disini</Link>
-            </p>
+            <div className="text-center pt-4">
+              <p className="text-xs text-muted-foreground font-medium">
+                Sudah punya akun? <Link href="/login" className="text-primary font-black hover:underline uppercase tracking-tight">Masuk Disini</Link>
+              </p>
+            </div>
           </form>
         </CardContent>
       </Card>

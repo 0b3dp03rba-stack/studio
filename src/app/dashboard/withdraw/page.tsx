@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '@/lib/utils-app';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Wallet, Info } from 'lucide-react';
+import { Wallet, Info, ArrowUpRight, ShieldCheck } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -34,10 +34,13 @@ export default function WithdrawPage() {
   const totalDeduction = amount + adminFee;
   const presets = [10000, 20000, 50000, 100000, 200000, 500000];
 
+  // Filter payment methods that are enabled by Admin
+  const enabledMethods = (config?.paymentMethods || []).filter((m: any) => m.enabled);
+
   const handleWithdraw = async () => {
     if (!user || !profile) return;
     if (!method) {
-      toast({ variant: "destructive", title: "Pilih Metode", description: "Silakan pilih metode pembayaran." });
+      toast({ variant: "destructive", title: "Pilih Metode", description: "Silakan pilih metode penarikan." });
       return;
     }
     if (amount < minWithdraw) {
@@ -45,11 +48,16 @@ export default function WithdrawPage() {
       return;
     }
     if (amount % 1000 !== 0) {
-      toast({ variant: "destructive", title: "Gagal", description: "Jumlah withdraw harus kelipatan 1000." });
+      toast({ variant: "destructive", title: "Gagal", description: "Jumlah harus kelipatan 1000." });
       return;
     }
     if ((profile.balance || 0) < totalDeduction) {
       toast({ variant: "destructive", title: "Gagal", description: "Saldo Anda tidak mencukupi (termasuk biaya admin)." });
+      return;
+    }
+    if (!profile.bankAccount || !profile.bankName) {
+      toast({ variant: "destructive", title: "Rekening Kosong", description: "Lengkapi data rekening di menu Profil terlebih dahulu." });
+      router.push('/dashboard/profil');
       return;
     }
 
@@ -65,8 +73,8 @@ export default function WithdrawPage() {
         createdAt: serverTimestamp(),
       });
 
-      toast({ title: "Berhasil", description: "Permintaan penarikan sedang diproses oleh admin." });
-      router.push('/dashboard');
+      toast({ title: "Berhasil", description: "Permintaan WD Anda sedang dikirim ke Admin." });
+      router.push('/dashboard/riwayat');
     } catch (error: any) {
       toast({ variant: "destructive", title: "Gagal", description: error.message });
     } finally {
@@ -77,90 +85,103 @@ export default function WithdrawPage() {
   return (
     <div className="space-y-6 animate-in">
       <div className="space-y-2">
-        <h1 className="text-3xl font-black tracking-tight">Tarik Saldo</h1>
-        <p className="text-muted-foreground text-sm font-medium">Pilih jumlah dan metode penarikan Anda.</p>
+        <h1 className="text-3xl font-black tracking-tighter">Withdraw</h1>
+        <p className="text-muted-foreground text-sm font-medium uppercase tracking-widest text-[10px] opacity-70">Tarik saldo hasil kerja keras Anda.</p>
       </div>
 
-      <Card className="neon-gradient text-background border-none glow-primary overflow-hidden relative rounded-[2rem]">
-        <CardContent className="p-8">
-          <p className="text-[10px] uppercase font-black opacity-60 tracking-widest">Saldo Anda</p>
-          <h2 className="text-4xl font-black">{formatCurrency(profile?.balance || 0)}</h2>
-          <div className="mt-6 pt-6 border-t border-background/10 text-xs font-bold flex justify-between uppercase tracking-widest">
-            <span>Biaya Admin</span>
+      <Card className="neon-gradient text-background border-none glow-primary overflow-hidden relative rounded-[2rem] group shadow-2xl">
+        <CardContent className="p-8 relative z-10">
+          <div className="flex justify-between items-start mb-6">
+            <div>
+              <p className="text-[10px] uppercase font-black opacity-60 tracking-widest mb-1">Saldo Anda</p>
+              <h2 className="text-5xl font-black tracking-tighter">{formatCurrency(profile?.balance || 0)}</h2>
+            </div>
+            <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-md border border-white/20 shadow-xl group-hover:rotate-12 transition-transform">
+              <ArrowUpRight size={28} />
+            </div>
+          </div>
+          <div className="mt-8 pt-6 border-t border-background/10 text-[10px] font-black flex justify-between uppercase tracking-[0.2em]">
+            <span className="opacity-60">Biaya Admin Platform</span>
             <span>{formatCurrency(adminFee)}</span>
           </div>
         </CardContent>
-        <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-10 -right-10 w-48 h-48 bg-white/10 rounded-full blur-3xl pointer-events-none group-hover:scale-125 transition-transform duration-700" />
+        <div className="absolute -top-10 -left-10 w-32 h-32 bg-primary/20 rounded-full blur-2xl pointer-events-none" />
       </Card>
 
       <div className="space-y-4">
-        <div className="grid grid-cols-3 gap-2">
+        <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Pilih Nominal Cepat</h3>
+        <div className="grid grid-cols-3 gap-2.5">
           {presets.map(p => (
             <Button 
               key={p} 
               variant={amount === p ? 'default' : 'outline'}
-              className={`h-12 rounded-xl font-black ${amount === p ? 'neon-gradient text-background border-none glow-primary' : 'bg-white/5 border-white/10'}`}
+              className={`h-14 rounded-2xl font-black text-xs transition-all active:scale-95 ${amount === p ? 'neon-gradient text-background border-none glow-primary shadow-lg shadow-primary/20' : 'glass-card border-none hover:bg-white/10'}`}
               onClick={() => setAmount(p)}
             >
-              {p / 1000}k
+              {p >= 1000000 ? `${p/1000000} Juta` : `${p / 1000}K`}
             </Button>
           ))}
         </div>
 
         <div className="space-y-2">
-          <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Jumlah Custom</label>
+          <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Nominal Custom</label>
           <Input 
             type="number" 
             placeholder="Min 10.000 (Kelipatan 1.000)"
-            className="bg-white/5 border-white/5 h-14 rounded-2xl px-5 text-sm font-bold focus-visible:ring-primary/30"
+            className="bg-white/5 border-white/5 h-16 rounded-[1.5rem] px-6 text-sm font-black focus-visible:ring-primary/30 shadow-inner"
             value={amount === 0 ? '' : amount}
             onChange={(e) => setAmount(parseInt(e.target.value) || 0)}
           />
         </div>
 
         <div className="space-y-2">
-          <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Metode Pembayaran</label>
+          <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Metode Penarikan</label>
           <Select onValueChange={setMethod} value={method}>
-            <SelectTrigger className="bg-white/5 border-white/5 h-14 rounded-2xl px-5 text-sm font-bold focus:ring-primary/30">
-              <SelectValue placeholder="Pilih Metode" />
+            <SelectTrigger className="bg-white/5 border-white/5 h-16 rounded-[1.5rem] px-6 text-sm font-black focus:ring-primary/30 shadow-inner">
+              <SelectValue placeholder="Pilih E-Wallet / Bank" />
             </SelectTrigger>
-            <SelectContent className="glass-card border-white/10 rounded-2xl">
-              {(config?.paymentMethods || []).filter((m: any) => m.enabled).map((m: any) => (
-                <SelectItem key={m.name} value={m.name} className="font-bold text-xs">{m.name}</SelectItem>
-              ))}
+            <SelectContent className="glass-card border-none rounded-2xl shadow-2xl backdrop-blur-2xl">
+              {enabledMethods.length > 0 ? (
+                enabledMethods.map((m: any) => (
+                  <SelectItem key={m.name} value={m.name} className="font-black text-[10px] uppercase py-3 px-4 focus:bg-primary/20 rounded-lg">{m.name}</SelectItem>
+                ))
+              ) : (
+                <div className="p-4 text-center text-[10px] font-black uppercase opacity-50">Memuat metode...</div>
+              )}
             </SelectContent>
           </Select>
         </div>
 
         {amount > 0 && (
-          <div className="p-5 glass-card border-none rounded-[1.5rem] space-y-3 animate-in">
-            <div className="flex justify-between text-xs">
-              <span className="text-muted-foreground font-bold uppercase tracking-tight">Jumlah Penarikan</span>
-              <span className="font-black">{formatCurrency(amount)}</span>
+          <Card className="glass-card border-none rounded-[1.5rem] p-6 space-y-4 animate-in">
+            <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest">
+              <span className="text-muted-foreground">Jumlah WD</span>
+              <span className="text-foreground">{formatCurrency(amount)}</span>
             </div>
-            <div className="flex justify-between text-xs">
-              <span className="text-muted-foreground font-bold uppercase tracking-tight">Biaya Admin</span>
-              <span className="font-black">{formatCurrency(adminFee)}</span>
+            <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest">
+              <span className="text-muted-foreground">Potongan Admin</span>
+              <span className="text-destructive font-black">-{formatCurrency(adminFee)}</span>
             </div>
-            <div className="flex justify-between text-sm pt-3 border-t border-white/5">
-              <span className="text-primary font-black uppercase tracking-widest">Total Potong Saldo</span>
-              <span className="text-primary font-black">{formatCurrency(totalDeduction)}</span>
+            <div className="pt-4 border-t border-white/5 flex justify-between items-center">
+              <span className="text-[10px] font-black uppercase tracking-widest text-primary">Total Potong Saldo</span>
+              <span className="text-xl font-black text-primary tracking-tighter">{formatCurrency(totalDeduction)}</span>
             </div>
-          </div>
+          </Card>
         )}
 
         <Button 
-          className="w-full h-14 neon-gradient text-background font-black glow-primary rounded-[1.25rem] text-md"
+          className="w-full h-16 neon-gradient text-background font-black glow-primary rounded-[1.5rem] text-lg mt-4 group active:scale-95 transition-all"
           onClick={handleWithdraw}
           disabled={isSubmitting || amount <= 0}
         >
-          <Wallet size={20} className="mr-2" />
-          {isSubmitting ? "Memproses..." : "Tarik Sekarang"}
+          <Wallet size={24} className="mr-3 group-hover:scale-110 transition-transform" />
+          {isSubmitting ? "PROCESSING..." : "TARIK SALDO"}
         </Button>
 
-        <div className="flex gap-3 p-4 bg-secondary/10 border border-secondary/20 rounded-2xl">
-          <Info size={18} className="text-secondary shrink-0" />
-          <p className="text-[10px] text-secondary/80 leading-relaxed font-bold uppercase tracking-tight">Penarikan akan diproses secara manual oleh admin dalam waktu maksimal 24 jam.</p>
+        <div className="flex gap-4 p-5 bg-secondary/10 border border-secondary/20 rounded-[1.5rem] shadow-inner">
+          <ShieldCheck size={24} className="text-secondary shrink-0" />
+          <p className="text-[10px] text-secondary/80 leading-relaxed font-black uppercase tracking-tight">Setiap penarikan dana diproteksi oleh sistem keamanan kami. Admin akan memproses WD dalam waktu maksimal 24 jam kerja.</p>
         </div>
       </div>
     </div>
