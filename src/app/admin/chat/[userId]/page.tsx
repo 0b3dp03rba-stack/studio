@@ -54,6 +54,8 @@ export default function AdminChatDetailPage({ params }: { params: Promise<{ user
     });
   };
 
+  const userLabel = targetUser?.email ? targetUser.email.split('@')[0] : 'User';
+
   if (!targetUser) return <div className="p-20 text-center animate-pulse uppercase font-black text-xs text-primary/50">Memuat Profil...</div>;
 
   return (
@@ -66,7 +68,7 @@ export default function AdminChatDetailPage({ params }: { params: Promise<{ user
           <User size={20} />
         </div>
         <div>
-          <h1 className="text-sm font-black uppercase tracking-widest">{targetUser.email.split('@')[0]}</h1>
+          <h1 className="text-sm font-black uppercase tracking-widest">{userLabel}</h1>
           <p className="text-[10px] font-bold text-primary uppercase">User Platform</p>
         </div>
       </div>

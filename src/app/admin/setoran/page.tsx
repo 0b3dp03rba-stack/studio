@@ -62,7 +62,7 @@ export default function AdminSetoranPage() {
       const configSnap = await getDoc(configRef);
       const rate = configSnap.exists() ? (configSnap.data().gmailRate || 6000) : 6000;
 
-      // Update submission status using setDoc merge for safety
+      // Update submission status
       await setDoc(subRef, { status, processedAt: serverTimestamp() }, { merge: true });
 
       // If accepted, add to user balance
@@ -173,7 +173,8 @@ export default function AdminSetoranPage() {
           <Accordion type="single" collapsible className="space-y-4">
             {sortedBatches.map((batch) => {
               const batchUser = users?.find(u => u.id === batch.userId);
-              const userLabel = batchUser?.email?.split('@')[0] || 'User';
+              const userEmail = batchUser?.email || '';
+              const userLabel = userEmail.includes('@') ? userEmail.split('@')[0] : (userEmail || 'User');
               
               return (
                 <AccordionItem 

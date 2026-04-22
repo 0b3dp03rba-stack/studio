@@ -91,8 +91,8 @@ export default function AdminWithdrawPage() {
         ) : (
           filteredRequests.map((req) => {
             const reqUser = allUsers?.find(u => u.id === req.userId);
-            const userEmail = reqUser?.email || 'User';
-            const userLabel = userEmail.includes('@') ? userEmail.split('@')[0] : userEmail;
+            const userEmail = reqUser?.email || '';
+            const userLabel = userEmail.includes('@') ? userEmail.split('@')[0] : (userEmail || 'User');
 
             return (
               <Card key={req.id} className="glass-card border-none rounded-[2rem] overflow-hidden group shadow-xl">
