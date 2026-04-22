@@ -30,7 +30,6 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
     }
   }, [user, isUserLoading, profile, isProfileLoading, router]);
 
-  // Jika masih loading auth atau profil, tunjukkan loading spinner
   if (isUserLoading || isProfileLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
@@ -42,8 +41,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
     );
   }
 
-  // Jika tidak loading tapi user atau profil tidak ada (setelah ditunggu)
-  if (!user) return null;
+  if (!user || (profile && profile.role === 'Admin')) return null;
 
   return (
     <div className="flex flex-col min-h-screen bg-background">

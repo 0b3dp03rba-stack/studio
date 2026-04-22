@@ -38,6 +38,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
+  // Penting: Jangan render children jika bukan admin untuk mencegah query prematur
   if (!user || !profile || profile.role !== 'Admin') return null;
 
   return (

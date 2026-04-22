@@ -2,9 +2,56 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      // Aturan paling simpel: asal login, bebas baca tulis.
-      allow read, write: if request.auth != null;
+    // Fungsi pembantu untuk cek Admin
+    function isAdmin() {
+      return request.auth != null && 
+        get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == 'Admin';
+    }
+
+    // Aturan untuk Profil Pengguna
+    match /userProfiles/{userId} {
+      // Izinkan baca untuk semua yang login agar bisa cek role orang lain (untuk chat)
+      allow read: if request.auth != null;
+      // Hanya pemilik atau admin yang bisa tulis
+      allow write: if request.auth.uid == userId || isAdmin();
+    }
+
+    // Aturan untuk Gmail Batches & Submissions
+    match /gmailBatches/{batchId} {
+      allow read, write: if request.auth != null && (resource == null || resource.data.userId == request.auth.uid || isAdmin());
+      
+      match /gmailSubmissions/{submissionId} {
+        allow read, write: if request.auth != null && (resource == null || resource.data.userId == request.auth.uid || isAdmin());
+      }
+    }
+
+    // Aturan untuk Penarikan Dana
+    match /withdrawalRequests/{requestId} {
+      allow read, write: if request.auth != null && (resource == null || resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    // Aturan untuk Chat Messages
+    match /messages/{messageId} {
+      // User bisa baca tulis jika mereka adalah pengirim atau penerima
+      // Admin bebas baca tulis semua pesan
+      allow read, write: if request.auth != null && (
+        request.auth.uid == request.resource.data.senderId || 
+        request.auth.uid == request.resource.data.receiverId ||
+        request.auth.uid == resource.data.senderId ||
+        request.auth.uid == resource.data.receiverId ||
+        isAdmin()
+      );
+    }
+
+    // Aturan untuk Config & Admin Roles
+    match /appConfig/{document=**} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+    
+    match /adminRoles/{userId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
     }
   }
 }

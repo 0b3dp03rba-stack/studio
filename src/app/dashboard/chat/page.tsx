@@ -15,8 +15,7 @@ export default function UserChatPage() {
   const [text, setText] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Menggunakan query yang lebih sederhana untuk menghindari perlunya indeks komposit manual di awal
-  // Kita ambil semua pesan yang melibatkan user ini
+  // Menggunakan query yang aman sesuai filter security rules
   const messagesQuery = useMemoFirebase(() => {
     if (!user) return null;
     return query(
