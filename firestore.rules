@@ -2,43 +2,10 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Fungsi pembantu untuk mengecek apakah user sudah login
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-
-    // Aturan eksplisit untuk setiap koleksi utama
-    
-    match /userProfiles/{userId} {
-      allow read, write: if isAuthenticated();
-    }
-    
-    match /gmailBatches/{batchId} {
-      allow read, write: if isAuthenticated();
-      match /gmailSubmissions/{submissionId} {
-        allow read, write: if isAuthenticated();
-      }
-    }
-    
-    match /withdrawalRequests/{requestId} {
-      allow read, write: if isAuthenticated();
-    }
-    
-    match /messages/{messageId} {
-      allow read, write: if isAuthenticated();
-    }
-    
-    match /appConfig/{docId} {
-      allow read, write: if isAuthenticated();
-    }
-    
-    match /adminRoles/{userId} {
-      allow read, write: if isAuthenticated();
-    }
-
-    // Aturan cadangan untuk dokumen lain (jika ada)
+    // ATURAN PALING SEDERHANA: Asal login (authenticated), boleh baca dan tulis.
+    // Tidak ada verifikasi tambahan yang menghambat.
     match /{document=**} {
-      allow read, write: if isAuthenticated();
+      allow read, write: if request.auth != null;
     }
   }
 }

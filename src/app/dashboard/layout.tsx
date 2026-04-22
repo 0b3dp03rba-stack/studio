@@ -16,7 +16,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
 
   const profileRef = useMemoFirebase(() => 
     user ? doc(db, 'userProfiles', user.uid) : null, 
-    [db, user]
+    [db, user?.uid]
   );
   const { data: profile, isLoading: isProfileLoading } = useDoc(profileRef);
 
@@ -30,7 +30,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
     }
   }, [user, isUserLoading, profile, isProfileLoading, router]);
 
-  if (isUserLoading || isProfileLoading || !user) {
+  if (isUserLoading || isProfileLoading || !user || !profile) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
@@ -41,7 +41,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <Header />
-      <main className="flex-1 p-4 pb-24 max-w-md mx-auto w-full">
+      <main className="flex-1 p-4 pb-24 max-w-md mx-auto w-full animate-in">
         {children}
       </main>
       <FloatingButton />

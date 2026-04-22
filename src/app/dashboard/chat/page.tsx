@@ -25,7 +25,7 @@ export default function UserChatPage() {
         where('receiverId', '==', user.uid)
       ),
       orderBy('createdAt', 'asc'),
-      limit(150)
+      limit(200)
     );
   }, [db, user?.uid]);
 
@@ -44,7 +44,6 @@ export default function UserChatPage() {
     const messageText = text.trim();
     setText('');
 
-    // Mengirim pesan ke sistem admin
     addDoc(collection(db, 'messages'), {
       senderId: user.uid,
       receiverId: 'admin-system',
