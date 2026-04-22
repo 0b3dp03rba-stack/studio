@@ -15,7 +15,7 @@ export default function UserChatPage() {
   const [text, setText] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Query pesan yang melibatkan user ini (baik sebagai pengirim maupun penerima)
+  // Query pesan yang melibatkan user ini secara eksplisit
   const messagesQuery = useMemoFirebase(() => {
     if (!user) return null;
     return query(
@@ -42,11 +42,12 @@ export default function UserChatPage() {
     if (!text.trim() || !user) return;
 
     const messageText = text.trim();
-    setText(''); // Clear input immediately for better UX
+    setText('');
 
-    await addDoc(collection(db, 'messages'), {
+    // Mengirim pesan ke sistem admin
+    addDoc(collection(db, 'messages'), {
       senderId: user.uid,
-      receiverId: 'admin-system', // Target ke sistem admin
+      receiverId: 'admin-system',
       text: messageText,
       createdAt: serverTimestamp(),
     });

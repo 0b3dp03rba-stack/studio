@@ -19,7 +19,7 @@ export default function AdminChatDetailPage({ params }: { params: Promise<{ user
 
   const { data: targetUser } = useDoc(useMemoFirebase(() => doc(db, 'userProfiles', userId), [db, userId]));
 
-  // Query pesan antara admin ini dan user spesifik
+  // Query pesan antara admin dan user spesifik
   const messagesQuery = useMemoFirebase(() => 
     query(
       collection(db, 'messages'),
@@ -47,7 +47,7 @@ export default function AdminChatDetailPage({ params }: { params: Promise<{ user
     const messageText = text.trim();
     setText('');
 
-    await addDoc(collection(db, 'messages'), {
+    addDoc(collection(db, 'messages'), {
       senderId: adminUser.uid,
       receiverId: userId,
       text: messageText,

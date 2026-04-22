@@ -15,8 +15,7 @@ export default function RiwayatPage() {
   const db = useFirestore();
   const [selectedBatch, setSelectedBatch] = useState<any>(null);
 
-  // Query sederhana tanpa orderBy untuk menghindari error Index/Permission.
-  // Kita lakukan sorting di sisi klien (memory).
+  // Query riwayat milik user dengan filter yang sesuai aturan Firestore
   const batchesQuery = useMemoFirebase(() => {
     if (!user) return null;
     return query(
@@ -28,7 +27,7 @@ export default function RiwayatPage() {
 
   const { data: rawBatches, isLoading } = useCollection(batchesQuery);
 
-  // Urutkan data berdasarkan waktu terbaru di sisi klien
+  // Sorting di sisi klien untuk menghindari kebutuhan indeks komposit yang rumit
   const sortedBatches = useMemo(() => {
     if (!rawBatches) return [];
     return [...rawBatches].sort((a, b) => {
@@ -48,7 +47,7 @@ export default function RiwayatPage() {
       <div className="space-y-3">
         {isLoading ? (
           <div className="flex justify-center py-20">
-            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin shadow-lg shadow-primary/20"></div>
+            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
           </div>
         ) : sortedBatches.length === 0 ? (
           <div className="text-center py-20 opacity-20 group">
@@ -59,7 +58,7 @@ export default function RiwayatPage() {
           sortedBatches.map((batch) => (
             <Card 
               key={batch.id} 
-              className="glass-card border-none rounded-[1.5rem] hover:bg-white/10 transition-all cursor-pointer active:scale-95 group"
+              className="glass-card border-none rounded-[1.5rem] hover:bg-white/10 transition-all cursor-pointer group"
               onClick={() => setSelectedBatch(batch)}
             >
               <CardContent className="p-5 flex items-center justify-between">
@@ -88,9 +87,9 @@ export default function RiwayatPage() {
       </div>
 
       <Dialog open={!!selectedBatch} onOpenChange={() => setSelectedBatch(null)}>
-        <DialogContent className="glass-card border-white/10 max-h-[80vh] overflow-y-auto rounded-[2rem]">
+        <DialogContent className="glass-card border-white/10 rounded-[2rem]">
           <DialogHeader>
-            <DialogTitle className="flex justify-between items-center pr-8">
+            <DialogTitle className="flex justify-between items-center">
               <span className="font-black uppercase tracking-tight text-lg">Batch Detail</span>
               <Badge className="font-black text-[10px] h-6 px-3">{selectedBatch?.status}</Badge>
             </DialogTitle>
@@ -105,10 +104,6 @@ export default function RiwayatPage() {
                 <p className="text-[8px] font-black text-muted-foreground uppercase mb-1">Total Akun</p>
                 <p className="text-xs font-black">{selectedBatch?.totalCount} Akun</p>
               </div>
-            </div>
-            <div className="p-6 bg-primary/5 border border-primary/10 rounded-2xl text-center space-y-2">
-              <p className="text-xs font-bold text-muted-foreground">Verifikasi diproses manual oleh tim admin.</p>
-              <p className="text-[10px] font-black uppercase text-primary tracking-widest">Estimasi: 1-24 Jam</p>
             </div>
           </div>
         </DialogContent>
