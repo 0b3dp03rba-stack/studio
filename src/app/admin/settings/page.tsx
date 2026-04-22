@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -6,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Trash2, Plus, Sparkles, CreditCard, LayoutDashboard, FileText, Bell } from 'lucide-react';
+import { Trash2, Plus, Sparkles, CreditCard, LayoutDashboard, FileText, Bell, Power } from 'lucide-react';
 import { generateContentForAdmin } from '@/ai/flows/admin-genai-content-creator-flow';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
@@ -34,6 +33,7 @@ export default function AdminSettingsPage() {
       setLocalConfig(config);
     } else if (!isLoading) {
       setLocalConfig({
+        isPlatformOpen: true,
         gmailRate: 6000,
         minWithdraw: 10000,
         adminFee: 500,
@@ -50,7 +50,7 @@ export default function AdminSettingsPage() {
     }
   }, [config, isLoading]);
 
-  if (isLoading || !localConfig) return <div className="p-20 text-center animate-pulse font-black uppercase">Memuat Pengaturan...</div>;
+  if (isLoading || !localConfig) return <div className="p-20 text-center animate-pulse font-black uppercase text-primary">Memuat Konfigurasi...</div>;
 
   const handleUpdateParam = (key: string, val: any) => {
     setLocalConfig({ ...localConfig, [key]: val });
@@ -68,6 +68,19 @@ export default function AdminSettingsPage() {
       toast({ title: "Berhasil", description: "Parameter sistem diperbarui." });
     } catch (e) {
       toast({ variant: "destructive", title: "Gagal", description: "Gagal menyimpan parameter." });
+    }
+  };
+
+  const togglePlatformStatus = async (status: boolean) => {
+    try {
+      await setDoc(configRef, { isPlatformOpen: status, updatedAt: serverTimestamp() }, { merge: true });
+      handleUpdateParam('isPlatformOpen', status);
+      toast({ 
+        title: status ? "Layanan DIBUKA" : "Layanan DITUTUP", 
+        description: status ? "User sekarang bisa menyetor Gmail." : "Layanan setoran dinonaktifkan sementara." 
+      });
+    } catch (e) {
+      toast({ variant: "destructive", title: "Gagal", description: "Gagal mengubah status layanan." });
     }
   };
 
@@ -145,19 +158,40 @@ export default function AdminSettingsPage() {
   return (
     <div className="space-y-6 animate-in">
       <div className="space-y-2">
-        <h1 className="text-3xl font-black tracking-tight">System Settings</h1>
-        <p className="text-muted-foreground text-sm font-medium uppercase tracking-widest">Konfigurasi operasional platform.</p>
+        <h1 className="text-3xl font-black tracking-tighter uppercase neon-text">Sistem Obed Store</h1>
+        <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.2em] opacity-70">Konfigurasi pusat operasional.</p>
       </div>
+
+      <Card className="glass-card border-none rounded-[1.5rem] overflow-hidden">
+        <CardContent className="p-6 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${localConfig.isPlatformOpen ? 'bg-primary/20 text-primary glow-primary' : 'bg-muted text-muted-foreground'}`}>
+                <Power size={24} />
+             </div>
+             <div>
+                <p className="text-xs font-black uppercase tracking-tight">Status Layanan</p>
+                <p className={`text-[10px] font-black uppercase ${localConfig.isPlatformOpen ? 'text-primary' : 'text-muted-foreground'}`}>
+                  {localConfig.isPlatformOpen ? 'OPEN (USER BISA SETOR)' : 'CLOSED (OFFLINE)'}
+                </p>
+             </div>
+          </div>
+          <Switch 
+            checked={localConfig.isPlatformOpen} 
+            onCheckedChange={togglePlatformStatus}
+            className="data-[state=checked]:bg-primary"
+          />
+        </CardContent>
+      </Card>
 
       <Tabs defaultValue="general" className="w-full">
         <TabsList className="grid w-full grid-cols-2 mb-6 glass-card p-1.5 rounded-2xl h-14">
-          <TabsTrigger value="general" className="rounded-xl font-black uppercase text-[10px] data-[state=active]:neon-gradient data-[state=active]:text-background">General & Payments</TabsTrigger>
-          <TabsTrigger value="content" className="rounded-xl font-black uppercase text-[10px] data-[state=active]:neon-gradient data-[state=active]:text-background">Content & AI</TabsTrigger>
+          <TabsTrigger value="general" className="rounded-xl font-black uppercase text-[10px] data-[state=active]:neon-gradient data-[state=active]:text-white">Parameters</TabsTrigger>
+          <TabsTrigger value="content" className="rounded-xl font-black uppercase text-[10px] data-[state=active]:neon-gradient data-[state=active]:text-white">Content & AI</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general" className="space-y-6">
           <Card className="glass-card border-none rounded-[1.5rem] overflow-hidden">
-            <CardHeader className="pb-2 border-b border-white/5"><CardTitle className="text-xs font-black uppercase tracking-widest flex items-center gap-2 text-primary"><LayoutDashboard size={14} /> Parameter Sistem</CardTitle></CardHeader>
+            <CardHeader className="pb-2 border-b border-white/5"><CardTitle className="text-xs font-black uppercase tracking-widest flex items-center gap-2 text-primary"><LayoutDashboard size={14} /> Parameter Keuangan</CardTitle></CardHeader>
             <CardContent className="p-6 space-y-4 pt-4">
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Rate Gmail (Per Akun)</label>
@@ -174,10 +208,10 @@ export default function AdminSettingsPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Link Floating Button (CS)</label>
+                <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Link Customer Service</label>
                 <Input value={localConfig.floatingBtnLink} onChange={(e) => handleUpdateParam('floatingBtnLink', e.target.value)} className="bg-white/5 border-white/5 h-12 rounded-xl px-4 font-medium" />
               </div>
-              <Button onClick={saveGeneral} className="w-full h-12 neon-gradient text-background font-black rounded-xl glow-primary">SIMPAN PARAMETER</Button>
+              <Button onClick={saveGeneral} className="w-full h-12 neon-gradient text-white font-black rounded-xl glow-primary uppercase text-[10px] tracking-widest">Update Parameter</Button>
             </CardContent>
           </Card>
 
@@ -185,7 +219,7 @@ export default function AdminSettingsPage() {
             <h3 className="font-black text-xs uppercase tracking-widest text-muted-foreground flex items-center gap-2 px-1"><CreditCard size={14} className="text-primary" /> Metode Pembayaran</h3>
             <div className="flex gap-2">
               <Input placeholder="Nama Bank/E-Wallet..." value={newPayment} onChange={(e) => setNewPayment(e.target.value)} className="bg-white/5 border-white/5 h-12 rounded-xl px-4 text-xs font-bold" />
-              <Button size="icon" onClick={handleAddPayment} className="h-12 w-12 neon-gradient text-background shrink-0 rounded-xl glow-primary"><Plus size={20} /></Button>
+              <Button size="icon" onClick={handleAddPayment} className="h-12 w-12 neon-gradient text-white shrink-0 rounded-xl glow-primary"><Plus size={20} /></Button>
             </div>
             <div className="grid gap-3">
               {(localConfig.paymentMethods || []).map((method: any) => (
@@ -207,24 +241,24 @@ export default function AdminSettingsPage() {
         <TabsContent value="content" className="space-y-6">
           <Card className="border-none bg-primary/5 glow-primary overflow-hidden rounded-[1.5rem]">
             <CardHeader className="bg-primary/10 py-4 px-6">
-              <CardTitle className="text-xs font-black uppercase tracking-widest flex items-center gap-2 text-primary"><Sparkles size={16} /> AI Content Creator</CardTitle>
+              <CardTitle className="text-xs font-black uppercase tracking-widest flex items-center gap-2 text-primary"><Sparkles size={16} /> Obed AI Generator</CardTitle>
             </CardHeader>
             <CardContent className="p-6 space-y-4 pt-4">
               <div className="flex bg-white/5 p-1 rounded-xl h-12">
-                <Button size="sm" variant={aiType === 'Rules' ? 'default' : 'ghost'} onClick={() => setAiType('Rules')} className={`flex-1 text-[10px] font-black uppercase rounded-lg ${aiType === 'Rules' ? 'bg-primary text-background' : ''}`}>Rules</Button>
-                <Button size="sm" variant={aiType === 'Announcements' ? 'default' : 'ghost'} onClick={() => setAiType('Announcements')} className={`flex-1 text-[10px] font-black uppercase rounded-lg ${aiType === 'Announcements' ? 'bg-primary text-background' : ''}`}>Announcements</Button>
+                <Button size="sm" variant={aiType === 'Rules' ? 'default' : 'ghost'} onClick={() => setAiType('Rules')} className={`flex-1 text-[10px] font-black uppercase rounded-lg ${aiType === 'Rules' ? 'bg-primary text-white' : ''}`}>Rules</Button>
+                <Button size="sm" variant={aiType === 'Announcements' ? 'default' : 'ghost'} onClick={() => setAiType('Announcements')} className={`flex-1 text-[10px] font-black uppercase rounded-lg ${aiType === 'Announcements' ? 'bg-primary text-white' : ''}`}>Announcements</Button>
               </div>
-              <Input placeholder="Tema/Kata Kunci (Misal: Bonus setoran, WD cepat...)" value={aiKeywords} onChange={(e) => setAiKeywords(e.target.value)} className="bg-white/5 border-white/5 h-12 rounded-xl text-xs font-bold" />
-              <Button onClick={generateWithAi} disabled={isAiLoading || !aiKeywords} className="w-full h-12 bg-white text-background font-black text-[10px] uppercase rounded-xl hover:bg-white/90">
-                {isAiLoading ? "PROCESSING AI..." : "GENERATE AI DRAFT"}
+              <Input placeholder="Tema (Misal: Bonus setoran, WD cepat...)" value={aiKeywords} onChange={(e) => setAiKeywords(e.target.value)} className="bg-white/5 border-white/5 h-12 rounded-xl text-xs font-bold" />
+              <Button onClick={generateWithAi} disabled={isAiLoading || !aiKeywords} className="w-full h-12 bg-white text-background font-black text-[10px] uppercase rounded-xl hover:bg-white/90 shadow-xl">
+                {isAiLoading ? "Processing AI..." : "Generate AI Draft"}
               </Button>
             </CardContent>
           </Card>
 
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1"><FileText size={14} className="text-primary" /> Peraturan Platform</div>
-            <Textarea placeholder="Tempel draf AI atau tulis peraturan baru..." value={newRule} onChange={(e) => setNewRule(e.target.value)} className="bg-white/5 border-white/5 h-24 rounded-2xl text-xs font-medium leading-relaxed" />
-            <Button onClick={handleAddRule} className="w-full h-12 neon-gradient text-background font-black rounded-xl glow-primary">TAMBAH PERATURAN</Button>
+            <Textarea placeholder="Tempel draf AI atau tulis peraturan baru..." value={newRule} onChange={(e) => setNewRule(e.target.value)} className="bg-white/5 border-white/5 h-24 rounded-2xl text-xs font-medium leading-relaxed p-4" />
+            <Button onClick={handleAddRule} className="w-full h-12 neon-gradient text-white font-black rounded-xl glow-primary uppercase text-[10px] tracking-widest">Tambah Peraturan</Button>
             <div className="grid gap-2">
               {(localConfig.rules || []).map((r: string, i: number) => (
                 <div key={i} className="flex items-start justify-between p-4 glass-card rounded-2xl border-none">
@@ -236,9 +270,9 @@ export default function AdminSettingsPage() {
           </div>
 
           <div className="space-y-4 border-t border-white/5 pt-6">
-            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1"><Bell size={14} className="text-secondary" /> Pengumuman Terbaru</div>
-            <Textarea placeholder="Tulis pengumuman penting..." value={newAnn} onChange={(e) => setNewAnn(e.target.value)} className="bg-white/5 border-white/5 h-24 rounded-2xl text-xs font-medium leading-relaxed" />
-            <Button onClick={handleAddAnn} className="w-full h-12 neon-gradient text-background font-black rounded-xl glow-primary">POSTING PENGUMUMAN</Button>
+            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1"><Bell size={14} className="text-primary" /> Pengumuman Terbaru</div>
+            <Textarea placeholder="Tulis pengumuman penting..." value={newAnn} onChange={(e) => setNewAnn(e.target.value)} className="bg-white/5 border-white/5 h-24 rounded-2xl text-xs font-medium leading-relaxed p-4" />
+            <Button onClick={handleAddAnn} className="w-full h-12 neon-gradient text-white font-black rounded-xl glow-primary uppercase text-[10px] tracking-widest">Posting Pengumuman</Button>
             <div className="grid gap-2">
               {(localConfig.announcements || []).map((a: string, i: number) => (
                 <div key={i} className="flex items-start justify-between p-4 glass-card rounded-2xl border-none">
