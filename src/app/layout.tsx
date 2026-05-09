@@ -4,6 +4,7 @@ import './globals.css';
 import { AppProvider } from '@/lib/store';
 import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 
 export const metadata: Metadata = {
   title: 'Linku - Premium Link Hub',
@@ -29,6 +30,7 @@ export default function RootLayout({
             <Toaster />
           </AppProvider>
         </FirebaseClientProvider>
+        <SpeedInsights />
       </body>
     </html>
   );
