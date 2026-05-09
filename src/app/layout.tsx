@@ -6,8 +6,31 @@ import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://linku.biz.id'),
   title: 'Linku - Premium Link Hub',
-  description: 'Platform Manajemen Tautan Modern dengan Tema Neon',
+  description: 'Platform Manajemen Tautan Modern dengan Tema Neon. Tampilkan semua dunia Anda dalam satu link.',
+  openGraph: {
+    title: 'Linku - Premium Link Hub',
+    description: 'Platform Manajemen Tautan Modern dengan Tema Neon. Tampilkan semua dunia Anda dalam satu link.',
+    url: 'https://linku.biz.id',
+    siteName: 'Linku',
+    images: [
+      {
+        url: 'https://picsum.photos/seed/linku-logo/1200/630',
+        width: 1200,
+        height: 630,
+        alt: 'Linku Logo',
+      },
+    ],
+    locale: 'id_ID',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Linku - Premium Link Hub',
+    description: 'Platform Manajemen Tautan Modern dengan Tema Neon.',
+    images: ['https://picsum.photos/seed/linku-logo/1200/630'],
+  },
 };
 
 export default function RootLayout({
