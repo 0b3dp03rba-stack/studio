@@ -1,10 +1,10 @@
+
 "use client";
 
 import { use, useMemo, useEffect, useState } from 'react';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { firebaseConfig } from '@/firebase/config';
 import { doc, collection, updateDoc, increment, getDoc, query, orderBy } from 'firebase/firestore';
-import { User, Share2, MousePointer2, Link2, ChevronRight, LayoutGrid, ArrowLeft, Instagram, Youtube, Facebook, Mail, MessageCircle, ExternalLink, Globe, ShieldCheck } from 'lucide-react';
+import { User, Share2, MousePointer2, Link2, ChevronRight, LayoutGrid, ArrowLeft, Instagram, Youtube, Facebook, Mail, MessageCircle, ExternalLink, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
@@ -45,7 +45,6 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
   const [isResolving, setIsResolving] = useState(true);
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
   const [selectedSocial, setSelectedSocial] = useState<any>(null);
-  const [ytSubs, setYtSubs] = useState<string | null>(null);
 
   useEffect(() => {
     const resolveUser = async () => {
@@ -67,28 +66,6 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
     };
     resolveUser();
   }, [db, username]);
-
-  useEffect(() => {
-    if (selectedSocial?.platform === 'YouTube' && selectedSocial?.embedUrl) {
-      setYtSubs('...');
-      const API_KEY = firebaseConfig.googleApiKey;
-      const CHANNEL_ID = selectedSocial.embedUrl;
-      
-      fetch(`https://www.googleapis.com/youtube/v3/channels?part=statistics&id=${CHANNEL_ID}&key=${API_KEY}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.items && data.items.length > 0) {
-            const count = data.items[0].statistics.subscriberCount;
-            setYtSubs(Intl.NumberFormat('en-US', { notation: 'compact' }).format(count));
-          } else {
-            setYtSubs("Live");
-          }
-        })
-        .catch(() => setYtSubs("Cek YT"));
-    } else {
-      setYtSubs(null);
-    }
-  }, [selectedSocial]);
 
   const profileRef = useMemoFirebase(() => resolvedUserId ? doc(db, 'userProfiles', resolvedUserId) : null, [db, resolvedUserId]);
   const { data: profile, isLoading: isProfileLoading } = useDoc(profileRef);
@@ -329,33 +306,19 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
               </div>
             </div>
 
-            <div className="w-full aspect-[4/3] bg-black/40 relative overflow-hidden flex items-center justify-center">
-               {selectedSocial?.platform === 'YouTube' && ytSubs ? (
-                 <div className="text-center space-y-4 p-8 animate-in">
-                    <div className="w-24 h-24 rounded-full neon-gradient flex items-center justify-center text-background mx-auto glow-primary" style={{ background: dynamicGradient }}>
-                      <Youtube size={48} />
-                    </div>
-                    <div>
-                      <h3 className="text-4xl font-black text-white tracking-tighter">{ytSubs}</h3>
-                      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40">Subscribers Terdeteksi</p>
-                    </div>
-                 </div>
-               ) : (
-                 <div className="w-full h-full flex flex-col items-center justify-center gap-6 text-center p-8 animate-in">
-                   <div className="w-20 h-20 rounded-3xl flex items-center justify-center text-background glow-primary transition-all duration-700 animate-flowing-gradient" style={{ background: dynamicGradient, backgroundSize: '200% 200%' }}>
-                      {selectedSocial && (platformIcons[selectedSocial.platform] ? (() => {
-                        const Icon = platformIcons[selectedSocial.platform];
-                        return <Icon size={40} />;
-                      })() : <Link2 size={40} />)}
-                   </div>
-                   <div className="space-y-2">
-                     <h3 className="text-xl font-black text-white tracking-tight uppercase">@{selectedSocial?.label}</h3>
-                     <p className="text-[11px] font-medium text-white/50 leading-relaxed px-4">
-                       Ayo dukung dan ikuti keseruan saya di {selectedSocial?.platform}! Klik tombol di bawah untuk melihat profil selengkapnya.
-                     </p>
-                   </div>
-                 </div>
-               )}
+            <div className="w-full aspect-[4/3] bg-black/40 relative overflow-hidden flex flex-col items-center justify-center gap-6 text-center p-8 animate-in">
+               <div className="w-20 h-20 rounded-3xl flex items-center justify-center text-background glow-primary transition-all duration-700 animate-flowing-gradient" style={{ background: dynamicGradient, backgroundSize: '200% 200%' }}>
+                  {selectedSocial && (platformIcons[selectedSocial.platform] ? (() => {
+                    const Icon = platformIcons[selectedSocial.platform];
+                    return <Icon size={40} />;
+                  })() : <Link2 size={40} />)}
+               </div>
+               <div className="space-y-2">
+                 <h3 className="text-xl font-black text-white tracking-tight uppercase">@{selectedSocial?.label}</h3>
+                 <p className="text-[11px] font-medium text-white/50 leading-relaxed px-4">
+                   Ayo dukung dan ikuti keseruan saya di {selectedSocial?.platform}! Klik tombol di bawah untuk melihat profil selengkapnya.
+                 </p>
+               </div>
             </div>
 
             <div className="p-6 space-y-3">
@@ -370,7 +333,7 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
                 Kunjungi {selectedSocial?.platform} <ExternalLink size={16} className="ml-2" />
               </Button>
               <p className="text-[8px] text-center text-white/30 font-black uppercase tracking-widest leading-relaxed">
-                {selectedSocial?.platform === 'YouTube' ? 'Data diambil secara real-time dari YouTube API.' : 'Pastikan Anda telah login ke akun sosial media Anda untuk interaksi lebih lancar.'}
+                Pastikan Anda telah login ke akun sosial media Anda untuk interaksi lebih lancar.
               </p>
             </div>
           </div>

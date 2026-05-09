@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -79,7 +80,6 @@ export default function ProfilPage() {
   const [newSocial, setNewSocial] = useState({
     platform: '',
     url: '',
-    embedUrl: '',
     label: ''
   });
 
@@ -179,7 +179,7 @@ export default function ProfilPage() {
     };
 
     setSocialLinks([...socialLinks, cleanLink]);
-    setNewSocial({ platform: '', url: '', embedUrl: '', label: '' });
+    setNewSocial({ platform: '', url: '', label: '' });
     setIsEditing(true);
   };
 
@@ -300,7 +300,7 @@ export default function ProfilPage() {
 
         <Card className="glass-card border-white/5 rounded-[2rem] overflow-hidden">
           <CardContent className="p-6 space-y-6">
-            <h3 className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2 text-white"><Share2 size={16} className="text-primary" /> Sosmed & Live Stats</h3>
+            <h3 className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2 text-white"><Share2 size={16} className="text-primary" /> Sosial Media</h3>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
@@ -317,18 +317,13 @@ export default function ProfilPage() {
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-black text-muted-foreground uppercase ml-1">Username / Label</label>
+                  <label className="text-[9px] font-black text-muted-foreground uppercase ml-1">Username (@user)</label>
                   <Input value={newSocial.label} onChange={(e) => setNewSocial({...newSocial, label: e.target.value})} placeholder="@username" className="bg-white/5 border-white/10 h-12 rounded-xl text-xs font-bold" />
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label className="text-[9px] font-black text-muted-foreground uppercase ml-1">Link Profil Asli</label>
-                <Input value={newSocial.url} onChange={(e) => setNewSocial({...newSocial, url: e.target.value})} placeholder="https://youtube.com/@..." className="bg-white/5 border-white/10 h-12 rounded-xl text-xs font-bold" />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[9px] font-black text-primary uppercase ml-1 flex items-center gap-1"><Plus size={10}/> Channel ID (Khusus YouTube Live Stats)</label>
-                <Input value={newSocial.embedUrl} onChange={(e) => setNewSocial({...newSocial, embedUrl: e.target.value})} placeholder="UC..." className="bg-white/5 border-white/10 h-12 rounded-xl text-xs font-bold" />
-                <p className="text-[8px] text-muted-foreground px-1">Masukkan Channel ID (biasanya dimulai dengan UC) untuk mengaktifkan counter real-time YouTube.</p>
+                <label className="text-[9px] font-black text-muted-foreground uppercase ml-1">Link Profil</label>
+                <Input value={newSocial.url} onChange={(e) => setNewSocial({...newSocial, url: e.target.value})} placeholder="https://instagram.com/..." className="bg-white/5 border-white/10 h-12 rounded-xl text-xs font-bold" />
               </div>
               <Button onClick={handleAddSocialLink} className="w-full h-12 neon-gradient text-background font-black rounded-xl text-[10px] uppercase tracking-widest glow-primary">
                 Tambah Sosmed
