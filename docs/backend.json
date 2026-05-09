@@ -30,6 +30,21 @@
       },
       "required": ["id", "email", "username", "role"]
     },
+    "PlatformReview": {
+      "title": "PlatformReview",
+      "type": "object",
+      "description": "Ulasan pengguna untuk platform Linku.",
+      "properties": {
+        "userId": { "type": "string" },
+        "username": { "type": "string" },
+        "displayName": { "type": "string" },
+        "avatarUrl": { "type": "string" },
+        "rating": { "type": "number", "minimum": 1, "maximum": 5 },
+        "comment": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "rating", "comment"]
+    },
     "LinkGroup": {
       "title": "LinkGroup",
       "type": "object",
@@ -84,6 +99,10 @@
     "/usernames/{username}": {
       "schema": { "type": "object" },
       "description": "Mapping username unik ke userId."
+    },
+    "/platformReviews/{userId}": {
+      "schema": { "$ref": "#/backend/entities/PlatformReview" },
+      "description": "Ulasan pengguna untuk Linku."
     }
   }
 }

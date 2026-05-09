@@ -2,7 +2,7 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Membuka akses baca publik sepenuhnya agar tidak ada kendala izin pada profil publik
+    // Membuka akses baca publik sepenuhnya
     match /{document=**} {
       allow read: if true;
       allow write: if request.auth != null;
@@ -17,6 +17,12 @@ service cloud.firestore {
         allow read: if true;
         allow write: if request.auth != null && request.auth.uid == userId;
       }
+    }
+
+    // Aturan untuk ulasan platform
+    match /platformReviews/{userId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
 
     // Membolehkan publik melakukan increment clicks pada link
