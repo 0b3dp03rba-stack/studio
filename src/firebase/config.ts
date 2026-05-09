@@ -4,5 +4,6 @@ export const firebaseConfig = {
   "apiKey": "AIzaSyCULzqcY9O_kDhXsnDaV9_K7xnKscNLv3Q",
   "authDomain": "studio-8923344947-b67f0.firebaseapp.com",
   "measurementId": "",
-  "messagingSenderId": "1061039702372"
+  "messagingSenderId": "1061039702372",
+  "googleApiKey": "AIzaSyCULzqcY9O_kDhXsnDaV9_K7xnKscNLv3Q"
 };

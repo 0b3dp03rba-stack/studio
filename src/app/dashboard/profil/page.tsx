@@ -1,9 +1,8 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { User, LogOut, Mail, Edit3, Upload, AtSign, Loader2, Palette, Check, Copy, Share2, Plus, Trash2, Instagram, Youtube, Facebook, MessageCircle, Link2, Globe, ExternalLink } from 'lucide-react';
+import { User, LogOut, Mail, Edit3, Upload, AtSign, Loader2, Palette, Share2, Plus, Trash2, Instagram, Youtube, Facebook, MessageCircle, Link2, Globe, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -77,7 +76,6 @@ export default function ProfilPage() {
   const [tempImage, setTempImage] = useState<string | null>(null);
   const [fullUrl, setFullUrl] = useState('');
 
-  // New Social Form State
   const [newSocial, setNewSocial] = useState({
     platform: '',
     url: '',
@@ -127,7 +125,6 @@ export default function ProfilPage() {
     setExtractedPalette(palette);
     setThemeColor(palette[0]);
     setThemeColorSecondary(palette[1] || palette[0]);
-    toast({ title: "Palet Foto Siap", description: "Warna foto profil Anda telah diekstrak." });
   };
 
   const handleLogout = async () => {
@@ -258,7 +255,7 @@ export default function ProfilPage() {
 
                 {extractedPalette.length > 0 && (
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black text-muted-foreground uppercase ml-1 flex items-center gap-2"><Palette size={14} /> Palet Warna Foto Anda</label>
+                    <label className="text-[10px] font-black text-muted-foreground uppercase ml-1 flex items-center gap-2"><Palette size={14} /> Pilih Tema Warna</label>
                     <div className="grid grid-cols-4 gap-3">
                       {extractedPalette.map((color, i) => (
                         <button 
@@ -320,7 +317,7 @@ export default function ProfilPage() {
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-black text-muted-foreground uppercase ml-1">Username / ID</label>
+                  <label className="text-[9px] font-black text-muted-foreground uppercase ml-1">Username / Label</label>
                   <Input value={newSocial.label} onChange={(e) => setNewSocial({...newSocial, label: e.target.value})} placeholder="@username" className="bg-white/5 border-white/10 h-12 rounded-xl text-xs font-bold" />
                 </div>
               </div>
@@ -329,9 +326,9 @@ export default function ProfilPage() {
                 <Input value={newSocial.url} onChange={(e) => setNewSocial({...newSocial, url: e.target.value})} placeholder="https://youtube.com/@..." className="bg-white/5 border-white/10 h-12 rounded-xl text-xs font-bold" />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[9px] font-black text-primary uppercase ml-1 flex items-center gap-1"><Plus size={10}/> Embed Widget URL (Opsional)</label>
-                <Input value={newSocial.embedUrl} onChange={(e) => setNewSocial({...newSocial, embedUrl: e.target.value})} placeholder="https://socialcounts.org/..." className="bg-white/5 border-white/10 h-12 rounded-xl text-xs font-bold" />
-                <p className="text-[8px] text-muted-foreground px-1">Masukkan URL embed jika ingin menampilkan statistik real-time.</p>
+                <label className="text-[9px] font-black text-primary uppercase ml-1 flex items-center gap-1"><Plus size={10}/> Channel ID (Khusus YouTube Live Stats)</label>
+                <Input value={newSocial.embedUrl} onChange={(e) => setNewSocial({...newSocial, embedUrl: e.target.value})} placeholder="UC..." className="bg-white/5 border-white/10 h-12 rounded-xl text-xs font-bold" />
+                <p className="text-[8px] text-muted-foreground px-1">Masukkan Channel ID (biasanya dimulai dengan UC) untuk mengaktifkan counter real-time YouTube.</p>
               </div>
               <Button onClick={handleAddSocialLink} className="w-full h-12 neon-gradient text-background font-black rounded-xl text-[10px] uppercase tracking-widest glow-primary">
                 Tambah Sosmed
