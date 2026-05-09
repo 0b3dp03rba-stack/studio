@@ -10,7 +10,7 @@ import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@
 import { collection, addDoc, serverTimestamp, doc, deleteDoc, query, orderBy } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
-import { compressAndCropImage } from '@/lib/utils-app';
+import ImageCropperModal from '@/components/ImageCropperModal';
 
 export default function DashboardPage() {
   const { user } = useUser();
@@ -25,7 +25,10 @@ export default function DashboardPage() {
   const [newLinkUrl, setNewLinkUrl] = useState('');
   const [newLinkImage, setNewLinkImage] = useState('');
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
-  const [isProcessingImg, setIsProcessingImg] = useState(false);
+
+  const [cropperOpen, setCropperOpen] = useState(false);
+  const [tempImage, setTempImage] = useState<string | null>(null);
+  const [activeCropTarget, setActiveCropTarget] = useState<'group' | 'link' | null>(null);
 
   const profileRef = useMemoFirebase(() => user ? doc(db, 'userProfiles', user.uid) : null, [db, user?.uid]);
   const { data: profile } = useDoc(profileRef);
@@ -42,24 +45,26 @@ export default function DashboardPage() {
   }, [db, user?.uid]);
   const { data: standaloneLinks, isLoading: isStandaloneLoading } = useCollection(standaloneLinksQuery);
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, setter: (val: string) => void) => {
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>, target: 'group' | 'link') => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 1024 * 1024 * 5) {
         toast({ variant: "destructive", title: "File Terlalu Besar", description: "Maksimal ukuran foto adalah 5MB." });
         return;
       }
-      
-      setIsProcessingImg(true);
-      try {
-        const compressed = await compressAndCropImage(file, 300);
-        setter(compressed);
-      } catch (err) {
-        toast({ variant: "destructive", title: "Gagal Proses", description: "Foto gagal diproses ke format kotak." });
-      } finally {
-        setIsProcessingImg(false);
-      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        setTempImage(reader.result as string);
+        setActiveCropTarget(target);
+        setCropperOpen(true);
+      };
+      reader.readAsDataURL(file);
     }
+  };
+
+  const onCropComplete = (cropped: string) => {
+    if (activeCropTarget === 'group') setNewGroupImage(cropped);
+    if (activeCropTarget === 'link') setNewLinkImage(cropped);
   };
 
   const handleAddGroup = async () => {
@@ -77,7 +82,7 @@ export default function DashboardPage() {
       setNewGroupImage('');
       toast({ title: "Kelompok Dibuat", description: "Berhasil menambahkan kelompok baru." });
     } catch (e) {
-      toast({ variant: "destructive", title: "Gagal", description: "Terjadi kesalahan sistem saat menyimpan kelompok." });
+      toast({ variant: "destructive", title: "Gagal", description: "Terjadi kesalahan sistem." });
     }
   };
 
@@ -104,7 +109,7 @@ export default function DashboardPage() {
       setSelectedGroupId(null);
       toast({ title: "Tautan Ditambahkan", description: "Tautan baru berhasil disimpan." });
     } catch (e) {
-      toast({ variant: "destructive", title: "Gagal", description: "Gagal menyimpan link. Pastikan foto tidak terlalu besar." });
+      toast({ variant: "destructive", title: "Gagal", description: "Gagal menyimpan link." });
     }
   };
 
@@ -166,9 +171,9 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-4">
                   <div className="flex-1">
                     <label className="flex items-center justify-center gap-2 w-full h-12 bg-white/5 border border-dashed border-white/20 rounded-xl cursor-pointer hover:bg-white/10 transition-all">
-                      {isProcessingImg ? <Loader2 className="animate-spin text-primary" size={16} /> : <Upload size={16} className="text-primary" />}
-                      <span className="text-[10px] font-black uppercase text-white/60">{isProcessingImg ? 'Memproses...' : (newGroupImage ? 'Ganti Foto' : 'Pilih Foto (Auto Crop)')}</span>
-                      <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, setNewGroupImage)} disabled={isProcessingImg} />
+                      <Upload size={16} className="text-primary" />
+                      <span className="text-[10px] font-black uppercase text-white/60">{newGroupImage ? 'Ganti Foto' : 'Unggah Foto'}</span>
+                      <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageSelect(e, 'group')} />
                     </label>
                   </div>
                   {newGroupImage && (
@@ -180,7 +185,7 @@ export default function DashboardPage() {
                     </div>
                   )}
                 </div>
-                <Button onClick={handleAddGroup} disabled={!newGroupTitle || isProcessingImg} className="w-full h-12 neon-gradient text-white font-black rounded-xl glow-primary uppercase text-[10px] shadow-xl">
+                <Button onClick={handleAddGroup} disabled={!newGroupTitle} className="w-full h-12 neon-gradient text-white font-black rounded-xl glow-primary uppercase text-[10px] shadow-xl">
                   Simpan Kelompok
                 </Button>
               </div>
@@ -199,9 +204,9 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-4">
                   <div className="flex-1">
                     <label className="flex items-center justify-center gap-2 w-full h-12 bg-white/5 border border-dashed border-white/20 rounded-xl cursor-pointer hover:bg-white/10 transition-all">
-                      {isProcessingImg ? <Loader2 className="animate-spin text-primary" size={16} /> : <Upload size={16} className="text-primary" />}
-                      <span className="text-[10px] font-black uppercase text-white/60">{isProcessingImg ? 'Memproses...' : (newLinkImage ? 'Ganti Foto' : 'Pilih Foto (Auto Crop)')}</span>
-                      <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, setNewLinkImage)} disabled={isProcessingImg} />
+                      <Upload size={16} className="text-primary" />
+                      <span className="text-[10px] font-black uppercase text-white/60">{newLinkImage ? 'Ganti Foto' : 'Unggah Foto'}</span>
+                      <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageSelect(e, 'link')} />
                     </label>
                   </div>
                   {newLinkImage && (
@@ -213,7 +218,7 @@ export default function DashboardPage() {
                     </div>
                   )}
                 </div>
-                <Button onClick={handleAddLink} disabled={!newLinkTitle || !newLinkUrl || isProcessingImg} className="w-full h-12 neon-gradient text-white font-black rounded-xl glow-primary uppercase text-[10px] shadow-xl">
+                <Button onClick={handleAddLink} disabled={!newLinkTitle || !newLinkUrl} className="w-full h-12 neon-gradient text-white font-black rounded-xl glow-primary uppercase text-[10px] shadow-xl">
                   Simpan Tautan
                 </Button>
               </div>
@@ -237,9 +242,9 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-4">
                   <div className="flex-1">
                     <label className="flex items-center justify-center gap-2 w-full h-12 bg-white/5 border border-dashed border-white/20 rounded-xl cursor-pointer hover:bg-white/10 transition-all">
-                      {isProcessingImg ? <Loader2 className="animate-spin text-primary" size={16} /> : <Upload size={16} className="text-primary" />}
-                      <span className="text-[10px] font-black uppercase text-white/60">{isProcessingImg ? 'Memproses...' : (newLinkImage ? 'Ganti Foto' : 'Pilih Foto (Auto Crop)')}</span>
-                      <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, setNewLinkImage)} disabled={isProcessingImg} />
+                      <Upload size={16} className="text-primary" />
+                      <span className="text-[10px] font-black uppercase text-white/60">{newLinkImage ? 'Ganti Foto' : 'Unggah Foto'}</span>
+                      <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageSelect(e, 'link')} />
                     </label>
                   </div>
                   {newLinkImage && (
@@ -251,7 +256,7 @@ export default function DashboardPage() {
                     </div>
                   )}
                 </div>
-                <Button onClick={handleAddLink} disabled={!newLinkTitle || !newLinkUrl || isProcessingImg} className="w-full h-12 neon-gradient text-white font-black rounded-xl glow-primary uppercase text-[10px] shadow-xl">
+                <Button onClick={handleAddLink} disabled={!newLinkTitle || !newLinkUrl} className="w-full h-12 neon-gradient text-white font-black rounded-xl glow-primary uppercase text-[10px] shadow-xl">
                   Simpan Tautan
                 </Button>
               </div>
@@ -289,6 +294,13 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
+      <ImageCropperModal
+        imageSrc={tempImage}
+        isOpen={cropperOpen}
+        onClose={() => setCropperOpen(false)}
+        onCropComplete={onCropComplete}
+      />
     </div>
   );
 }

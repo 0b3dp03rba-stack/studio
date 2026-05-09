@@ -12,6 +12,8 @@
         "displayName": { "type": "string" },
         "bio": { "type": "string" },
         "avatarUrl": { "type": "string" },
+        "themeColor": { "type": "string", "description": "Primary theme color in hex (e.g. #ff0000)" },
+        "themeColorSecondary": { "type": "string", "description": "Secondary theme color in hex (e.g. #ffea00)" },
         "role": { "type": "string", "enum": ["User", "Admin"] },
         "createdAt": { "type": "string", "format": "date-time" }
       },

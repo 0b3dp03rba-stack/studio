@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { User, LogOut, Mail, Edit3, CheckCircle2, Upload, X, AtSign, Loader2 } from 'lucide-react';
+import { User, LogOut, Mail, Edit3, CheckCircle2, Upload, X, AtSign, Loader2, Palette } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, serverTimestamp, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { getAuth, signOut } from 'firebase/auth';
-import { compressAndCropImage } from '@/lib/utils-app';
+import ImageCropperModal from '@/components/ImageCropperModal';
 
 export default function ProfilPage() {
   const { user } = useUser();
@@ -27,9 +27,14 @@ export default function ProfilPage() {
   const [username, setUsername] = useState('');
   const [bio, setBio] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
+  const [themeColor, setThemeColor] = useState('#ff0000');
+  const [themeColorSecondary, setThemeColorSecondary] = useState('#ffea00');
+  
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [isCompressing, setIsCompressing] = useState(false);
+  
+  const [cropperOpen, setCropperOpen] = useState(false);
+  const [tempImage, setTempImage] = useState<string | null>(null);
 
   useEffect(() => {
     if (profile) {
@@ -37,26 +42,24 @@ export default function ProfilPage() {
       setUsername(profile.username || '');
       setBio(profile.bio || '');
       setAvatarUrl(profile.avatarUrl || '');
+      setThemeColor(profile.themeColor || '#ff0000');
+      setThemeColorSecondary(profile.themeColorSecondary || '#ffea00');
     }
   }, [profile]);
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 1024 * 1024 * 5) {
         toast({ variant: "destructive", title: "File Terlalu Besar", description: "Maksimal ukuran foto adalah 5MB." });
         return;
       }
-      
-      setIsCompressing(true);
-      try {
-        const compressed = await compressAndCropImage(file, 400);
-        setAvatarUrl(compressed);
-      } catch (err) {
-        toast({ variant: "destructive", title: "Gagal Memproses Foto", description: "Terjadi kesalahan saat mengolah foto." });
-      } finally {
-        setIsCompressing(false);
-      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        setTempImage(reader.result as string);
+        setCropperOpen(true);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -107,14 +110,16 @@ export default function ProfilPage() {
         username: cleanUsername,
         bio,
         avatarUrl,
+        themeColor,
+        themeColorSecondary,
         updatedAt: serverTimestamp()
       });
 
-      toast({ title: "Berhasil", description: "Profil Anda telah diperbarui secara permanen." });
+      toast({ title: "Berhasil", description: "Profil Anda telah diperbarui." });
       setIsEditing(false);
     } catch (e: any) {
       console.error(e);
-      toast({ variant: "destructive", title: "Gagal Menyimpan", description: "Gagal menyimpan ke server. Pastikan ukuran foto wajar." });
+      toast({ variant: "destructive", title: "Gagal Menyimpan", description: "Gagal menyimpan ke server." });
     } finally {
       setIsSaving(false);
     }
@@ -123,7 +128,13 @@ export default function ProfilPage() {
   return (
     <div className="space-y-6 animate-in">
       <div className="text-center space-y-4 py-8">
-        <div className="mx-auto w-28 h-28 rounded-[2rem] neon-gradient flex items-center justify-center glow-primary border-4 border-background shadow-2xl overflow-hidden relative group aspect-square">
+        <div 
+          className="mx-auto w-28 h-28 rounded-[2.5rem] flex items-center justify-center border-4 border-background shadow-2xl overflow-hidden relative group aspect-square glow-primary"
+          style={{ 
+            background: `linear-gradient(-45deg, ${themeColor}, ${themeColorSecondary})`,
+            boxShadow: `0 0 25px -5px ${themeColor}99`
+          }}
+        >
            {avatarUrl ? (
              <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover relative z-10" />
            ) : (
@@ -134,8 +145,8 @@ export default function ProfilPage() {
         <div className="px-4 text-left sm:text-center">
           <h1 className="text-2xl font-black text-white tracking-tight">{displayName || profile?.username || 'User Linku'}</h1>
           <div className="flex items-center sm:justify-center gap-1.5 mt-1">
-            <AtSign size={12} className="text-primary" />
-            <p className="text-primary text-[10px] font-black uppercase tracking-[0.2em]">{profile?.username || 'user'}</p>
+            <AtSign size={12} className="text-primary" style={{ color: themeColor }} />
+            <p className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: themeColor }}>{profile?.username || 'user'}</p>
           </div>
         </div>
       </div>
@@ -172,15 +183,39 @@ export default function ProfilPage() {
                       className="bg-white/5 h-14 text-sm pl-10 rounded-2xl border-white/10 text-white font-bold" 
                     />
                   </div>
-                  <p className="text-[9px] text-muted-foreground ml-1">URL Profil: linku.com/{username || 'username'}</p>
                 </div>
+                
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black text-muted-foreground uppercase ml-1 flex items-center gap-2"><Palette size={14} /> Tema Warna Profil</label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <p className="text-[8px] font-black uppercase text-white/30 ml-1">Utama</p>
+                      <input 
+                        type="color" 
+                        value={themeColor}
+                        onChange={(e) => setThemeColor(e.target.value)}
+                        className="w-full h-12 rounded-xl bg-white/5 border-none cursor-pointer p-1"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[8px] font-black uppercase text-white/30 ml-1">Gradasi</p>
+                      <input 
+                        type="color" 
+                        value={themeColorSecondary}
+                        onChange={(e) => setThemeColorSecondary(e.target.value)}
+                        className="w-full h-12 rounded-xl bg-white/5 border-none cursor-pointer p-1"
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 <div className="space-y-1.5 text-left">
-                  <label className="text-[10px] font-black text-muted-foreground uppercase ml-1">Foto Profil (Auto Crop 1:1)</label>
+                  <label className="text-[10px] font-black text-muted-foreground uppercase ml-1">Foto Profil</label>
                   <div className="flex items-center gap-4">
                     <label className="flex-1 flex items-center justify-center gap-3 h-14 bg-white/5 border border-dashed border-white/20 rounded-2xl cursor-pointer hover:bg-white/10 transition-all group">
-                      {isCompressing ? <Loader2 className="animate-spin text-primary" size={18} /> : <Upload size={18} className="text-primary group-hover:scale-110 transition-transform" />}
-                      <span className="text-xs font-bold text-white/40 uppercase">{isCompressing ? 'Memproses...' : 'Pilih Foto'}</span>
-                      <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} disabled={isCompressing} />
+                      <Upload size={18} className="text-primary" />
+                      <span className="text-xs font-bold text-white/40 uppercase">Ganti Foto</span>
+                      <input type="file" className="hidden" accept="image/*" onChange={handleImageSelect} />
                     </label>
                     {avatarUrl && (
                       <Button variant="ghost" size="icon" onClick={() => setAvatarUrl('')} className="h-14 w-14 rounded-2xl bg-destructive/10 text-destructive">
@@ -200,7 +235,7 @@ export default function ProfilPage() {
                 </div>
                 <div className="flex gap-2 pt-2">
                   <Button variant="outline" onClick={() => setIsEditing(false)} disabled={isSaving} className="flex-1 h-14 text-xs font-black rounded-2xl border-white/10 text-white">Batal</Button>
-                  <Button onClick={handleSaveProfile} disabled={isSaving || isCompressing} className="flex-1 h-14 text-xs neon-gradient text-background font-black rounded-2xl glow-primary shadow-xl">
+                  <Button onClick={handleSaveProfile} disabled={isSaving} className="flex-1 h-14 text-xs neon-gradient text-background font-black rounded-2xl glow-primary shadow-xl">
                     {isSaving ? <Loader2 className="animate-spin" size={20} /> : "Simpan Profil"}
                   </Button>
                 </div>
@@ -228,6 +263,13 @@ export default function ProfilPage() {
           <LogOut size={20} className="mr-3 group-hover:rotate-12 transition-transform" /> Keluar Aplikasi
         </Button>
       </div>
+
+      <ImageCropperModal
+        imageSrc={tempImage}
+        isOpen={cropperOpen}
+        onClose={() => setCropperOpen(false)}
+        onCropComplete={(cropped) => setAvatarUrl(cropped)}
+      />
     </div>
   );
 }
