@@ -4,114 +4,51 @@
     "UserProfile": {
       "title": "UserProfile",
       "type": "object",
-      "description": "Profil pengguna dengan informasi rekening bank dan saldo.",
+      "description": "Profil pengguna Linktree.",
       "properties": {
         "id": { "type": "string" },
         "email": { "type": "string", "format": "email" },
+        "username": { "type": "string" },
+        "displayName": { "type": "string" },
+        "bio": { "type": "string" },
+        "avatarUrl": { "type": "string" },
         "role": { "type": "string", "enum": ["User", "Admin"] },
-        "balance": { "type": "number" },
-        "bankName": { "type": "string" },
-        "bankAccount": { "type": "string" },
-        "bankAccountName": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" },
-        "updatedAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["id", "email", "role", "balance"]
-    },
-    "GmailBatch": {
-      "title": "GmailBatch",
-      "type": "object",
-      "description": "Grup setoran Gmail dari pengguna.",
-      "properties": {
-        "id": { "type": "string" },
-        "userId": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" },
-        "status": { "type": "string", "enum": ["Pending", "Proses", "Selesai"] },
-        "totalCount": { "type": "number" }
-      },
-      "required": ["id", "userId", "createdAt", "status", "totalCount"]
-    },
-    "GmailSubmission": {
-      "title": "GmailSubmission",
-      "type": "object",
-      "description": "Data individu akun Gmail yang disetor.",
-      "properties": {
-        "id": { "type": "string" },
-        "batchId": { "type": "string" },
-        "userId": { "type": "string" },
-        "email": { "type": "string" },
-        "password": { "type": "string" },
-        "status": { "type": "string", "enum": ["Pending", "Proses", "Disetujui", "Ditolak"] },
-        "processedAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["id", "batchId", "userId", "email", "password", "status"]
-    },
-    "WithdrawalRequest": {
-      "title": "WithdrawalRequest",
-      "type": "object",
-      "description": "Permintaan penarikan saldo oleh pengguna.",
-      "properties": {
-        "id": { "type": "string" },
-        "userId": { "type": "string" },
-        "amount": { "type": "number" },
-        "fee": { "type": "number" },
-        "totalDeduction": { "type": "number" },
-        "method": { "type": "string" },
-        "status": { "type": "string", "enum": ["Pending", "Disetujui", "Ditolak"] },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["id", "userId", "amount", "fee", "totalDeduction", "method", "status", "createdAt"]
+      "required": ["id", "email", "username", "role"]
     },
-    "ChatMessage": {
-      "title": "ChatMessage",
+    "Link": {
+      "title": "Link",
       "type": "object",
-      "description": "Pesan dalam sistem live chat.",
+      "description": "Tautan yang ditampilkan di profil.",
       "properties": {
         "id": { "type": "string" },
-        "senderId": { "type": "string" },
-        "receiverId": { "type": "string" },
-        "text": { "type": "string" },
-        "read": { "type": "boolean" },
-        "createdAt": { "type": "string", "format": "date-time" }
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "url": { "type": "string" },
+        "icon": { "type": "string" },
+        "order": { "type": "number" },
+        "isEnabled": { "type": "boolean" },
+        "clicks": { "type": "number" }
       },
-      "required": ["id", "senderId", "receiverId", "text", "createdAt"]
+      "required": ["id", "userId", "title", "url", "isEnabled"]
     }
   },
   "auth": {
-    "providers": ["password", "anonymous"]
+    "providers": ["password"]
   },
   "firestore": {
     "/userProfiles/{userId}": {
       "schema": { "$ref": "#/backend/entities/UserProfile" },
       "description": "Profil pengguna."
     },
-    "/adminRoles/{userId}": {
+    "/userProfiles/{userId}/links/{linkId}": {
+      "schema": { "$ref": "#/backend/entities/Link" },
+      "description": "Daftar tautan milik pengguna."
+    },
+    "/usernames/{username}": {
       "schema": { "type": "object" },
-      "description": "Tanda peran Admin (dokumen ada = Admin)."
-    },
-    "/gmailBatches/{batchId}": {
-      "schema": { "$ref": "#/backend/entities/GmailBatch" },
-      "description": "Batch setoran pengguna."
-    },
-    "/gmailBatches/{batchId}/gmailSubmissions/{submissionId}": {
-      "schema": { "$ref": "#/backend/entities/GmailSubmission" },
-      "description": "Detail akun Gmail dalam batch."
-    },
-    "/withdrawalRequests/{requestId}": {
-      "schema": { "$ref": "#/backend/entities/WithdrawalRequest" },
-      "description": "Permintaan penarikan dana."
-    },
-    "/messages/{messageId}": {
-      "schema": { "$ref": "#/backend/entities/ChatMessage" },
-      "description": "Pesan chat real-time."
-    },
-    "/submittedEmails/{email}": {
-      "schema": { "type": "object" },
-      "description": "Daftar email yang sudah pernah disetor (Global Unique Tracker)."
-    },
-    "/appConfig/singletonConfig": {
-      "schema": { "type": "object" },
-      "description": "Konfigurasi global sistem."
+      "description": "Mapping username unik ke userId."
     }
   }
 }

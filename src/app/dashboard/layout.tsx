@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import Header from '@/components/Header';
 import BottomNav from '@/components/BottomNav';
-import FloatingButton from '@/components/FloatingButton';
 import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 
@@ -27,13 +26,8 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
       router.push('/login');
       return;
     }
-
-    if (profile?.role === 'Admin') {
-      router.push('/admin');
-    }
   }, [user, isUserLoading, profile, isProfileLoading, router]);
 
-  // Tampilan loading yang lebih cerdas agar tidak stuck
   if (isUserLoading || (user && isProfileLoading)) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
@@ -45,7 +39,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
     );
   }
 
-  if (!user || profile?.role === 'Admin') return null;
+  if (!user) return null;
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -53,7 +47,6 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
       <main className="flex-1 p-4 pb-24 max-w-md mx-auto w-full animate-in">
         {children}
       </main>
-      <FloatingButton />
       <BottomNav />
     </div>
   );

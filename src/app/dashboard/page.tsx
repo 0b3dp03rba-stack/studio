@@ -1,140 +1,176 @@
+
 "use client";
 
+import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { AlertCircle, CheckCircle2, Clock, TrendingUp, Bell, ShieldCheck } from 'lucide-react';
-import { formatCurrency } from '@/lib/utils-app';
-import { useUser, useDoc, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, collection, query, where, limit } from 'firebase/firestore';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Plus, Trash2, GripVertical, Link as LinkIcon, Eye, ExternalLink, MousePointer2 } from 'lucide-react';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, addDoc, serverTimestamp, doc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
+import Link from 'next/link';
 
-export default function UserDashboard() {
+export default function DashboardPage() {
   const { user } = useUser();
   const db = useFirestore();
+  const { toast } = useToast();
   
-  const profileRef = useMemoFirebase(() => user ? doc(db, 'userProfiles', user.uid) : null, [db, user?.uid]);
-  const { data: profile } = useDoc(profileRef);
+  const [newTitle, setNewTitle] = useState('');
+  const [newUrl, setNewUrl] = useState('');
 
-  const configRef = useMemoFirebase(() => doc(db, 'appConfig', 'singletonConfig'), [db]);
-  const { data: config } = useDoc(configRef);
-
-  const submissionsQuery = useMemoFirebase(() => {
+  const linksQuery = useMemoFirebase(() => {
     if (!user) return null;
-    return query(
-      collection(db, 'gmailBatches'), 
-      where('userId', '==', user.uid),
-      limit(50)
-    );
+    return collection(db, 'userProfiles', user.uid, 'links');
   }, [db, user?.uid]);
 
-  const { data: batches } = useCollection(submissionsQuery);
+  const { data: links, isLoading } = useCollection(linksQuery);
 
-  const pendingCount = (batches || []).filter(b => b.status === 'Pending').length;
-  const balance = profile?.balance || 0;
+  const handleAddLink = async () => {
+    if (!user || !newTitle || !newUrl) return;
+    
+    try {
+      await addDoc(collection(db, 'userProfiles', user.uid, 'links'), {
+        userId: user.uid,
+        title: newTitle,
+        url: newUrl.startsWith('http') ? newUrl : `https://${newUrl}`,
+        isEnabled: true,
+        order: (links?.length || 0) + 1,
+        clicks: 0,
+        createdAt: serverTimestamp()
+      });
+      
+      setNewTitle('');
+      setNewUrl('');
+      toast({ title: "Tautan Ditambahkan", description: "Link baru Anda sudah siap!" });
+    } catch (e) {
+      toast({ variant: "destructive", title: "Gagal", description: "Terjadi kesalahan saat menyimpan link." });
+    }
+  };
+
+  const handleDeleteLink = async (linkId: string) => {
+    if (!user) return;
+    await deleteDoc(doc(db, 'userProfiles', user.uid, 'links', linkId));
+    toast({ title: "Dihapus", description: "Link telah dihapus dari profil Anda." });
+  };
+
+  const toggleLink = async (linkId: string, currentStatus: boolean) => {
+    if (!user) return;
+    await updateDoc(doc(db, 'userProfiles', user.uid, 'links', linkId), {
+      isEnabled: !currentStatus
+    });
+  };
 
   return (
     <div className="space-y-8 animate-in pb-10">
       <div className="space-y-1">
-        <h1 className="text-4xl font-black tracking-tighter neon-text-pulse uppercase">Halo, {user?.email?.split('@')[0]}</h1>
-        <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.4em]">Dashboard Operasional Utama.</p>
+        <h1 className="text-4xl font-black tracking-tighter neon-text-pulse uppercase">Link Manager</h1>
+        <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.4em]">Kelola semua tautan penting Anda.</p>
       </div>
 
-      <Card className="neon-gradient border-none overflow-hidden relative rounded-[2rem] group shadow-2xl">
-        <CardContent className="p-8 text-white relative z-10">
-          <div className="flex justify-between items-start mb-8">
-            <div className="space-y-3">
-              <p className="text-white/70 text-[10px] font-black uppercase tracking-[0.4em]">Total Saldo Tersedia</p>
-              <h2 className="text-6xl font-black tracking-tighter drop-shadow-lg">{formatCurrency(balance)}</h2>
-            </div>
-            <div className="bg-black/30 p-5 rounded-[2rem] backdrop-blur-xl border border-white/20 group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 shadow-2xl">
-              <TrendingUp size={32} className="text-white" />
-            </div>
+      <Card className="glass-card border-none rounded-[2rem] p-6 shadow-2xl relative overflow-hidden group">
+        <CardContent className="p-0 space-y-4">
+          <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase tracking-widest mb-2">
+            <Plus size={16} />
+            <span>Tambah Link Baru</span>
           </div>
-          <div className="flex gap-8 mt-12 pt-8 border-t border-white/20 items-center justify-between">
-            <div className="flex-1">
-              <p className="text-[10px] uppercase font-black text-white/60 tracking-[0.2em] mb-2">Layanan Platform</p>
-              <div className="flex items-center gap-2">
-                <div className={`w-2.5 h-2.5 rounded-full animate-pulse ${config?.isPlatformOpen ? 'bg-white shadow-[0_0_10px_white]' : 'bg-red-500 shadow-[0_0_10px_red]'}`} />
-                <span className="text-sm font-black uppercase tracking-widest">{config?.isPlatformOpen ? 'BUKA / ONLINE' : 'TUTUP / OFFLINE'}</span>
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="text-[10px] uppercase font-black text-white/60 tracking-[0.2em] mb-2">Estimasi Rate</p>
-              <p className="text-xl font-black">{formatCurrency(config?.gmailRate || 0)}<span className="text-[10px] opacity-60 ml-1 font-bold">/ACC</span></p>
-            </div>
+          <div className="space-y-3">
+            <Input 
+              placeholder="Judul Link (Contoh: Instagram Saya)" 
+              value={newTitle}
+              onChange={(e) => setNewTitle(e.target.value)}
+              className="bg-white/5 border-white/5 h-14 rounded-2xl px-6 font-bold focus-visible:ring-primary/20"
+            />
+            <Input 
+              placeholder="URL (Contoh: instagram.com/username)" 
+              value={newUrl}
+              onChange={(e) => setNewUrl(e.target.value)}
+              className="bg-white/5 border-white/5 h-14 rounded-2xl px-6 font-bold focus-visible:ring-primary/20"
+            />
+            <Button 
+              onClick={handleAddLink}
+              disabled={!newTitle || !newUrl}
+              className="w-full h-14 neon-gradient text-white font-black rounded-2xl glow-primary uppercase text-[10px] tracking-[0.2em] group active:scale-95 transition-all shadow-xl"
+            >
+              Simpan Link
+            </Button>
           </div>
         </CardContent>
-        {/* Decorative Neon Blurs */}
-        <div className="absolute -bottom-20 -right-20 w-64 h-64 bg-yellow-400/20 rounded-full blur-[100px]" />
-        <div className="absolute -top-10 -left-10 w-40 h-40 bg-red-600/30 rounded-full blur-[80px]" />
       </Card>
 
       <div className="space-y-4">
         <h3 className="font-black text-[11px] uppercase tracking-[0.3em] text-white/50 flex items-center gap-2 px-1">
-          <Bell size={16} className="text-primary" /> Pengumuman Terbaru
+          <LinkIcon size={16} className="text-primary" /> Daftar Link Anda
         </h3>
-        {config?.announcements && config.announcements.length > 0 ? (
+        
+        {isLoading ? (
+          <div className="py-20 text-center animate-pulse text-primary font-black uppercase text-[10px]">Memuat Link...</div>
+        ) : links && links.length > 0 ? (
           <div className="space-y-4">
-            {config.announcements.map((ann: string, i: number) => (
-              <div key={i} className="flex gap-4 glass-card p-6 rounded-[2rem] items-start hover:bg-white/5 transition-all shadow-xl group border-none">
-                <div className="mt-1 p-2.5 bg-primary/10 rounded-xl text-primary group-hover:neon-gradient group-hover:text-white transition-all">
-                  <AlertCircle size={20} />
-                </div>
-                <p className="text-sm leading-relaxed font-medium text-white/90">{ann}</p>
-              </div>
+            {links.sort((a,b) => (a.order || 0) - (b.order || 0)).map((link) => (
+              <Card key={link.id} className={`glass-card border-none rounded-[2rem] overflow-hidden group hover:bg-white/5 transition-all shadow-xl ${!link.isEnabled ? 'opacity-50' : ''}`}>
+                <CardContent className="p-6 flex items-center gap-4">
+                  <div className="cursor-grab text-white/20 hover:text-white transition-colors">
+                    <GripVertical size={20} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-black text-white uppercase text-sm truncate">{link.title}</h4>
+                    <p className="text-[10px] text-white/40 truncate font-mono">{link.url}</p>
+                    <div className="flex items-center gap-3 mt-2">
+                       <div className="flex items-center gap-1 text-[9px] font-black text-primary uppercase">
+                         <MousePointer2 size={10} /> {link.clicks || 0} Clicks
+                       </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => toggleLink(link.id, link.isEnabled)}
+                      className={`h-10 w-10 rounded-xl ${link.isEnabled ? 'text-primary' : 'text-white/20'}`}
+                    >
+                      <Eye size={18} />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => handleDeleteLink(link.id)}
+                      className="h-10 w-10 rounded-xl text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash2 size={18} />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
         ) : (
-          <div className="py-12 text-center glass-card rounded-[2rem] opacity-30 border-none">
-             <p className="text-[11px] font-black uppercase tracking-widest">Belum ada pembaruan sistem</p>
+          <div className="py-20 text-center glass-card rounded-[2.5rem] opacity-20 border-none">
+            <LinkIcon size={64} className="mx-auto mb-4" />
+            <p className="text-lg font-black uppercase tracking-widest">Belum Ada Tautan</p>
           </div>
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-5">
-        <Card className="glass-card border-none rounded-[2rem] hover:bg-white/10 transition-all shadow-xl group cursor-pointer active:scale-95">
-          <CardContent className="p-7 space-y-4">
-            <div className="w-14 h-14 bg-white/5 text-primary rounded-[1.5rem] flex items-center justify-center shadow-lg group-hover:neon-gradient group-hover:text-white transition-all duration-500">
-              <Clock size={28} />
-            </div>
-            <div>
-              <div className="text-4xl font-black tracking-tighter text-white">{pendingCount}</div>
-              <div className="text-[10px] text-white/40 font-black uppercase tracking-widest mt-1">Pending</div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="glass-card border-none rounded-[2rem] hover:bg-white/10 transition-all shadow-xl group cursor-pointer active:scale-95">
-          <CardContent className="p-7 space-y-4">
-            <div className="w-14 h-14 bg-white/5 text-primary rounded-[1.5rem] flex items-center justify-center shadow-lg group-hover:neon-gradient group-hover:text-white transition-all duration-500">
-              <CheckCircle2 size={28} />
-            </div>
-            <div>
-              <div className="text-4xl font-black tracking-tighter text-white">{(batches || []).length}</div>
-              <div className="text-[10px] text-white/40 font-black uppercase tracking-widest mt-1">Selesai</div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="space-y-4">
-        <h3 className="font-black text-[11px] uppercase tracking-[0.3em] text-white/50 flex items-center gap-2 px-1">
-          <ShieldCheck size={16} className="text-primary" /> Aturan Utama Platform
-        </h3>
-        <Card className="glass-card border-none rounded-[2rem] shadow-2xl relative overflow-hidden">
-          <CardContent className="p-8">
-            <ul className="space-y-6">
-              {config?.rules && config.rules.length > 0 ? (
-                config.rules.map((rule: string, i: number) => (
-                  <li key={i} className="flex gap-4 text-sm text-white/80 font-medium leading-relaxed group">
-                    <div className="w-2.5 h-2.5 rounded-full bg-primary mt-1.5 shrink-0 shadow-[0_0_12px_red] group-hover:scale-125 transition-transform" />
-                    <span className="text-white">{rule}</span>
-                  </li>
-                ))
-              ) : (
-                <li className="text-[11px] font-black uppercase opacity-20 text-center py-6 tracking-widest">Sinkronisasi data...</li>
-              )}
-            </ul>
-          </CardContent>
-        </Card>
-      </div>
+      {user && (
+        <div className="pt-6">
+          <Link href={`/u/${user.uid}`} className="block">
+            <Card className="neon-gradient border-none rounded-2xl overflow-hidden shadow-2xl transition-all active:scale-95 group hover:glow-primary">
+              <CardContent className="p-6 flex items-center justify-between text-white">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-black/30 flex items-center justify-center backdrop-blur-md border border-white/10">
+                    <ExternalLink size={24} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-tight">Lihat Profil Publik</p>
+                    <p className="text-[10px] font-black uppercase opacity-70 tracking-widest">Bagikan linktree Anda ke dunia</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        </div>
+      )}
     </div>
   );
 }

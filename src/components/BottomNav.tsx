@@ -1,46 +1,30 @@
+
 "use client";
 
-import { LayoutDashboard, Send, Wallet, History, User, FileText, Settings, MessageCircle } from 'lucide-react';
+import { LayoutDashboard, User, Link as LinkIcon, Share2 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useUser } from '@/firebase';
 
 export default function BottomNav() {
   const { user } = useUser();
-  const db = useFirestore();
   const pathname = usePathname();
 
-  const profileRef = useMemoFirebase(() => user ? doc(db, 'userProfiles', user.uid) : null, [db, user]);
-  const { data: profile } = useDoc(profileRef);
-
   if (!user) return null;
+  
+  // Sembunyikan Nav jika sedang di halaman publik profile (u/[userId])
+  if (pathname.startsWith('/u/')) return null;
 
-  const isAdmin = profile?.role === 'Admin';
-
-  const userNav = [
+  const navItems = [
     { label: 'Dash', icon: LayoutDashboard, href: '/dashboard' },
-    { label: 'Setor', icon: Send, href: '/dashboard/setor' },
-    { label: 'Tarik', icon: Wallet, href: '/dashboard/withdraw' },
-    { label: 'History', icon: History, href: '/dashboard/riwayat' },
     { label: 'Profil', icon: User, href: '/dashboard/profil' },
   ];
 
-  const adminNav = [
-    { label: 'Panel', icon: LayoutDashboard, href: '/admin' },
-    { label: 'Setoran', icon: FileText, href: '/admin/setoran' },
-    { label: 'Chat', icon: MessageCircle, href: '/admin/chat' },
-    { label: 'WD', icon: Wallet, href: '/admin/withdraw' },
-    { label: 'Sistem', icon: Settings, href: '/admin/settings' },
-  ];
-
-  const activeNav = isAdmin ? adminNav : userNav;
-
   return (
     <nav className="bottom-nav">
-      {activeNav.map((item) => {
-        const isActive = pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href));
+      {navItems.map((item) => {
+        const isActive = pathname === item.href;
         const Icon = item.icon;
         return (
           <Link
