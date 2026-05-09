@@ -35,22 +35,29 @@ const platformIcons: Record<string, any> = {
   Email: Mail
 };
 
-// Fungsi pembantu untuk mengekstrak username dari URL sosmed
+// Fungsi pembantu untuk mengekstrak username dari URL sosmed yang lebih robust
 function getSocialIdentifier(url: string, platform: string) {
+  if (!url) return '';
+  const cleanUrl = url.trim().replace(/\/$/, '');
+  
+  if (cleanUrl.startsWith('@')) return cleanUrl;
+
   try {
-    const urlObj = new URL(url.startsWith('http') ? url : `https://${url}`);
+    const urlObj = new URL(cleanUrl.startsWith('http') ? cleanUrl : `https://${cleanUrl}`);
     const parts = urlObj.pathname.split('/').filter(p => p);
     
     if (platform === 'YouTube') {
-      // YouTube bisa berupa /channel/ID, /c/NAME, atau @username
-      if (parts[0] === 'channel' || parts[0] === 'c') return parts[1];
-      if (parts[0]?.startsWith('@')) return parts[0];
-      return parts[0];
+      if (parts.includes('channel')) return parts[parts.indexOf('channel') + 1];
+      if (parts.includes('c')) return parts[parts.indexOf('c') + 1];
+      if (parts.includes('user')) return parts[parts.indexOf('user') + 1];
+      const atPart = parts.find(p => p.startsWith('@'));
+      if (atPart) return atPart;
+      return parts[0] || '';
     }
     
     return parts[0] || '';
   } catch (e) {
-    return '';
+    return cleanUrl.split('/').pop() || '';
   }
 }
 
@@ -89,7 +96,6 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
         if (userSnap.exists()) {
           setResolvedUserId(userSnap.data().userId);
         } else {
-          // Fallback if not mapped
           const profileRef = doc(db, 'userProfiles', username);
           const profileSnap = await getDoc(profileRef);
           if (profileSnap.exists()) setResolvedUserId(username);
@@ -127,14 +133,13 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
       ? doc(db, 'userProfiles', resolvedUserId, 'links', linkId)
       : doc(db, 'userProfiles', resolvedUserId, 'linkGroups', groupId!, 'links', linkId);
     
-    // Non-blocking update clicks
     updateDoc(linkRef, { clicks: increment(1) }).catch(() => {});
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   if (isResolving || isProfileLoading || isGroupsLoading || isStandaloneLoading) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center gap-4">
         <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-2xl animate-spin glow-primary"></div>
         <p className="text-[10px] font-black uppercase tracking-widest text-primary/50">Membangun Linku...</p>
       </div>
@@ -143,7 +148,7 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
 
   if (!profile) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center">
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6 text-center">
         <h1 className="text-3xl font-black text-white tracking-tighter mb-2">Profil Tidak Ditemukan</h1>
         <p className="text-xs text-white/40 font-bold uppercase tracking-widest">Maaf, @{username} tidak terdaftar.</p>
       </div>
@@ -156,12 +161,17 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
 
   return (
     <div 
-      className="min-h-screen bg-background p-6 pb-24 transition-colors duration-1000 relative"
+      className="min-h-screen transition-all duration-1000 relative overflow-x-hidden"
       style={{ 
-        backgroundImage: `radial-gradient(circle at top, ${primaryColor}44, transparent, transparent), radial-gradient(circle at bottom right, ${secondaryColor}11, transparent)`
+        backgroundColor: '#0a0a0a',
+        backgroundImage: `
+          radial-gradient(circle at 0% 0%, ${primaryColor}33 0%, transparent 60%),
+          radial-gradient(circle at 100% 100%, ${secondaryColor}22 0%, transparent 60%),
+          linear-gradient(to bottom, transparent, #000 90%)
+        `
       } as React.CSSProperties}
     >
-      <div className="max-w-md mx-auto space-y-8 animate-in relative z-10">
+      <div className="max-w-md mx-auto space-y-8 animate-in relative z-10 p-6 pb-24">
         
         <div className="flex justify-between items-center">
           {activeGroupId ? (
@@ -338,12 +348,14 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
               </div>
             </div>
 
-            <div className="w-full aspect-[4/3] bg-black/40 relative">
+            <div className="w-full aspect-[4/3] bg-black/60 relative overflow-hidden">
                {selectedSocial && getWidgetUrl(selectedSocial) ? (
                  <iframe 
                    src={getWidgetUrl(selectedSocial)!} 
                    className="w-full h-full border-none"
                    title="Live Counter"
+                   loading="lazy"
+                   sandbox="allow-scripts allow-same-origin"
                  />
                ) : (
                  <div className="w-full h-full flex flex-col items-center justify-center gap-4 text-center p-8">
@@ -351,19 +363,23 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
                    <p className="text-[10px] font-black uppercase tracking-widest text-white/40">Menghubungkan ke Statistik Live...</p>
                  </div>
                )}
+               {/* Note: Jika iframe blank karena provider memblokir, tombol di bawah akan tetap berfungsi */}
             </div>
 
-            <div className="p-6">
+            <div className="p-6 space-y-3">
               <Button 
-                className="w-full h-14 neon-gradient text-background font-black rounded-2xl glow-primary text-xs uppercase tracking-widest active:scale-95 transition-transform"
+                className="w-full h-14 neon-gradient text-background font-black rounded-2xl glow-primary text-[10px] uppercase tracking-widest active:scale-95 transition-transform"
                 style={{ background: dynamicGradient }}
                 onClick={() => {
                   window.open(selectedSocial?.url, '_blank', 'noopener,noreferrer');
                   setSelectedSocial(null);
                 }}
               >
-                Lihat Profil {selectedSocial?.platform} <ExternalLink size={16} className="ml-2" />
+                Kunjungi Profil {selectedSocial?.platform} <ExternalLink size={16} className="ml-2" />
               </Button>
+              <p className="text-[8px] text-center text-white/30 font-black uppercase tracking-widest">
+                Jika widget tidak muncul, silakan klik tombol di atas.
+              </p>
             </div>
           </div>
         </DialogContent>
