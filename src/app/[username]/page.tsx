@@ -4,8 +4,9 @@
 import { use, useMemo, useEffect, useState } from 'react';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc, collection, updateDoc, increment, getDoc, query, orderBy } from 'firebase/firestore';
-import { User, Share2, MousePointer2, Link2, ChevronRight, LayoutGrid, ArrowLeft, Instagram, Youtube, Facebook, Mail, MessageCircle, ExternalLink, Globe } from 'lucide-react';
+import { User, Share2, MousePointer2, Link2, ChevronRight, LayoutGrid, ArrowLeft, Instagram, Youtube, Facebook, Mail, MessageCircle, ExternalLink, Globe, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -45,6 +46,7 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
   const [isResolving, setIsResolving] = useState(true);
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
   const [selectedSocial, setSelectedSocial] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     const resolveUser = async () => {
@@ -54,7 +56,6 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
         if (userSnap.exists()) {
           setResolvedUserId(userSnap.data().userId);
         } else {
-          // Fallback check if it was already a userId
           const profileRef = doc(db, 'userProfiles', username);
           const profileSnap = await getDoc(profileRef);
           if (profileSnap.exists()) setResolvedUserId(username);
@@ -74,8 +75,22 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
   const groupsQuery = useMemoFirebase(() => resolvedUserId ? query(collection(db, 'userProfiles', resolvedUserId, 'linkGroups'), orderBy('order', 'asc')) : null, [db, resolvedUserId]);
   const { data: groups, isLoading: isGroupsLoading } = useCollection(groupsQuery);
 
-  const standaloneLinksQuery = useMemoFirebase(() => resolvedUserId ? query(collection(db, 'userProfiles', resolvedUserId, 'links'), orderBy('createdAt', 'desc')) : null, [db, resolvedUserId]);
+  const standaloneLinksQuery = useMemoFirebase(() => resolvedUserId ? query(collection(db, 'userProfiles', resolvedUserId, 'links'), orderBy('order', 'asc')) : null, [db, resolvedUserId]);
   const { data: standaloneLinks, isLoading: isStandaloneLoading } = useCollection(standaloneLinksQuery);
+
+  const filteredStandalone = useMemo(() => {
+    if (!standaloneLinks) return [];
+    return standaloneLinks.filter(l => 
+      l.isEnabled && l.title.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [standaloneLinks, searchQuery]);
+
+  const filteredGroups = useMemo(() => {
+    if (!groups) return [];
+    return groups.filter(g => 
+      g.isEnabled && g.title.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [groups, searchQuery]);
 
   const activeGroup = useMemo(() => groups?.find(g => g.id === activeGroupId), [groups, activeGroupId]);
 
@@ -216,6 +231,23 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
         </div>
 
         <div className="space-y-6 animate-in">
+          <div className="px-2">
+            <div className="relative group">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 group-focus-within:text-primary transition-colors" size={16} />
+              <Input 
+                placeholder="Cari link..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="glass-card bg-white/5 border-none h-12 pl-12 pr-10 rounded-2xl text-xs font-bold text-white placeholder:text-white/20 focus-visible:ring-1 focus-visible:ring-white/20"
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 hover:text-white">
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+          </div>
+
           <div className="flex items-center gap-2 px-2">
             <div className="h-px flex-1 bg-white/10" />
             <h2 
@@ -230,7 +262,7 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
           <div className="space-y-4">
             {!activeGroupId ? (
               <>
-                {standaloneLinks?.filter(l => l.isEnabled).map(link => (
+                {filteredStandalone.map(link => (
                   <button
                     key={link.id}
                     onClick={() => handleLinkClick(link.id, link.url, true)}
@@ -254,7 +286,7 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
                   </button>
                 ))}
 
-                {groups?.filter(g => g.isEnabled).map((group) => (
+                {filteredGroups.map((group) => (
                   <button
                     key={group.id}
                     onClick={() => setActiveGroupId(group.id)}
@@ -279,6 +311,10 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
                     </div>
                   </button>
                 ))}
+
+                {(filteredStandalone.length === 0 && filteredGroups.length === 0) && (
+                  <div className="text-center py-20 opacity-20 font-black uppercase text-[10px] tracking-[0.3em]">Tidak ditemukan hasil.</div>
+                )}
               </>
             ) : (
               <LinksInGroup 
@@ -287,6 +323,7 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
                 onLinkClick={handleLinkClick} 
                 primaryColor={primaryColor}
                 secondaryColor={secondaryColor}
+                searchQuery={searchQuery}
               />
             )}
           </div>
@@ -358,16 +395,23 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
   );
 }
 
-function LinksInGroup({ userId, groupId, onLinkClick, primaryColor, secondaryColor }: { userId: string, groupId: string, onLinkClick: any, primaryColor: string, secondaryColor: string }) {
+function LinksInGroup({ userId, groupId, onLinkClick, primaryColor, secondaryColor, searchQuery }: { userId: string, groupId: string, onLinkClick: any, primaryColor: string, secondaryColor: string, searchQuery: string }) {
   const db = useFirestore();
   const dynamicGradient = `linear-gradient(-45deg, ${primaryColor} 0%, ${secondaryColor} 50%, ${primaryColor} 100%)`;
   
-  const linksQuery = useMemoFirebase(() => query(collection(db, 'userProfiles', userId, 'linkGroups', groupId, 'links'), orderBy('order', 'asc')), [db, userId, groupId]);
+  const linksQuery = useMemoFirebase(() => query(collection(db, 'userProfiles', userId, 'linkGroups', groupId, 'links'), orderBy('createdAt', 'desc')), [db, userId, groupId]);
   const { data: links } = useCollection(linksQuery);
+
+  const filteredLinks = useMemo(() => {
+    if (!links) return [];
+    return links.filter(l => 
+      l.isEnabled && l.title.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [links, searchQuery]);
 
   return (
     <div className="grid gap-4 animate-in">
-      {links?.filter(l => l.isEnabled).map(link => (
+      {filteredLinks.map(link => (
         <button
           key={link.id}
           onClick={() => onLinkClick(link.id, link.url, false, groupId)}
@@ -390,8 +434,8 @@ function LinksInGroup({ userId, groupId, onLinkClick, primaryColor, secondaryCol
           </div>
         </button>
       ))}
-      {!links?.length && (
-        <div className="text-center py-20 opacity-20 font-black uppercase text-[10px] tracking-widest">Belum ada tautan di kelompok ini.</div>
+      {!filteredLinks.length && (
+        <div className="text-center py-20 opacity-20 font-black uppercase text-[10px] tracking-widest">Tidak ada tautan ditemukan.</div>
       )}
     </div>
   );

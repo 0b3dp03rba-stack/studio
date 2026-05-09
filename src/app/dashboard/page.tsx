@@ -5,9 +5,9 @@ import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Trash2, Link as LinkIcon, ExternalLink, AtSign, FolderPlus, Upload, X, LayoutGrid, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Link as LinkIcon, ExternalLink, AtSign, FolderPlus, Upload, X, LayoutGrid, Loader2, ChevronUp, ChevronDown } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, addDoc, serverTimestamp, doc, deleteDoc, query, orderBy } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, deleteDoc, query, orderBy, updateDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import ImageCropperModal from '@/components/ImageCropperModal';
@@ -41,7 +41,7 @@ export default function DashboardPage() {
 
   const standaloneLinksQuery = useMemoFirebase(() => {
     if (!user) return null;
-    return query(collection(db, 'userProfiles', user.uid, 'links'), orderBy('createdAt', 'desc'));
+    return query(collection(db, 'userProfiles', user.uid, 'links'), orderBy('order', 'asc'));
   }, [db, user?.uid]);
   const { data: standaloneLinks, isLoading: isStandaloneLoading } = useCollection(standaloneLinksQuery);
 
@@ -99,7 +99,7 @@ export default function DashboardPage() {
         url: newLinkUrl.startsWith('http') ? newLinkUrl : `https://${newLinkUrl}`,
         imageUrl: newLinkImage || '',
         isEnabled: true,
-        order: (standaloneLinks?.length || 0) + 1,
+        order: selectedGroupId ? 0 : (standaloneLinks?.length || 0) + 1,
         clicks: 0,
         createdAt: serverTimestamp()
       });
@@ -111,6 +111,26 @@ export default function DashboardPage() {
     } catch (e) {
       toast({ variant: "destructive", title: "Gagal", description: "Gagal menyimpan link." });
     }
+  };
+
+  const handleMove = async (id: string, type: 'group' | 'link', direction: 'up' | 'down') => {
+    if (!user) return;
+    const items = type === 'group' ? groups : standaloneLinks;
+    if (!items) return;
+
+    const index = items.findIndex(item => item.id === id);
+    if (direction === 'up' && index === 0) return;
+    if (direction === 'down' && index === items.length - 1) return;
+
+    const swapIndex = direction === 'up' ? index - 1 : index + 1;
+    const currentItem = items[index];
+    const swapItem = items[swapIndex];
+
+    const currentRef = doc(db, 'userProfiles', user.uid, type === 'group' ? 'linkGroups' : 'links', currentItem.id);
+    const swapRef = doc(db, 'userProfiles', user.uid, type === 'group' ? 'linkGroups' : 'links', swapItem.id);
+
+    await updateDoc(currentRef, { order: swapItem.order });
+    await updateDoc(swapRef, { order: currentItem.order });
   };
 
   const handleDeleteGroup = async (groupId: string) => {
@@ -274,15 +294,31 @@ export default function DashboardPage() {
           <div className="py-20 text-center animate-pulse text-primary font-black uppercase text-[10px]">Memuat...</div>
         ) : (
           <div className="space-y-4">
-            {standaloneLinks?.map(link => (
-              <StandaloneLinkItem key={link.id} link={link} />
+            {standaloneLinks?.map((link, idx) => (
+              <StandaloneLinkItem 
+                key={link.id} 
+                link={link} 
+                onMoveUp={() => handleMove(link.id, 'link', 'up')}
+                onMoveDown={() => handleMove(link.id, 'link', 'down')}
+                isFirst={idx === 0}
+                isLast={idx === (standaloneLinks.length - 1)}
+              />
             ))}
 
-            {groups?.map((group) => (
-              <GroupItem key={group.id} group={group} onAddLink={() => {
-                setSelectedGroupId(group.id);
-                setActiveTab('group');
-              }} onDelete={() => handleDeleteGroup(group.id)} />
+            {groups?.map((group, idx) => (
+              <GroupItem 
+                key={group.id} 
+                group={group} 
+                onAddLink={() => {
+                  setSelectedGroupId(group.id);
+                  setActiveTab('group');
+                }} 
+                onDelete={() => handleDeleteGroup(group.id)}
+                onMoveUp={() => handleMove(group.id, 'group', 'up')}
+                onMoveDown={() => handleMove(group.id, 'group', 'down')}
+                isFirst={idx === 0}
+                isLast={idx === (groups.length - 1)}
+              />
             ))}
 
             {(!groups?.length && !standaloneLinks?.length) && (
@@ -305,7 +341,7 @@ export default function DashboardPage() {
   );
 }
 
-function StandaloneLinkItem({ link }: { link: any }) {
+function StandaloneLinkItem({ link, onMoveUp, onMoveDown, isFirst, isLast }: { link: any, onMoveUp: () => void, onMoveDown: () => void, isFirst: boolean, isLast: boolean }) {
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
@@ -318,6 +354,10 @@ function StandaloneLinkItem({ link }: { link: any }) {
 
   return (
     <Card className="glass-card border-none rounded-2xl overflow-hidden shadow-xl p-4 flex items-center gap-4 group">
+      <div className="flex flex-col gap-1 mr-1">
+        <Button variant="ghost" size="icon" onClick={onMoveUp} disabled={isFirst} className="h-6 w-6 rounded-md opacity-20 hover:opacity-100 disabled:opacity-0"><ChevronUp size={14}/></Button>
+        <Button variant="ghost" size="icon" onClick={onMoveDown} disabled={isLast} className="h-6 w-6 rounded-md opacity-20 hover:opacity-100 disabled:opacity-0"><ChevronDown size={14}/></Button>
+      </div>
       <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/5 shrink-0 aspect-square">
         {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <LinkIcon size={18} className="text-primary" />}
       </div>
@@ -332,12 +372,12 @@ function StandaloneLinkItem({ link }: { link: any }) {
   );
 }
 
-function GroupItem({ group, onAddLink, onDelete }: { group: any; onAddLink: () => void; onDelete: () => void }) {
+function GroupItem({ group, onAddLink, onDelete, onMoveUp, onMoveDown, isFirst, isLast }: { group: any; onAddLink: () => void; onDelete: () => void, onMoveUp: () => void, onMoveDown: () => void, isFirst: boolean, isLast: boolean }) {
   const { user } = useUser();
   const db = useFirestore();
   const linksQuery = useMemoFirebase(() => {
     if (!user) return null;
-    return query(collection(db, 'userProfiles', user.uid, 'linkGroups', group.id, 'links'), orderBy('order', 'asc'));
+    return query(collection(db, 'userProfiles', user.uid, 'linkGroups', group.id, 'links'), orderBy('createdAt', 'desc'));
   }, [db, user?.uid, group.id]);
   const { data: links } = useCollection(linksQuery);
 
@@ -345,6 +385,10 @@ function GroupItem({ group, onAddLink, onDelete }: { group: any; onAddLink: () =
     <Card className="glass-card border-none rounded-[1.5rem] overflow-hidden shadow-xl">
       <CardContent className="p-0">
         <div className="p-6 flex items-center gap-4 bg-white/5">
+          <div className="flex flex-col gap-1 mr-1">
+            <Button variant="ghost" size="icon" onClick={onMoveUp} disabled={isFirst} className="h-6 w-6 rounded-md opacity-20 hover:opacity-100 disabled:opacity-0"><ChevronUp size={14}/></Button>
+            <Button variant="ghost" size="icon" onClick={onMoveDown} disabled={isLast} className="h-6 w-6 rounded-md opacity-20 hover:opacity-100 disabled:opacity-0"><ChevronDown size={14}/></Button>
+          </div>
           <div className="w-12 h-12 rounded-xl neon-gradient p-0.5 glow-primary shrink-0 aspect-square">
             <div className="w-full h-full bg-black rounded-[0.7rem] flex items-center justify-center overflow-hidden">
               {group.imageUrl ? <img src={group.imageUrl} className="w-full h-full object-cover" /> : <LayoutGrid size={20} className="text-primary" />}
