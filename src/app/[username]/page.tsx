@@ -4,7 +4,7 @@
 import { use, useMemo, useEffect, useState } from 'react';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc, collection, updateDoc, increment, getDoc, query, orderBy } from 'firebase/firestore';
-import { User, Share2, MousePointer2, Link2, ChevronRight, LayoutGrid, ArrowLeft, Instagram, Youtube, Facebook, Mail, MessageCircle, ExternalLink, Loader2 } from 'lucide-react';
+import { User, Share2, MousePointer2, Link2, ChevronRight, LayoutGrid, ArrowLeft, Instagram, Youtube, Facebook, Mail, MessageCircle, ExternalLink, Loader2, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
@@ -35,7 +35,7 @@ const platformIcons: Record<string, any> = {
   Email: Mail
 };
 
-// Fungsi pembantu untuk mengekstrak username dari URL sosmed yang lebih robust
+// Robust Social ID Extractor
 function getSocialIdentifier(url: string, platform: string) {
   if (!url) return '';
   const cleanUrl = url.trim().replace(/\/$/, '');
@@ -47,18 +47,17 @@ function getSocialIdentifier(url: string, platform: string) {
     const parts = urlObj.pathname.split('/').filter(p => p);
     
     if (platform === 'YouTube') {
-      // Prioritas ID Channel (UC...)
       const channelId = parts.find(p => p.startsWith('UC'));
       if (channelId) return channelId;
-      
       if (parts.includes('channel')) return parts[parts.indexOf('channel') + 1];
-      if (parts.includes('c')) return parts[parts.indexOf('c') + 1];
-      if (parts.includes('user')) return parts[parts.indexOf('user') + 1];
-      
       const handle = parts.find(p => p.startsWith('@'));
-      if (handle) return handle.replace('@', '');
-      
+      if (handle) return handle;
       return parts[0] || '';
+    }
+    
+    if (platform === 'TikTok') {
+      const handle = parts.find(p => p.startsWith('@'));
+      return handle || parts[0] || '';
     }
     
     return parts[0] || '';
@@ -67,18 +66,22 @@ function getSocialIdentifier(url: string, platform: string) {
   }
 }
 
-// Menentukan URL Widget Counter
+// Widget Provider Logic
 function getWidgetUrl(social: any) {
   const id = getSocialIdentifier(social.url, social.platform);
   if (!id) return null;
 
   switch (social.platform) {
     case 'YouTube':
-      return `https://socialcounts.org/youtube-live-subscriber-count/${id}`;
+      // YouTube Embed from SocialCounts
+      return `https://socialcounts.org/youtube-live-subscriber-count/${id}/embed`;
     case 'TikTok':
-      return `https://tiktokcounter.com/user/${id}`;
+      // TikTok Embed from Countik
+      const tiktokId = id.startsWith('@') ? id : `@${id}`;
+      return `https://countik.com/embed/user/${tiktokId}`;
     case 'Instagram':
-      return `https://instastat.net/${id}`;
+      // Instagram Stat
+      return `https://instastat.net/${id.replace('@', '')}`;
     default:
       return null;
   }
