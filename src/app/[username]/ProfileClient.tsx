@@ -3,8 +3,8 @@
 
 import { useMemo, useEffect, useState } from 'react';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc, collection, updateDoc, increment, getDoc, query, orderBy } from 'firebase/firestore';
-import { User, Share2, MousePointer2, Link2, ChevronRight, LayoutGrid, ArrowLeft, Instagram, Youtube, Facebook, Mail, MessageCircle, ExternalLink, Globe, Search, X } from 'lucide-react';
+import { doc, collection, updateDoc, increment, getDoc, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { User, Share2, MousePointer2, Link2, ChevronRight, LayoutGrid, ArrowLeft, Instagram, Youtube, Facebook, Mail, MessageCircle, ExternalLink, Globe, Search, X, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -46,6 +46,7 @@ export default function ProfileClient({ username }: { username: string }) {
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
   const [selectedSocial, setSelectedSocial] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [allGroupLinks, setAllGroupLinks] = useState<any[]>([]);
 
   useEffect(() => {
     const resolveUser = async () => {
@@ -77,21 +78,61 @@ export default function ProfileClient({ username }: { username: string }) {
   const standaloneLinksQuery = useMemoFirebase(() => resolvedUserId ? query(collection(db, 'userProfiles', resolvedUserId, 'links'), orderBy('order', 'asc')) : null, [db, resolvedUserId]);
   const { data: standaloneLinks, isLoading: isStandaloneLoading } = useCollection(standaloneLinksQuery);
 
+  // Deep Fetch: Fetch all links from all groups for global search & latest link logic
+  useEffect(() => {
+    if (!resolvedUserId || !groups) return;
+
+    const unsubscribes = groups.map(group => {
+      return onSnapshot(collection(db, 'userProfiles', resolvedUserId, 'linkGroups', group.id, 'links'), (snapshot) => {
+        const links = snapshot.docs.map(d => ({ ...d.data(), id: d.id, parentGroupId: group.id, parentGroupTitle: group.title }));
+        setAllGroupLinks(prev => {
+          const otherLinks = prev.filter(l => l.parentGroupId !== group.id);
+          return [...otherLinks, ...links];
+        });
+      });
+    });
+
+    return () => unsubscribes.forEach(unsub => unsub());
+  }, [resolvedUserId, groups, db]);
+
+  // Combined links for search and latest link feature
+  const combinedLinks = useMemo(() => {
+    const standalone = (standaloneLinks || []).map(l => ({ ...l, isStandalone: true }));
+    const grouped = allGroupLinks.map(l => ({ ...l, isStandalone: false }));
+    return [...standalone, ...grouped].sort((a, b) => {
+      const timeA = a.createdAt?.seconds || 0;
+      const timeB = b.createdAt?.seconds || 0;
+      return timeB - timeA;
+    });
+  }, [standaloneLinks, allGroupLinks]);
+
+  const latestLink = useMemo(() => {
+    const enabled = combinedLinks.filter(l => l.isEnabled);
+    return enabled.length > 0 ? enabled[0] : null;
+  }, [combinedLinks]);
+
+  const filteredCombined = useMemo(() => {
+    if (!searchQuery) return [];
+    return combinedLinks.filter(l => 
+      l.isEnabled && l.title.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [combinedLinks, searchQuery]);
+
   const filteredStandalone = useMemo(() => {
     if (!standaloneLinks) return [];
     return standaloneLinks.filter(l => 
-      l.isEnabled && l.title.toLowerCase().includes(searchQuery.toLowerCase())
+      l.isEnabled && 
+      l.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
+      (!latestLink || l.id !== latestLink.id) // Avoid duplicate with latest link
     );
-  }, [standaloneLinks, searchQuery]);
+  }, [standaloneLinks, searchQuery, latestLink]);
 
   const filteredGroups = useMemo(() => {
     if (!groups) return [];
     return groups.filter(g => 
-      g.isEnabled && g.title.toLowerCase().includes(searchQuery.toLowerCase())
+      g.isEnabled && (g.title.toLowerCase().includes(searchQuery.toLowerCase()) || searchQuery === '')
     );
   }, [groups, searchQuery]);
-
-  const activeGroup = useMemo(() => groups?.find(g => g.id === activeGroupId), [groups, activeGroupId]);
 
   const handleShare = () => {
     if (typeof window !== 'undefined') {
@@ -133,14 +174,7 @@ export default function ProfileClient({ username }: { username: string }) {
     );
   }
 
-  if (!profile) {
-    return (
-      <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6 text-center">
-        <h1 className="text-3xl font-black text-white tracking-tighter mb-2">Profil Tidak Ditemukan</h1>
-        <p className="text-xs text-white/40 font-bold uppercase tracking-widest">Maaf, @{username} tidak terdaftar.</p>
-      </div>
-    );
-  }
+  if (!profile) return null;
 
   const primaryColor = profile.themeColor || '#ff0000';
   const secondaryColor = profile.themeColorSecondary || '#ffea00';
@@ -169,15 +203,8 @@ export default function ProfileClient({ username }: { username: string }) {
             >
               <ArrowLeft size={16} /> Kembali
             </Button>
-          ) : (
-            <div className="w-10 h-10" /> 
-          )}
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={handleShare}
-            className="w-12 h-12 rounded-2xl glass-card text-white hover:bg-white/10 border-none shadow-xl"
-          >
+          ) : <div className="w-10 h-10" />}
+          <Button variant="ghost" size="icon" onClick={handleShare} className="w-12 h-12 rounded-2xl glass-card text-white hover:bg-white/10 border-none shadow-xl">
             <Share2 size={20} />
           </Button>
         </div>
@@ -185,41 +212,23 @@ export default function ProfileClient({ username }: { username: string }) {
         <div className="text-center space-y-6">
           <div 
             className="mx-auto w-32 h-32 rounded-[2.5rem] p-1 shadow-2xl transition-all duration-700 animate-flowing-gradient"
-            style={{ 
-              background: dynamicGradient,
-              backgroundSize: '200% 200%',
-              boxShadow: `0 0 50px -10px ${primaryColor}99`,
-              animationDuration: '7s'
-            }}
+            style={{ background: dynamicGradient, backgroundSize: '200% 200%', boxShadow: `0 0 50px -10px ${primaryColor}99`, animationDuration: '7s' }}
           >
             <div className="w-full h-full rounded-[2.3rem] bg-background flex items-center justify-center overflow-hidden border-4 border-background relative">
-              {profile.avatarUrl ? (
-                <img src={profile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-              ) : (
-                <User size={64} className="text-white/20" />
-              )}
+              {profile.avatarUrl ? <img src={profile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" /> : <User size={64} className="text-white/20" />}
             </div>
           </div>
           <div className="space-y-4 px-4">
             <div className="space-y-1">
               <h1 className="text-3xl font-black text-white tracking-tight leading-none">{profile.displayName || 'User'}</h1>
-              {profile.bio && (
-                <p className="text-sm font-medium text-white/70 max-w-xs mx-auto leading-relaxed pt-1">
-                  {profile.bio}
-                </p>
-              )}
+              {profile.bio && <p className="text-sm font-medium text-white/70 max-w-xs mx-auto leading-relaxed pt-1">{profile.bio}</p>}
             </div>
-
             {profile.socialLinks && profile.socialLinks.length > 0 && (
               <div className="flex flex-wrap justify-center gap-3 pt-2">
                 {profile.socialLinks.map((social: any, idx: number) => {
                   const Icon = platformIcons[social.platform] || Link2;
                   return (
-                    <button
-                      key={idx}
-                      onClick={() => setSelectedSocial(social)}
-                      className="w-11 h-11 rounded-xl glass-card flex items-center justify-center text-white/60 hover:text-white transition-all hover:scale-110 active:scale-95 border border-white/5 shadow-lg"
-                    >
+                    <button key={idx} onClick={() => setSelectedSocial(social)} className="w-11 h-11 rounded-xl glass-card flex items-center justify-center text-white/60 hover:text-white transition-all hover:scale-110 active:scale-95 border border-white/5 shadow-lg">
                       <Icon size={20} />
                     </button>
                   );
@@ -234,67 +243,74 @@ export default function ProfileClient({ username }: { username: string }) {
             <div className="relative group">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 group-focus-within:text-primary transition-colors" size={16} />
               <Input 
-                placeholder="Cari link..."
+                placeholder="Cari tautan global..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="glass-card bg-white/5 border-none h-12 pl-12 pr-10 rounded-2xl text-xs font-bold text-white placeholder:text-white/20 focus-visible:ring-1 focus-visible:ring-white/20"
               />
-              {searchQuery && (
-                <button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 hover:text-white">
-                  <X size={14} />
-                </button>
-              )}
+              {searchQuery && <button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 hover:text-white"><X size={14} /></button>}
             </div>
           </div>
 
           <div className="flex items-center gap-2 px-2">
             <div className="h-px flex-1 bg-white/10" />
-            <h2 
-              className="text-[10px] font-black uppercase tracking-[0.3em] whitespace-nowrap"
-              style={{ color: primaryColor }}
-            >
-              {activeGroupId ? activeGroup?.title : `All Link @${profile.username}`}
+            <h2 className="text-[10px] font-black uppercase tracking-[0.3em] whitespace-nowrap" style={{ color: primaryColor }}>
+              {searchQuery ? 'Hasil Pencarian' : (activeGroupId ? groups?.find(g => g.id === activeGroupId)?.title : `Koleksi @${profile.username}`)}
             </h2>
             <div className="h-px flex-1 bg-white/10" />
           </div>
 
           <div className="space-y-4">
-            {!activeGroupId ? (
+            {searchQuery ? (
               <>
+                {filteredCombined.map(link => (
+                  <LinkItem 
+                    key={link.id} 
+                    link={link} 
+                    onClick={() => handleLinkClick(link.id, link.url, link.isStandalone, link.parentGroupId)} 
+                    primaryColor={primaryColor} 
+                    dynamicGradient={dynamicGradient}
+                    subTitle={link.isStandalone ? 'Tautan Langsung' : `Dalam: ${link.parentGroupTitle}`}
+                  />
+                ))}
+                {filteredCombined.length === 0 && <div className="text-center py-20 opacity-20 font-black uppercase text-[10px] tracking-widest">Tidak ada hasil.</div>}
+              </>
+            ) : !activeGroupId ? (
+              <>
+                {/* 1 Link Terakhir di Upload Paling Atas */}
+                {latestLink && (
+                  <div className="space-y-3">
+                    <p className="text-[8px] font-black uppercase tracking-[0.4em] text-primary flex items-center gap-2 px-2">
+                      <Sparkles size={10} /> Tautan Terbaru
+                    </p>
+                    <LinkItem 
+                      link={latestLink} 
+                      onClick={() => handleLinkClick(latestLink.id, latestLink.url, latestLink.isStandalone, latestLink.parentGroupId)} 
+                      primaryColor={primaryColor} 
+                      dynamicGradient={dynamicGradient}
+                      subTitle={latestLink.isStandalone ? 'Tautan Langsung' : `Baru di ${latestLink.parentGroupTitle}`}
+                      featured
+                    />
+                  </div>
+                )}
+
                 {filteredStandalone.map(link => (
-                  <button
-                    key={link.id}
-                    onClick={() => handleLinkClick(link.id, link.url, true)}
-                    className="w-full p-0.5 rounded-2xl hover:scale-[1.02] transition-transform shadow-xl group/link animate-flowing-gradient"
-                    style={{ 
-                      background: dynamicGradient,
-                      backgroundSize: '200% 200%',
-                      animationDuration: '7s'
-                    }}
-                  >
-                    <div className="w-full h-20 bg-black/80 backdrop-blur-xl rounded-[0.95rem] flex items-center px-6 gap-4 border border-white/10">
-                      <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10">
-                        {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <Link2 size={24} style={{ color: primaryColor }} />}
-                      </div>
-                      <div className="flex-1 text-left min-w-0">
-                        <span className="text-base font-black text-white tracking-tight truncate block">{link.title}</span>
-                        <p className="text-[9px] font-black uppercase text-white/30 tracking-widest mt-0.5">Tautan Langsung</p>
-                      </div>
-                      <MousePointer2 size={20} className="text-white/20 group-hover/link:text-primary transition-colors" style={{ color: primaryColor }} />
-                    </div>
-                  </button>
+                  <LinkItem 
+                    key={link.id} 
+                    link={link} 
+                    onClick={() => handleLinkClick(link.id, link.url, true)} 
+                    primaryColor={primaryColor} 
+                    dynamicGradient={dynamicGradient}
+                    subTitle="Tautan Langsung"
+                  />
                 ))}
 
-                {filteredGroups.map((group) => (
+                {filteredGroups.map(group => (
                   <button
                     key={group.id}
                     onClick={() => setActiveGroupId(group.id)}
                     className="w-full p-0.5 rounded-2xl hover:scale-[1.02] transition-transform shadow-xl group/folder animate-flowing-gradient"
-                    style={{ 
-                      background: dynamicGradient,
-                      backgroundSize: '200% 200%',
-                      animationDuration: '7s'
-                    }}
+                    style={{ background: dynamicGradient, backgroundSize: '200% 200%', animationDuration: '7s' }}
                   >
                     <div className="w-full h-24 bg-black/70 backdrop-blur-2xl rounded-[0.95rem] flex items-center px-6 gap-4 border border-white/10 relative overflow-hidden">
                       <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10 shadow-xl shrink-0">
@@ -310,10 +326,6 @@ export default function ProfileClient({ username }: { username: string }) {
                     </div>
                   </button>
                 ))}
-
-                {(filteredStandalone.length === 0 && filteredGroups.length === 0) && (
-                  <div className="text-center py-20 opacity-20 font-black uppercase text-[10px] tracking-[0.3em]">Tidak ditemukan hasil.</div>
-                )}
               </>
             ) : (
               <LinksInGroup 
@@ -322,7 +334,6 @@ export default function ProfileClient({ username }: { username: string }) {
                 onLinkClick={handleLinkClick} 
                 primaryColor={primaryColor}
                 secondaryColor={secondaryColor}
-                searchQuery={searchQuery}
               />
             )}
           </div>
@@ -333,9 +344,6 @@ export default function ProfileClient({ username }: { username: string }) {
             <Link2 size={12} style={{ color: primaryColor }} />
             <p className="text-[9px] font-black uppercase tracking-[0.4em] text-white">Powering with Linku Engine</p>
           </div>
-          <Link href="/" className="block text-[10px] font-bold text-white/30 hover:text-white transition-colors uppercase tracking-widest underline underline-offset-4">
-            Klik untuk bergabung dengan {profile.displayName || profile.username} di Linku
-          </Link>
         </div>
       </div>
 
@@ -350,12 +358,9 @@ export default function ProfileClient({ username }: { username: string }) {
                      return <Icon size={20} />;
                    })() : <Link2 size={20} />)}
                  </div>
-                 <DialogTitle className="font-black text-lg tracking-tight text-white uppercase">
-                   {selectedSocial?.platform} Hub
-                 </DialogTitle>
+                 <DialogTitle className="font-black text-lg tracking-tight text-white uppercase">{selectedSocial?.platform} Hub</DialogTitle>
               </div>
             </div>
-
             <div className="w-full aspect-[4/3] bg-black/40 relative overflow-hidden flex flex-col items-center justify-center gap-6 text-center p-8 animate-in">
                <div className="w-20 h-20 rounded-3xl flex items-center justify-center text-background glow-primary transition-all duration-700 animate-flowing-gradient" style={{ background: dynamicGradient, backgroundSize: '200% 200%' }}>
                   {selectedSocial && (platformIcons[selectedSocial.platform] ? (() => {
@@ -365,12 +370,9 @@ export default function ProfileClient({ username }: { username: string }) {
                </div>
                <div className="space-y-2">
                  <h3 className="text-xl font-black text-white tracking-tight uppercase">{profile.displayName || 'User'}</h3>
-                 <p className="text-[11px] font-black text-white/50 uppercase tracking-widest">
-                    @{selectedSocial?.label}
-                 </p>
+                 <p className="text-[11px] font-black text-white/50 uppercase tracking-widest">@{selectedSocial?.label}</p>
                </div>
             </div>
-
             <div className="p-6 space-y-3">
               <Button 
                 className="w-full h-14 neon-gradient text-background font-black rounded-2xl glow-primary text-[10px] uppercase tracking-widest active:scale-95 transition-transform"
@@ -383,9 +385,6 @@ export default function ProfileClient({ username }: { username: string }) {
               >
                 Kunjungi {selectedSocial?.platform} <ExternalLink size={16} className="ml-2" />
               </Button>
-              <p className="text-[8px] text-center text-white/30 font-black uppercase tracking-widest leading-relaxed">
-                Browser Anda akan mencoba membuka aplikasi {selectedSocial?.platform} secara otomatis.
-              </p>
             </div>
           </div>
         </DialogContent>
@@ -394,48 +393,47 @@ export default function ProfileClient({ username }: { username: string }) {
   );
 }
 
-function LinksInGroup({ userId, groupId, onLinkClick, primaryColor, secondaryColor, searchQuery }: { userId: string, groupId: string, onLinkClick: any, primaryColor: string, secondaryColor: string, searchQuery: string }) {
+function LinkItem({ link, onClick, primaryColor, dynamicGradient, subTitle, featured }: { link: any, onClick: () => void, primaryColor: string, dynamicGradient: string, subTitle: string, featured?: boolean }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full p-0.5 rounded-2xl hover:scale-[1.02] transition-transform shadow-xl group/link animate-flowing-gradient ${featured ? 'glow-primary scale-[1.03]' : ''}`}
+      style={{ background: dynamicGradient, backgroundSize: '200% 200%', animationDuration: '7s' }}
+    >
+      <div className={`w-full h-20 bg-black/80 backdrop-blur-xl rounded-[0.95rem] flex items-center px-6 gap-4 border border-white/10 ${featured ? 'border-primary/40' : ''}`}>
+        <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10">
+          {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <Link2 size={24} style={{ color: primaryColor }} />}
+        </div>
+        <div className="flex-1 text-left min-w-0">
+          <span className="text-base font-black text-white tracking-tight truncate block">{link.title}</span>
+          <p className="text-[9px] font-black uppercase text-white/30 tracking-widest mt-0.5">{subTitle}</p>
+        </div>
+        <MousePointer2 size={20} className="text-white/20 group-hover/link:text-primary transition-colors" style={{ color: primaryColor }} />
+      </div>
+    </button>
+  );
+}
+
+function LinksInGroup({ userId, groupId, onLinkClick, primaryColor, secondaryColor }: { userId: string, groupId: string, onLinkClick: any, primaryColor: string, secondaryColor: string }) {
   const db = useFirestore();
   const dynamicGradient = `linear-gradient(-45deg, ${primaryColor} 0%, ${secondaryColor} 50%, ${primaryColor} 100%)`;
   
   const linksQuery = useMemoFirebase(() => query(collection(db, 'userProfiles', userId, 'linkGroups', groupId, 'links'), orderBy('createdAt', 'desc')), [db, userId, groupId]);
   const { data: links } = useCollection(linksQuery);
 
-  const filteredLinks = useMemo(() => {
-    if (!links) return [];
-    return links.filter(l => 
-      l.isEnabled && l.title.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [links, searchQuery]);
-
   return (
     <div className="grid gap-4 animate-in">
-      {filteredLinks.map(link => (
-        <button
-          key={link.id}
-          onClick={() => onLinkClick(link.id, link.url, false, groupId)}
-          className="w-full p-0.5 rounded-2xl hover:scale-[1.02] transition-transform shadow-xl group/link animate-flowing-gradient"
-          style={{ 
-            background: dynamicGradient,
-            backgroundSize: '200% 200%',
-            animationDuration: '7s'
-          }}
-        >
-          <div className="w-full h-20 bg-black/80 backdrop-blur-xl rounded-[0.95rem] flex items-center px-6 gap-4 border border-white/10">
-            <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10">
-              {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <Link2 size={24} style={{ color: primaryColor }} />}
-            </div>
-            <div className="flex-1 text-left min-w-0">
-              <span className="text-base font-black text-white tracking-tight truncate block">{link.title}</span>
-              <p className="text-[9px] font-black uppercase text-white/30 tracking-widest mt-0.5">Tautan Kelompok</p>
-            </div>
-            <MousePointer2 size={20} className="text-white/20 group-hover/link:text-primary transition-colors" style={{ color: primaryColor }} />
-          </div>
-        </button>
+      {links?.filter(l => l.isEnabled).map(link => (
+        <LinkItem 
+          key={link.id} 
+          link={link} 
+          onClick={() => onLinkClick(link.id, link.url, false, groupId)} 
+          primaryColor={primaryColor} 
+          dynamicGradient={dynamicGradient}
+          subTitle="Tautan Kelompok"
+        />
       ))}
-      {!filteredLinks.length && (
-        <div className="text-center py-20 opacity-20 font-black uppercase text-[10px] tracking-widest">Tidak ada tautan ditemukan.</div>
-      )}
+      {!links?.length && <div className="text-center py-20 opacity-20 font-black uppercase text-[10px] tracking-widest">Tidak ada tautan.</div>}
     </div>
   );
 }
