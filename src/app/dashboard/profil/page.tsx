@@ -79,7 +79,6 @@ export default function ProfilPage() {
 
   const [newSocial, setNewSocial] = useState({
     platform: '',
-    url: '',
     label: ''
   });
 
@@ -168,18 +167,13 @@ export default function ProfilPage() {
   };
 
   const handleAddSocialLink = () => {
-    if (!newSocial.platform || !newSocial.url || !newSocial.label) {
-      toast({ variant: "destructive", title: "Lengkapi Form", description: "Platform, Link, dan Username wajib diisi." });
+    if (!newSocial.platform || !newSocial.label) {
+      toast({ variant: "destructive", title: "Lengkapi Form", description: "Platform dan Username wajib diisi." });
       return;
     }
     
-    const cleanLink = {
-      ...newSocial,
-      url: newSocial.url.startsWith('http') ? newSocial.url : `https://${newSocial.url}`
-    };
-
-    setSocialLinks([...socialLinks, cleanLink]);
-    setNewSocial({ platform: '', url: '', label: '' });
+    setSocialLinks([...socialLinks, { ...newSocial }]);
+    setNewSocial({ platform: '', label: '' });
     setIsEditing(true);
   };
 
@@ -300,7 +294,7 @@ export default function ProfilPage() {
 
         <Card className="glass-card border-white/5 rounded-[2rem] overflow-hidden">
           <CardContent className="p-6 space-y-6">
-            <h3 className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2 text-white"><Share2 size={16} className="text-primary" /> Sosial Media</h3>
+            <h3 className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2 text-white"><Share2 size={16} className="text-primary" /> Hubungkan Sosial Media</h3>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
@@ -317,16 +311,12 @@ export default function ProfilPage() {
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-black text-muted-foreground uppercase ml-1">Username (@user)</label>
-                  <Input value={newSocial.label} onChange={(e) => setNewSocial({...newSocial, label: e.target.value})} placeholder="@username" className="bg-white/5 border-white/10 h-12 rounded-xl text-xs font-bold" />
+                  <label className="text-[9px] font-black text-muted-foreground uppercase ml-1">Username / ID</label>
+                  <Input value={newSocial.label} onChange={(e) => setNewSocial({...newSocial, label: e.target.value})} placeholder="misal: gunxmod" className="bg-white/5 border-white/10 h-12 rounded-xl text-xs font-bold" />
                 </div>
               </div>
-              <div className="space-y-1.5">
-                <label className="text-[9px] font-black text-muted-foreground uppercase ml-1">Link Profil</label>
-                <Input value={newSocial.url} onChange={(e) => setNewSocial({...newSocial, url: e.target.value})} placeholder="https://instagram.com/..." className="bg-white/5 border-white/10 h-12 rounded-xl text-xs font-bold" />
-              </div>
               <Button onClick={handleAddSocialLink} className="w-full h-12 neon-gradient text-background font-black rounded-xl text-[10px] uppercase tracking-widest glow-primary">
-                Tambah Sosmed
+                Tambah Sosmed Otomatis
               </Button>
             </div>
             <div className="grid gap-3 pt-4 border-t border-white/5">
@@ -340,7 +330,7 @@ export default function ProfilPage() {
                       </div>
                       <div className="min-w-0">
                         <p className="text-xs font-black uppercase truncate">{social.platform}</p>
-                        <p className="text-[10px] text-muted-foreground font-black truncate uppercase tracking-widest">{social.label}</p>
+                        <p className="text-[10px] text-muted-foreground font-black truncate uppercase tracking-widest">@{social.label}</p>
                       </div>
                     </div>
                     <Button size="icon" variant="ghost" onClick={() => handleRemoveSocialLink(i)} className="text-destructive h-10 w-10 rounded-xl hover:bg-destructive/10">

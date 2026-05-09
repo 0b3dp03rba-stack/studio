@@ -95,6 +95,20 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
+  const generateSocialUrl = (platform: string, label: string) => {
+    const cleanLabel = label.replace('@', '');
+    switch (platform) {
+      case 'Instagram': return `https://instagram.com/${cleanLabel}`;
+      case 'YouTube': return `https://youtube.com/@${cleanLabel}`;
+      case 'TikTok': return `https://tiktok.com/@${cleanLabel}`;
+      case 'Facebook': return `https://facebook.com/${cleanLabel}`;
+      case 'WhatsApp': return `https://wa.me/${cleanLabel}`;
+      case 'Email': return `mailto:${cleanLabel}`;
+      case 'Website': return label.startsWith('http') ? label : `https://${label}`;
+      default: return '#';
+    }
+  };
+
   if (isResolving || isProfileLoading || isGroupsLoading || isStandaloneLoading) {
     return (
       <div className="min-h-screen bg-black flex flex-col items-center justify-center gap-4">
@@ -174,13 +188,12 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
           <div className="space-y-4 px-4">
             <div className="space-y-1">
               <h1 className="text-3xl font-black text-white tracking-tight leading-none">{profile.displayName || 'User'}</h1>
-              <p className="text-[10px] font-black uppercase text-white/40 tracking-[0.3em]">@{profile.username}</p>
+              {profile.bio && (
+                <p className="text-sm font-medium text-white/70 max-w-xs mx-auto leading-relaxed pt-1">
+                  {profile.bio}
+                </p>
+              )}
             </div>
-            {profile.bio && (
-              <p className="text-sm font-medium text-white/70 max-w-xs mx-auto leading-relaxed">
-                {profile.bio}
-              </p>
-            )}
 
             {profile.socialLinks && profile.socialLinks.length > 0 && (
               <div className="flex flex-wrap justify-center gap-3 pt-2">
@@ -314,9 +327,9 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
                   })() : <Link2 size={40} />)}
                </div>
                <div className="space-y-2">
-                 <h3 className="text-xl font-black text-white tracking-tight uppercase">@{selectedSocial?.label}</h3>
-                 <p className="text-[11px] font-medium text-white/50 leading-relaxed px-4">
-                   Ayo dukung dan ikuti keseruan saya di {selectedSocial?.platform}! Klik tombol di bawah untuk melihat profil selengkapnya.
+                 <h3 className="text-xl font-black text-white tracking-tight uppercase">{profile.displayName || 'User'}</h3>
+                 <p className="text-[11px] font-black text-white/50 uppercase tracking-widest">
+                    @{selectedSocial?.label}
                  </p>
                </div>
             </div>
@@ -326,14 +339,15 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
                 className="w-full h-14 neon-gradient text-background font-black rounded-2xl glow-primary text-[10px] uppercase tracking-widest active:scale-95 transition-transform"
                 style={{ background: dynamicGradient }}
                 onClick={() => {
-                  window.open(selectedSocial?.url, '_blank', 'noopener,noreferrer');
+                  const url = generateSocialUrl(selectedSocial.platform, selectedSocial.label);
+                  window.open(url, '_blank', 'noopener,noreferrer');
                   setSelectedSocial(null);
                 }}
               >
                 Kunjungi {selectedSocial?.platform} <ExternalLink size={16} className="ml-2" />
               </Button>
               <p className="text-[8px] text-center text-white/30 font-black uppercase tracking-widest leading-relaxed">
-                Pastikan Anda telah login ke akun sosial media Anda untuk interaksi lebih lancar.
+                Browser Anda akan mencoba membuka aplikasi {selectedSocial?.platform} secara otomatis.
               </p>
             </div>
           </div>
