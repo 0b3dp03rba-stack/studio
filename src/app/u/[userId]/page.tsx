@@ -1,3 +1,4 @@
+
 "use client";
 
 import { use, useMemo, useEffect, useState } from 'react';
@@ -39,7 +40,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userId
   if (isProfileLoading || isGroupsLoading || isStandaloneLoading) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
-        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-2xl animate-spin"></div>
         <p className="text-[10px] font-black uppercase tracking-widest text-primary/50">Membangun profil...</p>
       </div>
     );
@@ -48,7 +49,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userId
   if (!profile) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center">
-        <h1 className="text-3xl font-black text-white uppercase tracking-tighter mb-2">Profil Tidak Ditemukan</h1>
+        <h1 className="text-3xl font-black text-white tracking-tighter mb-2">Profil Tidak Ditemukan</h1>
         <p className="text-xs text-white/40 font-bold uppercase tracking-widest">Maaf, halaman ini tidak eksis atau telah dihapus.</p>
       </div>
     );
@@ -70,8 +71,8 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userId
         </div>
 
         <div className="text-center space-y-6">
-          <div className="mx-auto w-32 h-32 rounded-[3.5rem] neon-gradient p-1 shadow-2xl glow-primary">
-            <div className="w-full h-full rounded-[3.3rem] bg-background flex items-center justify-center overflow-hidden border-4 border-background relative">
+          <div className="mx-auto w-32 h-32 rounded-[2.5rem] neon-gradient p-1 shadow-2xl glow-primary">
+            <div className="w-full h-full rounded-[2.3rem] bg-background flex items-center justify-center overflow-hidden border-4 border-background relative">
               {profile.avatarUrl ? (
                 <img src={profile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
@@ -80,7 +81,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userId
             </div>
           </div>
           <div className="space-y-3 px-4">
-            <h1 className="text-3xl font-black text-white tracking-tighter animate-text-fast-pulse">{profile.displayName || profile.username || 'User Linku'}</h1>
+            <h1 className="text-3xl font-black text-white tracking-tighter">{profile.displayName || profile.username || 'User Linku'}</h1>
             {profile.bio ? (
               <p className="text-sm font-medium text-white/70 max-w-xs mx-auto leading-relaxed">
                 {profile.bio}
@@ -97,9 +98,9 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userId
               <button
                 key={link.id}
                 onClick={() => handleLinkClick(link.id, link.url, true)}
-                className="w-full neon-gradient p-0.5 rounded-[2rem] hover:scale-[1.02] transition-transform shadow-xl group/link"
+                className="w-full neon-gradient p-0.5 rounded-2xl hover:scale-[1.02] transition-transform shadow-xl group/link"
               >
-                <div className="w-full h-16 bg-black/80 backdrop-blur-xl rounded-[1.8rem] flex items-center px-6 gap-4 border border-white/10">
+                <div className="w-full h-16 bg-black/80 backdrop-blur-xl rounded-[0.95rem] flex items-center px-6 gap-4 border border-white/10">
                   <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10">
                     {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <Link2 size={20} className="text-primary" />}
                   </div>
@@ -116,9 +117,9 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userId
             {groups?.filter(g => g.isEnabled).map((group) => (
               <AccordionItem key={group.id} value={group.id} className="border-none">
                 <div className="relative group">
-                  <div className="absolute inset-0 neon-gradient opacity-0 group-hover:opacity-100 blur-2xl transition-all duration-500 rounded-3xl" />
-                  <AccordionTrigger className="relative h-24 neon-gradient p-0.5 rounded-[2rem] hover:no-underline shadow-2xl transition-transform hover:scale-[1.01] group-data-[state=open]:scale-[1.02]">
-                    <div className="w-full h-full bg-black/70 backdrop-blur-xl rounded-[1.8rem] flex items-center px-6 gap-4 border border-white/10">
+                  <div className="absolute inset-0 neon-gradient opacity-0 group-hover:opacity-100 blur-2xl transition-all duration-500 rounded-2xl" />
+                  <AccordionTrigger className="relative h-24 neon-gradient p-0.5 rounded-2xl hover:no-underline shadow-2xl transition-transform hover:scale-[1.01] group-data-[state=open]:scale-[1.02]">
+                    <div className="w-full h-full bg-black/70 backdrop-blur-xl rounded-[0.95rem] flex items-center px-6 gap-4 border border-white/10">
                       <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10 shadow-xl shrink-0">
                         {group.imageUrl ? <img src={group.imageUrl} className="w-full h-full object-cover" /> : <LayoutGrid size={24} className="text-primary" />}
                       </div>

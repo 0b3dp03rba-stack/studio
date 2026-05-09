@@ -82,7 +82,11 @@ export default function ProfilPage() {
 
         // Delete old mapping if exists
         if (profile?.username) {
-          await deleteDoc(doc(db, 'usernames', profile.username));
+          try {
+            await deleteDoc(doc(db, 'usernames', profile.username));
+          } catch (e) {
+            console.warn("Could not delete old username mapping, might be permission or non-existent", e);
+          }
         }
         
         // Set new mapping
@@ -103,7 +107,8 @@ export default function ProfilPage() {
       toast({ title: "Berhasil", description: "Profil Anda telah diperbarui." });
       setIsEditing(false);
     } catch (e: any) {
-      toast({ variant: "destructive", title: "Gagal", description: "Terjadi kesalahan saat menyimpan." });
+      console.error(e);
+      toast({ variant: "destructive", title: "Gagal", description: "Terjadi kesalahan saat menyimpan. Cek koneksi atau izin." });
     } finally {
       setIsSaving(false);
     }
@@ -120,9 +125,9 @@ export default function ProfilPage() {
            )}
            <div className="absolute inset-0 bg-black/20" />
         </div>
-        <div className="px-4">
+        <div className="px-4 text-left sm:text-center">
           <h1 className="text-2xl font-black text-white tracking-tight">{displayName || profile?.username || 'User Linku'}</h1>
-          <div className="flex items-center justify-center gap-1.5 mt-1">
+          <div className="flex items-center sm:justify-center gap-1.5 mt-1">
             <AtSign size={12} className="text-primary" />
             <p className="text-primary text-[10px] font-black uppercase tracking-[0.2em]">{profile?.username || 'user'}</p>
           </div>
