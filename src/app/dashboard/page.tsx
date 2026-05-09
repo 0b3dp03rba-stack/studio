@@ -5,8 +5,8 @@ import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Trash2, GripVertical, Link as LinkIcon, Eye, ExternalLink, MousePointer2 } from 'lucide-react';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { Plus, Trash2, GripVertical, Link as LinkIcon, Eye, ExternalLink, MousePointer2, AtSign } from 'lucide-react';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, addDoc, serverTimestamp, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
@@ -18,6 +18,9 @@ export default function DashboardPage() {
   
   const [newTitle, setNewTitle] = useState('');
   const [newUrl, setNewUrl] = useState('');
+
+  const profileRef = useMemoFirebase(() => user ? doc(db, 'userProfiles', user.uid) : null, [db, user?.uid]);
+  const { data: profile } = useDoc(profileRef);
 
   const linksQuery = useMemoFirebase(() => {
     if (!user) return null;
@@ -61,11 +64,19 @@ export default function DashboardPage() {
     });
   };
 
+  const publicUrl = profile?.username ? `${window.location.origin}/${profile.username}` : `${window.location.origin}/u/${user?.uid}`;
+
   return (
     <div className="space-y-8 animate-in pb-12">
       <div className="space-y-2">
-        <h1 className="text-4xl font-black tracking-tighter uppercase text-white animate-text-fast-pulse">Linku Manager</h1>
-        <p className="text-primary/50 text-[10px] font-black uppercase tracking-[0.4em]">Kelola semua tautan penting Anda.</p>
+        <h1 className="text-4xl font-black tracking-tighter uppercase text-white">Linku Manager</h1>
+        <div className="flex items-center gap-2 p-3 bg-white/5 rounded-xl border border-white/5 w-fit">
+           <AtSign size={14} className="text-primary" />
+           <span className="text-[10px] font-black text-white uppercase tracking-widest">{profile?.username || 'Belum ada username'}</span>
+           <Link href={publicUrl} target="_blank" className="ml-2 text-[10px] text-primary hover:underline font-bold flex items-center gap-1">
+             Lihat Profil <ExternalLink size={10} />
+           </Link>
+        </div>
       </div>
 
       <Card className="glass-card border-none rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden group">
@@ -152,26 +163,6 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
-
-      {user && (
-        <div className="pt-8">
-          <Link href={`/u/${user.uid}`} className="block">
-            <Card className="neon-gradient border-none rounded-2xl overflow-hidden shadow-2xl transition-all active:scale-95 group hover:glow-primary">
-              <CardContent className="p-7 flex items-center justify-between text-background">
-                <div className="flex items-center gap-5">
-                  <div className="w-14 h-14 rounded-xl bg-black/40 flex items-center justify-center backdrop-blur-md border border-white/10">
-                    <ExternalLink size={28} className="text-white" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-black uppercase tracking-tight">Lihat Profil Publik</p>
-                    <p className="text-[10px] font-black uppercase opacity-70 tracking-widest">Bagikan Linku Anda ke dunia</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-        </div>
-      )}
     </div>
   );
 }

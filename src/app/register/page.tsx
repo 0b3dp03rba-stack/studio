@@ -7,14 +7,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Mail, Lock, UserPlus, Link2, Check } from 'lucide-react';
+import { Mail, Lock, User, Link2, Check, AtSign } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth, useFirestore } from '@/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -27,6 +28,12 @@ export default function RegisterPage() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    const cleanUsername = username.toLowerCase().trim().replace(/[^a-z0-9_]/g, '');
+    if (cleanUsername.length < 3) {
+      toast({ variant: "destructive", title: "Username Terlalu Pendek", description: "Minimal 3 karakter alfanumerik." });
+      return;
+    }
+
     if (password !== confirmPassword) {
       toast({ variant: "destructive", title: "Gagal", description: "Password tidak cocok." });
       return;
@@ -34,15 +41,33 @@ export default function RegisterPage() {
 
     setIsLoading(true);
     try {
+      // Check username uniqueness
+      const usernameRef = doc(db, 'usernames', cleanUsername);
+      const usernameSnap = await getDoc(usernameRef);
+      
+      if (usernameSnap.exists()) {
+        toast({ variant: "destructive", title: "Username Sudah Dipakai", description: "Silakan pilih username lain." });
+        setIsLoading(false);
+        return;
+      }
+
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const firebaseUser = userCredential.user;
 
+      // Batch create profile and username mapping
       await setDoc(doc(db, 'userProfiles', firebaseUser.uid), {
         id: firebaseUser.uid,
         email: firebaseUser.email,
+        username: cleanUsername,
+        displayName: cleanUsername,
         role: 'User',
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
+      });
+
+      await setDoc(usernameRef, {
+        userId: firebaseUser.uid,
+        createdAt: serverTimestamp()
       });
 
       toast({ title: "Berhasil", description: "Akun Linku Anda telah aktif!" });
@@ -73,11 +98,24 @@ export default function RegisterPage() {
           </div>
           <div className="space-y-1">
             <CardTitle className="text-5xl font-black tracking-tighter text-white">Linku</CardTitle>
-            <CardDescription className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Neon Link Engine</CardDescription>
+            <CardDescription className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Neon Link Hub</CardDescription>
           </div>
         </CardHeader>
         <CardContent className="px-8 pb-12 pt-4">
           <form onSubmit={handleRegister} className="space-y-5">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Unique Username</label>
+              <div className="relative">
+                <AtSign className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+                <Input 
+                  placeholder="username_kamu" 
+                  value={username} 
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
+                  className="bg-white/5 border-white/10 h-14 pl-12 rounded-2xl focus-visible:ring-primary/30"
+                />
+              </div>
+            </div>
             <div className="space-y-2">
               <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Email Address</label>
               <Input 
