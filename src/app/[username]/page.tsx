@@ -4,7 +4,7 @@
 import { use, useMemo, useEffect, useState } from 'react';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc, collection, updateDoc, increment, getDoc, query, orderBy } from 'firebase/firestore';
-import { User, Share2, MousePointer2, Link2, ChevronRight, LayoutGrid, ArrowLeft } from 'lucide-react';
+import { User, Share2, MousePointer2, Link2, ChevronRight, LayoutGrid, ArrowLeft, AtSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 
@@ -117,34 +117,42 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
           </Button>
         </div>
 
+        <div className="text-center space-y-6">
+          <div 
+            className="mx-auto w-32 h-32 rounded-[2.5rem] p-1 shadow-2xl transition-all duration-700"
+            style={{ 
+              background: `linear-gradient(-45deg, ${primaryColor}, ${secondaryColor})`,
+              boxShadow: `0 0 50px -10px ${primaryColor}99`
+            }}
+          >
+            <div className="w-full h-full rounded-[2.3rem] bg-background flex items-center justify-center overflow-hidden border-4 border-background relative">
+              {profile.avatarUrl ? (
+                <img src={profile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                <User size={64} className="text-white/20" />
+              )}
+            </div>
+          </div>
+          <div className="space-y-3 px-4">
+            <h1 className="text-3xl font-black text-white tracking-tight">{profile.displayName || 'User'}</h1>
+            {profile.bio ? (
+              <p className="text-sm font-medium text-white/70 max-w-xs mx-auto leading-relaxed">
+                {profile.bio}
+              </p>
+            ) : (
+              <p className="text-[10px] font-black uppercase tracking-[0.4em] mt-1 opacity-30">Personal Hub</p>
+            )}
+          </div>
+        </div>
+
         {!activeGroupId ? (
-          <>
-            <div className="text-center space-y-6">
-              <div 
-                className="mx-auto w-32 h-32 rounded-[2.5rem] p-1 shadow-2xl transition-all duration-700"
-                style={{ 
-                  background: `linear-gradient(-45deg, ${primaryColor}, ${secondaryColor})`,
-                  boxShadow: `0 0 50px -10px ${primaryColor}99`
-                }}
-              >
-                <div className="w-full h-full rounded-[2.3rem] bg-background flex items-center justify-center overflow-hidden border-4 border-background relative">
-                  {profile.avatarUrl ? (
-                    <img src={profile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-                  ) : (
-                    <User size={64} className="text-white/20" />
-                  )}
-                </div>
-              </div>
-              <div className="space-y-3 px-4">
-                <h1 className="text-4xl font-black text-white tracking-tighter">All Link {profile.username || 'User'}</h1>
-                {profile.bio ? (
-                  <p className="text-sm font-medium text-white/70 max-w-xs mx-auto leading-relaxed">
-                    {profile.bio}
-                  </p>
-                ) : (
-                  <p className="text-[10px] font-black uppercase tracking-[0.4em] mt-1 opacity-30">Personal Hub</p>
-                )}
-              </div>
+          <div className="space-y-6 animate-in">
+            <div className="flex items-center gap-2 px-2">
+              <div className="h-px flex-1 bg-white/10" />
+              <h2 className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] whitespace-nowrap">
+                All Link @{profile.username}
+              </h2>
+              <div className="h-px flex-1 bg-white/10" />
             </div>
 
             <div className="space-y-4">
@@ -161,7 +169,7 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
                     </div>
                     <div className="flex-1 text-left min-w-0">
                       <span className="text-base font-black text-white tracking-tight truncate block">{link.title}</span>
-                      <p className="text-[9px] font-black uppercase text-white/30 tracking-widest mt-0.5">Link Mandiri</p>
+                      <p className="text-[9px] font-black uppercase text-white/30 tracking-widest mt-0.5">Tautan Langsung</p>
                     </div>
                     <MousePointer2 size={20} className="text-white/20 group-hover/link:text-primary transition-colors" style={{ color: primaryColor }} />
                   </div>
@@ -182,7 +190,7 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
                     <div className="flex-1 text-left">
                       <span className="text-lg font-black text-white tracking-tight">{group.title}</span>
                       <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] mt-1 flex items-center gap-2">
-                        Kelompok <ChevronRight size={12} className="text-primary" />
+                        Buka Kelompok <ChevronRight size={12} className="text-primary" />
                       </p>
                     </div>
                     <ChevronRight size={24} className="text-white/20 transition-transform group-hover/folder:translate-x-1" />
@@ -190,22 +198,15 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
                 </button>
               ))}
             </div>
-          </>
+          </div>
         ) : (
-          <div className="space-y-8 animate-in slide-in-from-right-10">
-            <div className="text-center space-y-4">
-              <div 
-                className="mx-auto w-24 h-24 rounded-3xl p-0.5 shadow-2xl"
-                style={{ background: `linear-gradient(-45deg, ${primaryColor}, ${secondaryColor})` }}
-              >
-                <div className="w-full h-full rounded-[1.4rem] bg-black/80 backdrop-blur-xl flex items-center justify-center overflow-hidden">
-                   {activeGroup?.imageUrl ? <img src={activeGroup.imageUrl} className="w-full h-full object-cover" /> : <LayoutGrid size={40} style={{ color: primaryColor }} />}
-                </div>
-              </div>
-              <div className="space-y-1">
-                <h2 className="text-3xl font-black text-white tracking-tight uppercase">{activeGroup?.title}</h2>
-                <p className="text-[10px] font-black text-primary uppercase tracking-[0.4em]">Daftar Tautan Kelompok</p>
-              </div>
+          <div className="space-y-6 animate-in slide-in-from-right-10">
+            <div className="flex items-center gap-2 px-2">
+              <div className="h-px flex-1 bg-white/10" />
+              <h2 className="text-[10px] font-black text-primary uppercase tracking-[0.3em] whitespace-nowrap">
+                {activeGroup?.title}
+              </h2>
+              <div className="h-px flex-1 bg-white/10" />
             </div>
 
             <LinksInGroup 

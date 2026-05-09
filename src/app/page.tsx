@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Link2, Sparkles, LayoutGrid, Palette, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
@@ -11,9 +12,18 @@ export default function LandingPage() {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
 
-  if (user && !isUserLoading) {
-    router.push('/dashboard');
-    return null;
+  useEffect(() => {
+    if (user && !isUserLoading) {
+      router.push('/dashboard');
+    }
+  }, [user, isUserLoading, router]);
+
+  if (isUserLoading || user) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-2xl animate-spin"></div>
+      </div>
+    );
   }
 
   return (
