@@ -5,11 +5,12 @@ import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Trash2, Link as LinkIcon, ExternalLink, AtSign, FolderPlus, Upload, X, LayoutGrid } from 'lucide-react';
+import { Plus, Trash2, Link as LinkIcon, ExternalLink, AtSign, FolderPlus, Upload, X, LayoutGrid, Loader2 } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, addDoc, serverTimestamp, doc, deleteDoc, query, orderBy } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
+import { compressAndCropImage } from '@/lib/utils-app';
 
 export default function DashboardPage() {
   const { user } = useUser();
@@ -24,6 +25,7 @@ export default function DashboardPage() {
   const [newLinkUrl, setNewLinkUrl] = useState('');
   const [newLinkImage, setNewLinkImage] = useState('');
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [isProcessingImg, setIsProcessingImg] = useState(false);
 
   const profileRef = useMemoFirebase(() => user ? doc(db, 'userProfiles', user.uid) : null, [db, user?.uid]);
   const { data: profile } = useDoc(profileRef);
@@ -40,16 +42,23 @@ export default function DashboardPage() {
   }, [db, user?.uid]);
   const { data: standaloneLinks, isLoading: isStandaloneLoading } = useCollection(standaloneLinksQuery);
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, setter: (val: string) => void) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, setter: (val: string) => void) => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 1024 * 1024 * 5) {
-        toast({ variant: "destructive", title: "File terlalu besar", description: "Maksimal ukuran foto adalah 5MB." });
+        toast({ variant: "destructive", title: "File Terlalu Besar", description: "Maksimal ukuran foto adalah 5MB." });
         return;
       }
-      const reader = new FileReader();
-      reader.onloadend = () => setter(reader.result as string);
-      reader.readAsDataURL(file);
+      
+      setIsProcessingImg(true);
+      try {
+        const compressed = await compressAndCropImage(file, 300);
+        setter(compressed);
+      } catch (err) {
+        toast({ variant: "destructive", title: "Gagal Proses", description: "Foto gagal diproses ke format kotak." });
+      } finally {
+        setIsProcessingImg(false);
+      }
     }
   };
 
@@ -66,9 +75,9 @@ export default function DashboardPage() {
       });
       setNewGroupTitle('');
       setNewGroupImage('');
-      toast({ title: "Kelompok dibuat", description: "Berhasil menambahkan kelompok baru." });
+      toast({ title: "Kelompok Dibuat", description: "Berhasil menambahkan kelompok baru." });
     } catch (e) {
-      toast({ variant: "destructive", title: "Gagal", description: "Terjadi kesalahan." });
+      toast({ variant: "destructive", title: "Gagal", description: "Terjadi kesalahan sistem saat menyimpan kelompok." });
     }
   };
 
@@ -85,7 +94,7 @@ export default function DashboardPage() {
         url: newLinkUrl.startsWith('http') ? newLinkUrl : `https://${newLinkUrl}`,
         imageUrl: newLinkImage || '',
         isEnabled: true,
-        order: 1,
+        order: (standaloneLinks?.length || 0) + 1,
         clicks: 0,
         createdAt: serverTimestamp()
       });
@@ -93,16 +102,16 @@ export default function DashboardPage() {
       setNewLinkUrl('');
       setNewLinkImage('');
       setSelectedGroupId(null);
-      toast({ title: "Tautan ditambahkan", description: "Tautan baru berhasil disimpan." });
+      toast({ title: "Tautan Ditambahkan", description: "Tautan baru berhasil disimpan." });
     } catch (e) {
-      toast({ variant: "destructive", title: "Gagal", description: "Gagal menyimpan link." });
+      toast({ variant: "destructive", title: "Gagal", description: "Gagal menyimpan link. Pastikan foto tidak terlalu besar." });
     }
   };
 
   const handleDeleteGroup = async (groupId: string) => {
     if (!user) return;
     await deleteDoc(doc(db, 'userProfiles', user.uid, 'linkGroups', groupId));
-    toast({ title: "Kelompok dihapus", description: "Kelompok telah dihapus." });
+    toast({ title: "Kelompok Dihapus", description: "Kelompok telah dihapus permanen." });
   };
 
   const publicUrl = `/${profile?.username || user?.uid}`;
@@ -135,7 +144,7 @@ export default function DashboardPage() {
             }}
             className={`flex-1 py-3 text-[10px] font-black uppercase rounded-xl transition-all ${activeTab === 'link' ? 'neon-gradient text-white glow-primary' : 'text-white/40'}`}
           >
-            Tambah Link Mandiri
+            Link Mandiri
           </button>
         </div>
 
@@ -157,9 +166,9 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-4">
                   <div className="flex-1">
                     <label className="flex items-center justify-center gap-2 w-full h-12 bg-white/5 border border-dashed border-white/20 rounded-xl cursor-pointer hover:bg-white/10 transition-all">
-                      <Upload size={16} className="text-primary" />
-                      <span className="text-[10px] font-black uppercase text-white/60">{newGroupImage ? 'Ganti Foto' : 'Pilih Foto (1:1)'}</span>
-                      <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, setNewGroupImage)} />
+                      {isProcessingImg ? <Loader2 className="animate-spin text-primary" size={16} /> : <Upload size={16} className="text-primary" />}
+                      <span className="text-[10px] font-black uppercase text-white/60">{isProcessingImg ? 'Memproses...' : (newGroupImage ? 'Ganti Foto' : 'Pilih Foto (Auto Crop)')}</span>
+                      <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, setNewGroupImage)} disabled={isProcessingImg} />
                     </label>
                   </div>
                   {newGroupImage && (
@@ -171,7 +180,7 @@ export default function DashboardPage() {
                     </div>
                   )}
                 </div>
-                <Button onClick={handleAddGroup} disabled={!newGroupTitle} className="w-full h-12 neon-gradient text-white font-black rounded-xl glow-primary uppercase text-[10px] shadow-xl">
+                <Button onClick={handleAddGroup} disabled={!newGroupTitle || isProcessingImg} className="w-full h-12 neon-gradient text-white font-black rounded-xl glow-primary uppercase text-[10px] shadow-xl">
                   Simpan Kelompok
                 </Button>
               </div>
@@ -190,9 +199,9 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-4">
                   <div className="flex-1">
                     <label className="flex items-center justify-center gap-2 w-full h-12 bg-white/5 border border-dashed border-white/20 rounded-xl cursor-pointer hover:bg-white/10 transition-all">
-                      <Upload size={16} className="text-primary" />
-                      <span className="text-[10px] font-black uppercase text-white/60">{newLinkImage ? 'Ganti Foto' : 'Pilih Foto (1:1)'}</span>
-                      <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, setNewLinkImage)} />
+                      {isProcessingImg ? <Loader2 className="animate-spin text-primary" size={16} /> : <Upload size={16} className="text-primary" />}
+                      <span className="text-[10px] font-black uppercase text-white/60">{isProcessingImg ? 'Memproses...' : (newLinkImage ? 'Ganti Foto' : 'Pilih Foto (Auto Crop)')}</span>
+                      <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, setNewLinkImage)} disabled={isProcessingImg} />
                     </label>
                   </div>
                   {newLinkImage && (
@@ -204,7 +213,7 @@ export default function DashboardPage() {
                     </div>
                   )}
                 </div>
-                <Button onClick={handleAddLink} disabled={!newLinkTitle || !newLinkUrl} className="w-full h-12 neon-gradient text-white font-black rounded-xl glow-primary uppercase text-[10px] shadow-xl">
+                <Button onClick={handleAddLink} disabled={!newLinkTitle || !newLinkUrl || isProcessingImg} className="w-full h-12 neon-gradient text-white font-black rounded-xl glow-primary uppercase text-[10px] shadow-xl">
                   Simpan Tautan
                 </Button>
               </div>
@@ -228,9 +237,9 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-4">
                   <div className="flex-1">
                     <label className="flex items-center justify-center gap-2 w-full h-12 bg-white/5 border border-dashed border-white/20 rounded-xl cursor-pointer hover:bg-white/10 transition-all">
-                      <Upload size={16} className="text-primary" />
-                      <span className="text-[10px] font-black uppercase text-white/60">{newLinkImage ? 'Ganti Foto' : 'Pilih Foto (1:1)'}</span>
-                      <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, setNewLinkImage)} />
+                      {isProcessingImg ? <Loader2 className="animate-spin text-primary" size={16} /> : <Upload size={16} className="text-primary" />}
+                      <span className="text-[10px] font-black uppercase text-white/60">{isProcessingImg ? 'Memproses...' : (newLinkImage ? 'Ganti Foto' : 'Pilih Foto (Auto Crop)')}</span>
+                      <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, setNewLinkImage)} disabled={isProcessingImg} />
                     </label>
                   </div>
                   {newLinkImage && (
@@ -242,7 +251,7 @@ export default function DashboardPage() {
                     </div>
                   )}
                 </div>
-                <Button onClick={handleAddLink} disabled={!newLinkTitle || !newLinkUrl} className="w-full h-12 neon-gradient text-white font-black rounded-xl glow-primary uppercase text-[10px] shadow-xl">
+                <Button onClick={handleAddLink} disabled={!newLinkTitle || !newLinkUrl || isProcessingImg} className="w-full h-12 neon-gradient text-white font-black rounded-xl glow-primary uppercase text-[10px] shadow-xl">
                   Simpan Tautan
                 </Button>
               </div>

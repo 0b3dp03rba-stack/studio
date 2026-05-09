@@ -39,3 +39,47 @@ export function validateGmailFormat(input: string) {
 
   return { items, errors };
 }
+
+/**
+ * Mengompresi dan memotong gambar menjadi rasio 1:1 (persegi)
+ * Berguna untuk menjaga ukuran dokumen Firestore di bawah 1MB
+ */
+export async function compressAndCropImage(file: File, targetSize = 400): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Gagal mendapatkan konteks canvas'));
+          return;
+        }
+
+        // Tentukan dimensi potong (Square dari tengah)
+        const sourceSize = Math.min(img.width, img.height);
+        const sourceX = (img.width - sourceSize) / 2;
+        const sourceY = (img.height - sourceSize) / 2;
+
+        // Set ukuran output
+        canvas.width = targetSize;
+        canvas.height = targetSize;
+
+        // Gambar ke canvas dengan cropping 1:1
+        ctx.drawImage(
+          img,
+          sourceX, sourceY, sourceSize, sourceSize, // Source (crop dari tengah)
+          0, 0, targetSize, targetSize             // Destination (resized)
+        );
+
+        // Export sebagai JPEG dengan kualitas 0.7 untuk ukuran file minimal
+        resolve(canvas.toDataURL('image/jpeg', 0.7));
+      };
+      img.onerror = (err) => reject(err);
+    };
+    reader.onerror = (err) => reject(err);
+  });
+}

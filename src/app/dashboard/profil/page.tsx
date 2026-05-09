@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, serverTimestamp, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { getAuth, signOut } from 'firebase/auth';
+import { compressAndCropImage } from '@/lib/utils-app';
 
 export default function ProfilPage() {
   const { user } = useUser();
@@ -28,6 +29,7 @@ export default function ProfilPage() {
   const [avatarUrl, setAvatarUrl] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isCompressing, setIsCompressing] = useState(false);
 
   useEffect(() => {
     if (profile) {
@@ -38,16 +40,23 @@ export default function ProfilPage() {
     }
   }, [profile]);
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 1024 * 1024 * 5) {
-        toast({ variant: "destructive", title: "File terlalu besar", description: "Maksimal ukuran foto adalah 5MB." });
+        toast({ variant: "destructive", title: "File Terlalu Besar", description: "Maksimal ukuran foto adalah 5MB." });
         return;
       }
-      const reader = new FileReader();
-      reader.onloadend = () => setAvatarUrl(reader.result as string);
-      reader.readAsDataURL(file);
+      
+      setIsCompressing(true);
+      try {
+        const compressed = await compressAndCropImage(file, 400);
+        setAvatarUrl(compressed);
+      } catch (err) {
+        toast({ variant: "destructive", title: "Gagal Memproses Foto", description: "Terjadi kesalahan saat mengolah foto." });
+      } finally {
+        setIsCompressing(false);
+      }
     }
   };
 
@@ -64,32 +73,29 @@ export default function ProfilPage() {
       const cleanUsername = username.toLowerCase().trim().replace(/[^a-z0-9_]/g, '');
       
       if (cleanUsername.length < 3) {
-        toast({ variant: "destructive", title: "Username terlalu pendek", description: "Minimal 3 karakter." });
+        toast({ variant: "destructive", title: "Username Terlalu Pendek", description: "Minimal 3 karakter." });
         setIsSaving(false);
         return;
       }
 
-      // Check if username changed and handle uniqueness
       if (cleanUsername !== profile?.username) {
         const usernameRef = doc(db, 'usernames', cleanUsername);
         const usernameSnap = await getDoc(usernameRef);
         
         if (usernameSnap.exists()) {
-          toast({ variant: "destructive", title: "Username tidak tersedia", description: "Username sudah digunakan oleh user lain." });
+          toast({ variant: "destructive", title: "Username Tidak Tersedia", description: "Username sudah digunakan oleh user lain." });
           setIsSaving(false);
           return;
         }
 
-        // Delete old mapping if exists
         if (profile?.username) {
           try {
             await deleteDoc(doc(db, 'usernames', profile.username));
           } catch (e) {
-            console.warn("Could not delete old username mapping, might be permission or non-existent", e);
+            console.warn("Could not delete old username mapping", e);
           }
         }
         
-        // Set new mapping
         await setDoc(usernameRef, {
           userId: user.uid,
           createdAt: serverTimestamp()
@@ -104,11 +110,11 @@ export default function ProfilPage() {
         updatedAt: serverTimestamp()
       });
 
-      toast({ title: "Berhasil", description: "Profil Anda telah diperbarui." });
+      toast({ title: "Berhasil", description: "Profil Anda telah diperbarui secara permanen." });
       setIsEditing(false);
     } catch (e: any) {
       console.error(e);
-      toast({ variant: "destructive", title: "Gagal", description: "Terjadi kesalahan saat menyimpan. Cek koneksi atau izin." });
+      toast({ variant: "destructive", title: "Gagal Menyimpan", description: "Gagal menyimpan ke server. Pastikan ukuran foto wajar." });
     } finally {
       setIsSaving(false);
     }
@@ -140,7 +146,7 @@ export default function ProfilPage() {
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2 text-white"><Edit3 size={16} className="text-primary" /> Pengaturan Profil</h3>
               {!isEditing && (
-                <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)} className="h-8 px-4 text-[10px] font-black text-primary rounded-xl hover:bg-primary/10">EDIT</Button>
+                <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)} className="h-8 px-4 text-[10px] font-black text-primary rounded-xl hover:bg-primary/10">Edit Profil</Button>
               )}
             </div>
 
@@ -166,15 +172,15 @@ export default function ProfilPage() {
                       className="bg-white/5 h-14 text-sm pl-10 rounded-2xl border-white/10 text-white font-bold" 
                     />
                   </div>
-                  <p className="text-[9px] text-muted-foreground ml-1">URL Profil: domain.com/{username || 'username'}</p>
+                  <p className="text-[9px] text-muted-foreground ml-1">URL Profil: linku.com/{username || 'username'}</p>
                 </div>
                 <div className="space-y-1.5 text-left">
-                  <label className="text-[10px] font-black text-muted-foreground uppercase ml-1">Foto Profil (1:1)</label>
+                  <label className="text-[10px] font-black text-muted-foreground uppercase ml-1">Foto Profil (Auto Crop 1:1)</label>
                   <div className="flex items-center gap-4">
                     <label className="flex-1 flex items-center justify-center gap-3 h-14 bg-white/5 border border-dashed border-white/20 rounded-2xl cursor-pointer hover:bg-white/10 transition-all group">
-                      <Upload size={18} className="text-primary group-hover:scale-110 transition-transform" />
-                      <span className="text-xs font-bold text-white/40 uppercase">Pilih Foto</span>
-                      <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
+                      {isCompressing ? <Loader2 className="animate-spin text-primary" size={18} /> : <Upload size={18} className="text-primary group-hover:scale-110 transition-transform" />}
+                      <span className="text-xs font-bold text-white/40 uppercase">{isCompressing ? 'Memproses...' : 'Pilih Foto'}</span>
+                      <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} disabled={isCompressing} />
                     </label>
                     {avatarUrl && (
                       <Button variant="ghost" size="icon" onClick={() => setAvatarUrl('')} className="h-14 w-14 rounded-2xl bg-destructive/10 text-destructive">
@@ -193,9 +199,9 @@ export default function ProfilPage() {
                   />
                 </div>
                 <div className="flex gap-2 pt-2">
-                  <Button variant="outline" onClick={() => setIsEditing(false)} disabled={isSaving} className="flex-1 h-14 text-xs font-black rounded-2xl border-white/10 text-white">BATAL</Button>
-                  <Button onClick={handleSaveProfile} disabled={isSaving} className="flex-1 h-14 text-xs neon-gradient text-background font-black rounded-2xl glow-primary shadow-xl">
-                    {isSaving ? <Loader2 className="animate-spin" size={20} /> : "SIMPAN"}
+                  <Button variant="outline" onClick={() => setIsEditing(false)} disabled={isSaving} className="flex-1 h-14 text-xs font-black rounded-2xl border-white/10 text-white">Batal</Button>
+                  <Button onClick={handleSaveProfile} disabled={isSaving || isCompressing} className="flex-1 h-14 text-xs neon-gradient text-background font-black rounded-2xl glow-primary shadow-xl">
+                    {isSaving ? <Loader2 className="animate-spin" size={20} /> : "Simpan Profil"}
                   </Button>
                 </div>
               </div>
@@ -219,7 +225,7 @@ export default function ProfilPage() {
         </Card>
 
         <Button variant="destructive" className="w-full h-16 rounded-[1.5rem] font-black text-sm uppercase mt-6 group shadow-2xl active:scale-95 transition-all" onClick={handleLogout}>
-          <LogOut size={20} className="mr-3 group-hover:rotate-12 transition-transform" /> Keluar
+          <LogOut size={20} className="mr-3 group-hover:rotate-12 transition-transform" /> Keluar Aplikasi
         </Button>
       </div>
     </div>
