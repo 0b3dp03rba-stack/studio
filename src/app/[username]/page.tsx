@@ -4,7 +4,7 @@
 import { use, useMemo, useEffect, useState } from 'react';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc, collection, updateDoc, increment, getDoc, query, orderBy } from 'firebase/firestore';
-import { User, Share2, MousePointer2, Link2, ChevronRight, LayoutGrid, ArrowLeft, Instagram, Youtube, Facebook, Mail, MessageCircle, ExternalLink, Loader2, Copy } from 'lucide-react';
+import { User, Share2, MousePointer2, Link2, ChevronRight, LayoutGrid, ArrowLeft, Instagram, Youtube, Facebook, Mail, MessageCircle, ExternalLink, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
@@ -40,24 +40,30 @@ function getSocialIdentifier(url: string, platform: string) {
   if (!url) return '';
   const cleanUrl = url.trim().replace(/\/$/, '');
   
-  if (cleanUrl.startsWith('@')) return cleanUrl;
+  if (cleanUrl.startsWith('@')) return cleanUrl.replace('@', '');
 
   try {
     const urlObj = new URL(cleanUrl.startsWith('http') ? cleanUrl : `https://${cleanUrl}`);
     const parts = urlObj.pathname.split('/').filter(p => p);
     
     if (platform === 'YouTube') {
+      // Prioritas ID Channel (UC...)
+      const channelId = parts.find(p => p.startsWith('UC'));
+      if (channelId) return channelId;
+      
       if (parts.includes('channel')) return parts[parts.indexOf('channel') + 1];
       if (parts.includes('c')) return parts[parts.indexOf('c') + 1];
       if (parts.includes('user')) return parts[parts.indexOf('user') + 1];
-      const atPart = parts.find(p => p.startsWith('@'));
-      if (atPart) return atPart;
+      
+      const handle = parts.find(p => p.startsWith('@'));
+      if (handle) return handle.replace('@', '');
+      
       return parts[0] || '';
     }
     
     return parts[0] || '';
   } catch (e) {
-    return cleanUrl.split('/').pop() || '';
+    return cleanUrl.split('/').pop()?.replace('@', '') || '';
   }
 }
 
@@ -68,7 +74,7 @@ function getWidgetUrl(social: any) {
 
   switch (social.platform) {
     case 'YouTube':
-      return `https://socialcounts.org/youtube-live-subscriber-counter/${id}`;
+      return `https://socialcounts.org/youtube-live-subscriber-count/${id}`;
     case 'TikTok':
       return `https://tiktokcounter.com/user/${id}`;
     case 'Instagram':
@@ -355,7 +361,8 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
                    className="w-full h-full border-none"
                    title="Live Counter"
                    loading="lazy"
-                   sandbox="allow-scripts allow-same-origin"
+                   referrerPolicy="no-referrer"
+                   sandbox="allow-scripts allow-same-origin allow-popups"
                  />
                ) : (
                  <div className="w-full h-full flex flex-col items-center justify-center gap-4 text-center p-8">
@@ -363,7 +370,6 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
                    <p className="text-[10px] font-black uppercase tracking-widest text-white/40">Menghubungkan ke Statistik Live...</p>
                  </div>
                )}
-               {/* Note: Jika iframe blank karena provider memblokir, tombol di bawah akan tetap berfungsi */}
             </div>
 
             <div className="p-6 space-y-3">
@@ -377,8 +383,8 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
               >
                 Kunjungi Profil {selectedSocial?.platform} <ExternalLink size={16} className="ml-2" />
               </Button>
-              <p className="text-[8px] text-center text-white/30 font-black uppercase tracking-widest">
-                Jika widget tidak muncul, silakan klik tombol di atas.
+              <p className="text-[8px] text-center text-white/30 font-black uppercase tracking-widest leading-relaxed">
+                Widget memuat statistik real-time. Jika tampilan kosong, kemungkinan provider memblokir akses atau profil Anda bersifat privat.
               </p>
             </div>
           </div>

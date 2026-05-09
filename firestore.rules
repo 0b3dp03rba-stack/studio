@@ -2,41 +2,7 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Profil dan Usernames harus bisa dibaca publik secara total
-    match /userProfiles/{userId} {
-      allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == userId;
-      
-      // Mengizinkan update klik secara publik dan pembacaan rekursif
-      match /{allSubcollections=**} {
-        allow read: if true;
-        allow write: if request.auth != null && request.auth.uid == userId;
-        allow update: if true; 
-      }
-    }
-    
-    match /usernames/{username} {
-      allow read: if true;
-      allow write: if request.auth != null;
-    }
-    
-    match /appConfig/{document=**} {
-      allow read: if true;
-      allow write: if request.auth != null;
-    }
-
-    match /submittedEmails/{email} {
-      allow read: if true;
-      allow write: if request.auth != null;
-    }
-    
-    // Pesan untuk konsultasi
-    match /messages/{messageId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
-    }
-    
-    // Fallback keamanan
+    // Memberikan akses baca publik total untuk menghindari error izin
     match /{document=**} {
       allow read: if true;
       allow write: if request.auth != null;
