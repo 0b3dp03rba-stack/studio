@@ -22,8 +22,8 @@
             "properties": {
               "platform": { "type": "string" },
               "url": { "type": "string" },
-              "value": { "type": "string" },
-              "label": { "type": "string" }
+              "embedUrl": { "type": "string", "description": "URL untuk iframe widget" },
+              "label": { "type": "string", "description": "Username atau label tampilan" }
             }
           }
         },

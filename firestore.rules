@@ -2,36 +2,21 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Total public read access for profile-related data
+    // Sederhanakan total akses baca untuk profil publik
+    match /{document=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    
+    // Spesifik untuk userProfiles demi keamanan tambahan jika diperlukan
     match /userProfiles/{userId} {
       allow read: if true;
       allow write: if request.auth != null && request.auth.uid == userId;
       
-      match /links/{linkId} {
+      match /{allSubcollections=**} {
         allow read: if true;
         allow write: if request.auth != null && request.auth.uid == userId;
       }
-      match /linkGroups/{groupId} {
-        allow read: if true;
-        allow write: if request.auth != null && request.auth.uid == userId;
-        
-        match /links/{linkId} {
-          allow read: if true;
-          allow write: if request.auth != null && request.auth.uid == userId;
-        }
-      }
-    }
-    
-    // Mapping usernames to IDs must be readable by everyone
-    match /usernames/{username} {
-      allow read: if true;
-      allow write: if request.auth != null;
-    }
-
-    // Default catch-all for other collections used in the app
-    match /{document=**} {
-      allow read: if true;
-      allow write: if request.auth != null;
     }
   }
 }

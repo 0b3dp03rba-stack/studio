@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { User, LogOut, Mail, Edit3, Upload, AtSign, Loader2, Palette, Check, Copy, Share2, Plus, Trash2, Instagram, Youtube, Facebook, MessageCircle, Link2 } from 'lucide-react';
+import { User, LogOut, Mail, Edit3, Upload, AtSign, Loader2, Palette, Check, Copy, Share2, Plus, Trash2, Instagram, Youtube, Facebook, MessageCircle, Link2, Globe, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -39,6 +39,7 @@ const socialPlatforms = [
   { name: 'Facebook', icon: Facebook },
   { name: 'WhatsApp', icon: MessageCircle },
   { name: 'Email', icon: Mail },
+  { name: 'Website', icon: Globe },
 ];
 
 const platformIcons: Record<string, any> = {
@@ -47,7 +48,8 @@ const platformIcons: Record<string, any> = {
   TikTok: TikTokIcon,
   Facebook: Facebook,
   WhatsApp: MessageCircle,
-  Email: Mail
+  Email: Mail,
+  Website: Globe
 };
 
 export default function ProfilPage() {
@@ -75,8 +77,13 @@ export default function ProfilPage() {
   const [tempImage, setTempImage] = useState<string | null>(null);
   const [fullUrl, setFullUrl] = useState('');
 
-  const [newSocialPlatform, setNewSocialPlatform] = useState('');
-  const [newSocialUrl, setNewSocialUrl] = useState('');
+  // New Social Form State
+  const [newSocial, setNewSocial] = useState({
+    platform: '',
+    url: '',
+    embedUrl: '',
+    label: ''
+  });
 
   useEffect(() => {
     if (profile) {
@@ -118,7 +125,6 @@ export default function ProfilPage() {
     setIsEditing(true);
     const palette = await extractPaletteFromImage(cropped);
     setExtractedPalette(palette);
-    // Auto select best combo
     setThemeColor(palette[0]);
     setThemeColorSecondary(palette[1] || palette[0]);
     toast({ title: "Palet Foto Siap", description: "Warna foto profil Anda telah diekstrak." });
@@ -165,15 +171,18 @@ export default function ProfilPage() {
   };
 
   const handleAddSocialLink = () => {
-    if (!newSocialPlatform || !newSocialUrl) return;
-    const newLink = {
-      platform: newSocialPlatform,
-      url: newSocialUrl.startsWith('http') ? newSocialUrl : `https://${newSocialUrl}`,
-      isEnabled: true
+    if (!newSocial.platform || !newSocial.url || !newSocial.label) {
+      toast({ variant: "destructive", title: "Lengkapi Form", description: "Platform, Link, dan Username wajib diisi." });
+      return;
+    }
+    
+    const cleanLink = {
+      ...newSocial,
+      url: newSocial.url.startsWith('http') ? newSocial.url : `https://${newSocial.url}`
     };
-    setSocialLinks([...socialLinks, newLink]);
-    setNewSocialPlatform('');
-    setNewSocialUrl('');
+
+    setSocialLinks([...socialLinks, cleanLink]);
+    setNewSocial({ platform: '', url: '', embedUrl: '', label: '' });
     setIsEditing(true);
   };
 
@@ -265,7 +274,6 @@ export default function ProfilPage() {
                         </button>
                       ))}
                     </div>
-                    <p className="text-[8px] font-black text-white/30 uppercase text-center">Klik warna untuk mengatur Tema Utama & Sekunder</p>
                   </div>
                 )}
 
@@ -295,27 +303,38 @@ export default function ProfilPage() {
 
         <Card className="glass-card border-white/5 rounded-[2rem] overflow-hidden">
           <CardContent className="p-6 space-y-6">
-            <h3 className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2 text-white"><Share2 size={16} className="text-primary" /> Hubungkan Live Sosmed</h3>
+            <h3 className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2 text-white"><Share2 size={16} className="text-primary" /> Sosmed & Live Stats</h3>
             <div className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-[9px] font-black text-muted-foreground uppercase ml-1">Platform</label>
-                <Select value={newSocialPlatform} onValueChange={setNewSocialPlatform}>
-                  <SelectTrigger className="bg-white/5 border-white/10 h-12 rounded-xl text-xs font-bold">
-                    <SelectValue placeholder="Pilih Platform" />
-                  </SelectTrigger>
-                  <SelectContent className="glass-card border-none rounded-xl">
-                    {socialPlatforms.map(p => (
-                      <SelectItem key={p.name} value={p.name} className="text-xs font-bold">{p.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-black text-muted-foreground uppercase ml-1">Platform</label>
+                  <Select value={newSocial.platform} onValueChange={(v) => setNewSocial({...newSocial, platform: v})}>
+                    <SelectTrigger className="bg-white/5 border-white/10 h-12 rounded-xl text-xs font-bold">
+                      <SelectValue placeholder="Pilih" />
+                    </SelectTrigger>
+                    <SelectContent className="glass-card border-none rounded-xl">
+                      {socialPlatforms.map(p => (
+                        <SelectItem key={p.name} value={p.name} className="text-xs font-bold">{p.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-black text-muted-foreground uppercase ml-1">Username / ID</label>
+                  <Input value={newSocial.label} onChange={(e) => setNewSocial({...newSocial, label: e.target.value})} placeholder="@username" className="bg-white/5 border-white/10 h-12 rounded-xl text-xs font-bold" />
+                </div>
               </div>
               <div className="space-y-1.5">
-                <label className="text-[9px] font-black text-muted-foreground uppercase ml-1">URL Profil Media Sosial</label>
-                <Input value={newSocialUrl} onChange={(e) => setNewSocialUrl(e.target.value)} placeholder="https://youtube.com/@username" className="bg-white/5 border-white/10 h-12 rounded-xl text-xs font-bold" />
+                <label className="text-[9px] font-black text-muted-foreground uppercase ml-1">Link Profil Asli</label>
+                <Input value={newSocial.url} onChange={(e) => setNewSocial({...newSocial, url: e.target.value})} placeholder="https://youtube.com/@..." className="bg-white/5 border-white/10 h-12 rounded-xl text-xs font-bold" />
               </div>
-              <Button onClick={handleAddSocialLink} disabled={!newSocialPlatform || !newSocialUrl} className="w-full h-12 neon-gradient text-background font-black rounded-xl text-[10px] uppercase tracking-widest glow-primary">
-                <Plus size={16} className="mr-2" /> Simpan Link Sosial
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-black text-primary uppercase ml-1 flex items-center gap-1"><Plus size={10}/> Embed Widget URL (Opsional)</label>
+                <Input value={newSocial.embedUrl} onChange={(e) => setNewSocial({...newSocial, embedUrl: e.target.value})} placeholder="https://socialcounts.org/..." className="bg-white/5 border-white/10 h-12 rounded-xl text-xs font-bold" />
+                <p className="text-[8px] text-muted-foreground px-1">Masukkan URL embed jika ingin menampilkan statistik real-time.</p>
+              </div>
+              <Button onClick={handleAddSocialLink} className="w-full h-12 neon-gradient text-background font-black rounded-xl text-[10px] uppercase tracking-widest glow-primary">
+                Tambah Sosmed
               </Button>
             </div>
             <div className="grid gap-3 pt-4 border-t border-white/5">
@@ -329,7 +348,7 @@ export default function ProfilPage() {
                       </div>
                       <div className="min-w-0">
                         <p className="text-xs font-black uppercase truncate">{social.platform}</p>
-                        <p className="text-[10px] text-primary font-black animate-pulse truncate uppercase tracking-widest">Live Connection Active</p>
+                        <p className="text-[10px] text-muted-foreground font-black truncate uppercase tracking-widest">{social.label}</p>
                       </div>
                     </div>
                     <Button size="icon" variant="ghost" onClick={() => handleRemoveSocialLink(i)} className="text-destructive h-10 w-10 rounded-xl hover:bg-destructive/10">

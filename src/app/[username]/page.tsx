@@ -32,60 +32,9 @@ const platformIcons: Record<string, any> = {
   TikTok: TikTokIcon,
   Facebook: Facebook,
   WhatsApp: MessageCircle,
-  Email: Mail
+  Email: Mail,
+  Website: Globe
 };
-
-// Robust Social ID Extractor
-function getSocialIdentifier(url: string, platform: string) {
-  if (!url) return '';
-  const cleanUrl = url.trim().replace(/\/$/, '');
-  
-  if (cleanUrl.startsWith('@')) return cleanUrl.replace('@', '');
-
-  try {
-    const urlObj = new URL(cleanUrl.startsWith('http') ? cleanUrl : `https://${cleanUrl}`);
-    const parts = urlObj.pathname.split('/').filter(p => p);
-    
-    if (platform === 'YouTube') {
-      const channelId = parts.find(p => p.startsWith('UC'));
-      if (channelId) return channelId;
-      if (parts.includes('channel')) return parts[parts.indexOf('channel') + 1];
-      const handle = parts.find(p => p.startsWith('@'));
-      if (handle) return handle;
-      return parts[0] || '';
-    }
-    
-    if (platform === 'TikTok') {
-      const handle = parts.find(p => p.startsWith('@'));
-      return handle || parts[0] || '';
-    }
-    
-    return parts[0] || '';
-  } catch (e) {
-    return cleanUrl.split('/').pop()?.replace('@', '') || '';
-  }
-}
-
-// Widget Provider Logic
-function getWidgetUrl(social: any) {
-  const id = getSocialIdentifier(social.url, social.platform);
-  if (!id) return null;
-
-  switch (social.platform) {
-    case 'YouTube':
-      // YouTube Embed from SocialCounts
-      return `https://socialcounts.org/youtube-live-subscriber-count/${id}/embed`;
-    case 'TikTok':
-      // TikTok Embed from Countik
-      const tiktokId = id.startsWith('@') ? id : `@${id}`;
-      return `https://countik.com/embed/user/${tiktokId}`;
-    case 'Instagram':
-      // Instagram Stat
-      return `https://instastat.net/${id.replace('@', '')}`;
-    default:
-      return null;
-  }
-}
 
 export default function PublicProfileByUsername({ params }: { params: Promise<{ username: string }> }) {
   const { username } = use(params);
@@ -105,6 +54,7 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
         if (userSnap.exists()) {
           setResolvedUserId(userSnap.data().userId);
         } else {
+          // Fallback check direct ID
           const profileRef = doc(db, 'userProfiles', username);
           const profileSnap = await getDoc(profileRef);
           if (profileSnap.exists()) setResolvedUserId(username);
@@ -357,10 +307,10 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
               </div>
             </div>
 
-            <div className="w-full aspect-[4/3] bg-black/60 relative overflow-hidden">
-               {selectedSocial && getWidgetUrl(selectedSocial) ? (
+            <div className="w-full aspect-[4/3] bg-black/60 relative overflow-hidden flex items-center justify-center">
+               {selectedSocial?.embedUrl ? (
                  <iframe 
-                   src={getWidgetUrl(selectedSocial)!} 
+                   src={selectedSocial.embedUrl} 
                    className="w-full h-full border-none"
                    title="Live Counter"
                    loading="lazy"
@@ -369,8 +319,14 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
                  />
                ) : (
                  <div className="w-full h-full flex flex-col items-center justify-center gap-4 text-center p-8">
-                   <Loader2 className="w-10 h-10 text-primary animate-spin" />
-                   <p className="text-[10px] font-black uppercase tracking-widest text-white/40">Menghubungkan ke Statistik Live...</p>
+                   <div className="w-24 h-24 rounded-full neon-gradient flex items-center justify-center text-background animate-pulse" style={{ background: dynamicGradient }}>
+                      {selectedSocial && (platformIcons[selectedSocial.platform] ? (() => {
+                        const Icon = platformIcons[selectedSocial.platform];
+                        return <Icon size={48} />;
+                      })() : <Link2 size={48} />)}
+                   </div>
+                   <h3 className="text-2xl font-black text-white tracking-tighter">{selectedSocial?.label || '@username'}</h3>
+                   <p className="text-[10px] font-black uppercase tracking-widest text-white/40">Statistik Real-time Tidak Tersedia</p>
                  </div>
                )}
             </div>
@@ -387,7 +343,7 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
                 Kunjungi Profil {selectedSocial?.platform} <ExternalLink size={16} className="ml-2" />
               </Button>
               <p className="text-[8px] text-center text-white/30 font-black uppercase tracking-widest leading-relaxed">
-                Widget memuat statistik real-time. Jika tampilan kosong, kemungkinan provider memblokir akses atau profil Anda bersifat privat.
+                Widget memuat statistik real-time jika URL embed tersedia. Jika tampilan kosong, kemungkinan provider memblokir akses atau profil Anda bersifat privat.
               </p>
             </div>
           </div>
