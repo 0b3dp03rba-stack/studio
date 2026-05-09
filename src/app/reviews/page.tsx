@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useMemo } from 'react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy } from 'firebase/firestore';
 import { Star, Quote, ChevronLeft, LayoutGrid } from 'lucide-react';
@@ -10,11 +11,50 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 
+// Komponen untuk merender bintang parsial/desimal
+const PartialStarRating = ({ rating, size = 20, className = "" }: { rating: number, size?: number, className?: string }) => {
+  return (
+    <div className={`flex items-center gap-1 ${className}`}>
+      {[1, 2, 3, 4, 5].map((starIndex) => {
+        const fillAmount = Math.max(0, Math.min(100, (rating - (starIndex - 1)) * 100));
+        return (
+          <div key={starIndex} className="relative" style={{ width: size, height: size }}>
+            <Star 
+              size={size} 
+              className="text-white/10 absolute inset-0" 
+            />
+            <div 
+              className="absolute inset-0 overflow-hidden"
+              style={{ width: `${fillAmount}%` }}
+            >
+              <Star 
+                size={size} 
+                fill="currentColor" 
+                className="text-primary"
+              />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 export default function AllReviewsPage() {
   const db = useFirestore();
 
   const reviewsQuery = useMemoFirebase(() => query(collection(db, 'platformReviews'), orderBy('createdAt', 'desc')), [db]);
   const { data: reviews, isLoading } = useCollection(reviewsQuery);
+
+  // Hitung Statistik Rating
+  const stats = useMemo(() => {
+    if (!reviews || reviews.length === 0) return { average: 0, total: 0 };
+    const sum = reviews.reduce((acc, rev) => acc + (rev.rating || 0), 0);
+    return {
+      average: Number((sum / reviews.length).toFixed(1)),
+      total: reviews.length
+    };
+  }, [reviews]);
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
@@ -27,14 +67,27 @@ export default function AllReviewsPage() {
       </header>
 
       <main className="relative z-10 pt-32 pb-24 px-6 max-w-2xl mx-auto space-y-12 animate-in text-center">
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div className="mx-auto w-20 h-20 rounded-[1.5rem] bg-black border border-white/10 flex items-center justify-center text-primary shadow-2xl glow-primary">
             <Star size={40} fill="currentColor" />
           </div>
           <div className="space-y-1">
-            <h1 className="text-4xl font-black text-white tracking-tighter uppercase">Rating Pengguna</h1>
-            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/70">Testimonial jujur dari komunitas Linku</p>
+            <h1 className="text-4xl font-black text-white tracking-tighter uppercase leading-none">Rating Komunitas</h1>
+            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/70">Testimonial jujur pengguna Linku</p>
           </div>
+
+          {/* Summary Stats */}
+          {!isLoading && stats.total > 0 && (
+            <div className="flex flex-col items-center gap-2 pt-4">
+              <div className="flex items-center gap-4">
+                <span className="text-6xl font-black text-white tracking-tighter">{stats.average}</span>
+                <div className="text-left">
+                  <PartialStarRating rating={stats.average} size={28} />
+                  <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mt-1">Total {stats.total} Ulasan Aktif</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {isLoading ? (

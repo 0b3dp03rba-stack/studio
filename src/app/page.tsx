@@ -7,8 +7,39 @@ import { Link2, Sparkles, LayoutGrid, Palette, ArrowRight, Star, Quote } from 'l
 import Link from 'next/link';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { useRouter } from 'next/navigation';
-import { collection, query, orderBy, limit } from 'firebase/firestore';
+import { collection, query, orderBy } from 'firebase/firestore';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+
+// Komponen untuk merender bintang parsial/desimal
+const PartialStarRating = ({ rating, size = 20, className = "" }: { rating: number, size?: number, className?: string }) => {
+  return (
+    <div className={`flex items-center gap-1 ${className}`}>
+      {[1, 2, 3, 4, 5].map((starIndex) => {
+        const fillAmount = Math.max(0, Math.min(100, (rating - (starIndex - 1)) * 100));
+        return (
+          <div key={starIndex} className="relative" style={{ width: size, height: size }}>
+            {/* Background Bintang Kosong */}
+            <Star 
+              size={size} 
+              className="text-white/10 absolute inset-0" 
+            />
+            {/* Bintang Terisi dengan Clipping */}
+            <div 
+              className="absolute inset-0 overflow-hidden text-primary fill-primary"
+              style={{ width: `${fillAmount}%` }}
+            >
+              <Star 
+                size={size} 
+                fill="currentColor" 
+                className="text-primary"
+              />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
 
 export default function LandingPage() {
   const { user, isUserLoading } = useUser();
@@ -21,8 +52,23 @@ export default function LandingPage() {
     }
   }, [user, isUserLoading, router]);
 
-  const reviewsQuery = useMemoFirebase(() => query(collection(db, 'platformReviews'), orderBy('createdAt', 'desc'), limit(3)), [db]);
-  const { data: reviews, isLoading: isReviewsLoading } = useCollection(reviewsQuery);
+  const reviewsQuery = useMemoFirebase(() => query(collection(db, 'platformReviews'), orderBy('createdAt', 'desc')), [db]);
+  const { data: allReviews, isLoading: isReviewsLoading } = useCollection(reviewsQuery);
+
+  // Hitung Statistik Rating
+  const stats = useMemo(() => {
+    if (!allReviews || allReviews.length === 0) return { average: 0, total: 0 };
+    const sum = allReviews.reduce((acc, rev) => acc + (rev.rating || 0), 0);
+    return {
+      average: Number((sum / allReviews.length).toFixed(1)),
+      total: allReviews.length
+    };
+  }, [allReviews]);
+
+  // Ambil hanya 3 ulasan terbaru untuk ditampilkan sebagai kartu
+  const displayedReviews = useMemo(() => {
+    return allReviews?.slice(0, 3) || [];
+  }, [allReviews]);
 
   if (isUserLoading || user) {
     return (
@@ -80,13 +126,28 @@ export default function LandingPage() {
 
         {/* Reviews Section */}
         <section className="space-y-12 py-12 animate-in" style={{ animationDelay: '0.4s' }}>
-          <div className="space-y-2">
-             <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Wall of Love</h2>
-             <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/70">Apa kata mereka tentang Linku</p>
+          <div className="space-y-4">
+             <div className="space-y-1">
+                <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Wall of Love</h2>
+                <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/70">Apa kata mereka tentang Linku</p>
+             </div>
+             
+             {/* Statistik Rating Rata-rata */}
+             {!isReviewsLoading && stats.total > 0 && (
+               <div className="flex flex-col items-center gap-2 py-4 animate-in">
+                  <div className="flex items-center gap-4">
+                    <span className="text-5xl font-black text-white tracking-tighter">{stats.average}</span>
+                    <div className="text-left">
+                      <PartialStarRating rating={stats.average} size={24} />
+                      <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mt-1">Berdasarkan {stats.total} Ulasan</p>
+                    </div>
+                  </div>
+               </div>
+             )}
           </div>
 
           <div className="grid gap-6 max-w-2xl mx-auto">
-            {reviews?.map((review) => (
+            {displayedReviews.map((review) => (
               <div key={review.id} className="glass-card p-6 rounded-[2rem] text-left space-y-4 relative group hover:scale-[1.02] transition-transform">
                 <Quote className="absolute top-6 right-6 text-primary/10 w-12 h-12" />
                 <div className="flex items-center gap-4">
@@ -107,7 +168,7 @@ export default function LandingPage() {
               </div>
             ))}
             
-            {reviews && reviews.length > 0 && (
+            {stats.total > 3 && (
               <div className="pt-4">
                 <Button variant="ghost" asChild className="text-[10px] font-black uppercase tracking-[0.2em] text-primary hover:bg-primary/10 rounded-xl px-8">
                   <Link href="/reviews">Lihat Semua Rating <ArrowRight size={14} className="ml-2" /></Link>
@@ -115,7 +176,7 @@ export default function LandingPage() {
               </div>
             )}
             
-            {!isReviewsLoading && (!reviews || reviews.length === 0) && (
+            {!isReviewsLoading && stats.total === 0 && (
               <p className="opacity-20 font-black uppercase text-[10px] tracking-widest">Belum ada ulasan.</p>
             )}
           </div>
