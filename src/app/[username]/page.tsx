@@ -85,7 +85,6 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
 
   const primaryColor = profile.themeColor || '#ff0000';
   const secondaryColor = profile.themeColorSecondary || '#ffea00';
-  // 50:50 Gradient Stop for dynamic feeling
   const dynamicGradient = `linear-gradient(-45deg, ${primaryColor} 0%, ${secondaryColor} 50%, ${primaryColor} 100%)`;
 
   return (
@@ -243,8 +242,8 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
             <Link2 size={12} style={{ color: primaryColor }} />
             <p className="text-[9px] font-black uppercase tracking-[0.4em] text-white">Powering with Linku Engine</p>
           </div>
-          <Link href="/" className="text-[8px] font-bold text-white/30 hover:text-white transition-colors uppercase tracking-widest">
-            Bergabung dengan {profile.displayName || profile.username} di Linku
+          <Link href="/" className="text-[8px] font-bold text-white/30 hover:text-white transition-colors uppercase tracking-widest underline underline-offset-4">
+            Klik untuk bergabung dengan {profile.displayName || profile.username} di Linku
           </Link>
         </div>
       </div>
