@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { User, LogOut, Mail, Edit3, Upload, AtSign, Loader2, Palette, Check, Copy, Share2, Plus, Trash2, Instagram, Youtube, Facebook, MessageCircle, Link2, RefreshCw } from 'lucide-react';
+import { User, LogOut, Mail, Edit3, Upload, AtSign, Loader2, Palette, Check, Copy, Share2, Plus, Trash2, Instagram, Youtube, Facebook, MessageCircle, Link2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,8 +15,6 @@ import { getAuth, signOut } from 'firebase/auth';
 import ImageCropperModal from '@/components/ImageCropperModal';
 import { extractPaletteFromImage } from '@/lib/utils-app';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-
-const DEFAULT_PALETTE = ['#ff0000', '#00ffff', '#0000ff', '#00ff00', '#ff00ff', '#ffff00', '#000000', '#ffffff'];
 
 const TikTokIcon = ({ className, size = 16 }: { className?: string, size?: number }) => (
   <svg 
@@ -67,7 +65,7 @@ export default function ProfilPage() {
   const [avatarUrl, setAvatarUrl] = useState('');
   const [themeColor, setThemeColor] = useState('#ff0000');
   const [themeColorSecondary, setThemeColorSecondary] = useState('#ffea00');
-  const [customPalette, setCustomPalette] = useState<string[]>(DEFAULT_PALETTE);
+  const [extractedPalette, setExtractedPalette] = useState<string[]>([]);
   const [socialLinks, setSocialLinks] = useState<any[]>([]);
   
   const [isEditing, setIsEditing] = useState(false);
@@ -91,7 +89,8 @@ export default function ProfilPage() {
       setSocialLinks(profile.socialLinks || []);
       
       if (typeof window !== 'undefined') {
-        setFullUrl(`${window.location.origin}/${profile.username || profile.id}`);
+        const domain = window.location.origin;
+        setFullUrl(`${domain}/${profile.username || profile.id}`);
       }
     }
   }, [profile]);
@@ -118,10 +117,11 @@ export default function ProfilPage() {
     setAvatarUrl(cropped);
     setIsEditing(true);
     const palette = await extractPaletteFromImage(cropped);
-    setCustomPalette(palette);
+    setExtractedPalette(palette);
+    // Auto select best combo
     setThemeColor(palette[0]);
     setThemeColorSecondary(palette[1] || palette[0]);
-    toast({ title: "Palet Diperbarui", description: "Warna tema telah disesuaikan dengan foto profil Anda." });
+    toast({ title: "Palet Foto Siap", description: "Warna foto profil Anda telah diekstrak." });
   };
 
   const handleLogout = async () => {
@@ -169,8 +169,7 @@ export default function ProfilPage() {
     const newLink = {
       platform: newSocialPlatform,
       url: newSocialUrl.startsWith('http') ? newSocialUrl : `https://${newSocialUrl}`,
-      value: 'Live',
-      label: 'Real-time Stats'
+      isEnabled: true
     };
     setSocialLinks([...socialLinks, newLink]);
     setNewSocialPlatform('');
@@ -192,7 +191,7 @@ export default function ProfilPage() {
           className="mx-auto w-28 h-28 rounded-[2rem] flex items-center justify-center border-4 border-background shadow-2xl overflow-hidden relative group aspect-square"
           style={{ 
             background: `linear-gradient(-45deg, ${themeColor}, ${themeColorSecondary})`,
-            boxShadow: `0 0 25px -5px ${themeColor}99`
+            boxShadow: `0 0 30px -5px ${themeColor}66`
           }}
         >
            {avatarUrl ? (
@@ -214,11 +213,11 @@ export default function ProfilPage() {
       <Card className="glass-card border-none bg-primary/5 rounded-[2rem] overflow-hidden">
         <CardContent className="p-6 space-y-4">
           <div className="flex items-center justify-between">
-            <div className="space-y-1">
+            <div className="space-y-1 min-w-0 flex-1">
               <p className="text-[10px] font-black uppercase text-primary tracking-widest">URL Profil Linku</p>
-              <p className="text-sm font-bold text-white truncate max-w-[220px]">{fullUrl || 'Menyiapkan URL...'}</p>
+              <p className="text-sm font-bold text-white truncate pr-4">{fullUrl || 'Menyiapkan URL...'}</p>
             </div>
-            <Button variant="ghost" size="icon" onClick={handleCopyUrl} className="h-12 w-12 rounded-2xl bg-white/5 hover:bg-primary/20 hover:text-primary shadow-xl">
+            <Button variant="ghost" size="icon" onClick={handleCopyUrl} className="h-12 w-12 rounded-2xl bg-white/5 hover:bg-primary/20 hover:text-primary shadow-xl shrink-0">
               <Copy size={20} />
             </Button>
           </div>
@@ -229,9 +228,9 @@ export default function ProfilPage() {
         <Card className="glass-card border-white/5 rounded-[2rem] overflow-hidden">
           <CardContent className="p-6 space-y-5">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2 text-white"><Edit3 size={16} className="text-primary" /> Pengaturan Profil</h3>
+              <h3 className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2 text-white"><Edit3 size={16} className="text-primary" /> Edit Profil</h3>
               {!isEditing && (
-                <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)} className="h-8 px-4 text-[10px] font-black text-primary rounded-xl hover:bg-primary/10">Edit Profil</Button>
+                <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)} className="h-8 px-4 text-[10px] font-black text-primary rounded-xl hover:bg-primary/10">Buka Mode Edit</Button>
               )}
             </div>
             {isEditing ? (
@@ -247,33 +246,46 @@ export default function ProfilPage() {
                     <Input value={username} onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))} placeholder="username" className="bg-white/5 h-14 text-sm pl-10 rounded-2xl border-white/10 text-white font-bold" />
                   </div>
                 </div>
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black text-muted-foreground uppercase ml-1 flex items-center gap-2"><Palette size={14} /> Palet Warna Foto</label>
-                  <div className="grid grid-cols-4 gap-3">
-                    {customPalette.map((color, i) => (
-                      <button key={i} onClick={() => { setThemeColor(color); setThemeColorSecondary(color); }} className={`aspect-square rounded-xl border-2 transition-all flex items-center justify-center ${themeColor === color ? 'border-white scale-105 shadow-lg' : 'border-transparent opacity-70 hover:opacity-100'}`} style={{ backgroundColor: color }}>
-                        {themeColor === color && <Check size={16} className="text-white mix-blend-difference" />}
-                      </button>
-                    ))}
+
+                {extractedPalette.length > 0 && (
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-muted-foreground uppercase ml-1 flex items-center gap-2"><Palette size={14} /> Palet Warna Foto Anda</label>
+                    <div className="grid grid-cols-4 gap-3">
+                      {extractedPalette.map((color, i) => (
+                        <button 
+                          key={i} 
+                          onClick={() => {
+                            if (themeColor === color) setThemeColorSecondary(color);
+                            else setThemeColor(color);
+                          }} 
+                          className={`aspect-square rounded-xl border-2 transition-all flex items-center justify-center ${themeColor === color || themeColorSecondary === color ? 'border-white scale-105 shadow-lg' : 'border-transparent opacity-70 hover:opacity-100'}`} 
+                          style={{ backgroundColor: color }}
+                        >
+                          {themeColor === color && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-[8px] font-black text-white/30 uppercase text-center">Klik warna untuk mengatur Tema Utama & Sekunder</p>
                   </div>
-                </div>
+                )}
+
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-muted-foreground uppercase ml-1">Foto Profil</label>
+                  <label className="text-[10px] font-black text-muted-foreground uppercase ml-1">Unggah Foto Profil</label>
                   <label className="flex items-center justify-center gap-3 h-14 bg-white/5 border border-dashed border-white/20 rounded-2xl cursor-pointer hover:bg-white/10 transition-all">
                     <Upload size={18} className="text-primary" />
-                    <span className="text-xs font-bold text-white/40 uppercase">Ganti Foto</span>
+                    <span className="text-xs font-bold text-white/40 uppercase">Pilih Gambar</span>
                     <input type="file" className="hidden" accept="image/*" onChange={handleImageSelect} />
                   </label>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-muted-foreground uppercase ml-1">Bio</label>
-                  <Textarea value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Bio..." className="bg-white/5 h-24 text-sm rounded-2xl border-white/10 text-white font-medium" />
+                  <label className="text-[10px] font-black text-muted-foreground uppercase ml-1">Bio Singkat</label>
+                  <Textarea value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Tulis bio Anda..." className="bg-white/5 h-24 text-sm rounded-2xl border-white/10 text-white font-medium" />
                 </div>
               </div>
             ) : (
               <div className="space-y-5">
                 <div className="p-4 bg-white/[0.02] rounded-2xl border border-white/5">
-                  <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">Bio</p>
+                  <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">Bio Anda</p>
                   <p className="text-sm font-medium text-white/80 leading-relaxed">{bio || 'Belum ada bio.'}</p>
                 </div>
               </div>
@@ -283,29 +295,27 @@ export default function ProfilPage() {
 
         <Card className="glass-card border-white/5 rounded-[2rem] overflow-hidden">
           <CardContent className="p-6 space-y-6">
-            <h3 className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2 text-white"><Share2 size={16} className="text-primary" /> Media Sosial (Live Stats)</h3>
+            <h3 className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2 text-white"><Share2 size={16} className="text-primary" /> Hubungkan Live Sosmed</h3>
             <div className="space-y-4">
-              <div className="grid grid-cols-1 gap-3">
-                <div className="space-y-1.5">
-                  <label className="text-[9px] font-black text-muted-foreground uppercase ml-1">Platform</label>
-                  <Select value={newSocialPlatform} onValueChange={setNewSocialPlatform}>
-                    <SelectTrigger className="bg-white/5 border-white/10 h-12 rounded-xl text-xs font-bold">
-                      <SelectValue placeholder="Pilih Platform" />
-                    </SelectTrigger>
-                    <SelectContent className="glass-card border-none rounded-xl">
-                      {socialPlatforms.map(p => (
-                        <SelectItem key={p.name} value={p.name} className="text-xs font-bold">{p.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-black text-muted-foreground uppercase ml-1">Platform</label>
+                <Select value={newSocialPlatform} onValueChange={setNewSocialPlatform}>
+                  <SelectTrigger className="bg-white/5 border-white/10 h-12 rounded-xl text-xs font-bold">
+                    <SelectValue placeholder="Pilih Platform" />
+                  </SelectTrigger>
+                  <SelectContent className="glass-card border-none rounded-xl">
+                    {socialPlatforms.map(p => (
+                      <SelectItem key={p.name} value={p.name} className="text-xs font-bold">{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1.5">
-                <label className="text-[9px] font-black text-muted-foreground uppercase ml-1">URL Profil Sosmed</label>
-                <Input value={newSocialUrl} onChange={(e) => setNewSocialUrl(e.target.value)} placeholder="https://instagram.com/username" className="bg-white/5 border-white/10 h-12 rounded-xl text-xs font-bold" />
+                <label className="text-[9px] font-black text-muted-foreground uppercase ml-1">URL Profil Media Sosial</label>
+                <Input value={newSocialUrl} onChange={(e) => setNewSocialUrl(e.target.value)} placeholder="https://youtube.com/@username" className="bg-white/5 border-white/10 h-12 rounded-xl text-xs font-bold" />
               </div>
               <Button onClick={handleAddSocialLink} disabled={!newSocialPlatform || !newSocialUrl} className="w-full h-12 neon-gradient text-background font-black rounded-xl text-[10px] uppercase tracking-widest glow-primary">
-                <Plus size={16} className="mr-2" /> Hubungkan Live Sosmed
+                <Plus size={16} className="mr-2" /> Simpan Link Sosial
               </Button>
             </div>
             <div className="grid gap-3 pt-4 border-t border-white/5">
@@ -319,14 +329,12 @@ export default function ProfilPage() {
                       </div>
                       <div className="min-w-0">
                         <p className="text-xs font-black uppercase truncate">{social.platform}</p>
-                        <p className="text-[10px] text-primary font-black animate-pulse truncate uppercase tracking-widest">Real-time Connection Ready</p>
+                        <p className="text-[10px] text-primary font-black animate-pulse truncate uppercase tracking-widest">Live Connection Active</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Button size="icon" variant="ghost" onClick={() => handleRemoveSocialLink(i)} className="text-destructive h-10 w-10 rounded-xl hover:bg-destructive/10">
-                        <Trash2 size={16} />
-                      </Button>
-                    </div>
+                    <Button size="icon" variant="ghost" onClick={() => handleRemoveSocialLink(i)} className="text-destructive h-10 w-10 rounded-xl hover:bg-destructive/10">
+                      <Trash2 size={16} />
+                    </Button>
                   </div>
                 );
               })}
@@ -338,7 +346,7 @@ export default function ProfilPage() {
           <div className="flex gap-2 pt-4">
             <Button variant="outline" onClick={() => setIsEditing(false)} disabled={isSaving} className="flex-1 h-14 rounded-2xl">Batal</Button>
             <Button onClick={handleSaveProfile} disabled={isSaving} className="flex-1 h-14 neon-gradient text-background font-black rounded-2xl shadow-xl">
-              {isSaving ? <Loader2 className="animate-spin" size={20} /> : "Simpan Semua"}
+              {isSaving ? <Loader2 className="animate-spin" size={20} /> : "Simpan Perubahan"}
             </Button>
           </div>
         )}

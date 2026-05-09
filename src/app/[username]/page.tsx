@@ -4,12 +4,11 @@
 import { use, useMemo, useEffect, useState } from 'react';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc, collection, updateDoc, increment, getDoc, query, orderBy } from 'firebase/firestore';
-import { User, Share2, MousePointer2, Link2, ChevronRight, LayoutGrid, ArrowLeft, Instagram, Youtube, Facebook, Mail, MessageCircle, ExternalLink, RefreshCw, Loader2 } from 'lucide-react';
+import { User, Share2, MousePointer2, Link2, ChevronRight, LayoutGrid, ArrowLeft, Instagram, Youtube, Facebook, Mail, MessageCircle, ExternalLink, Loader2, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { syncSocialStats } from '@/ai/flows/social-stats-flow';
 
 const TikTokIcon = ({ className, size = 20 }: { className?: string, size?: number }) => (
   <svg 
@@ -36,6 +35,42 @@ const platformIcons: Record<string, any> = {
   Email: Mail
 };
 
+// Fungsi pembantu untuk mengekstrak username dari URL sosmed
+function getSocialIdentifier(url: string, platform: string) {
+  try {
+    const urlObj = new URL(url.startsWith('http') ? url : `https://${url}`);
+    const parts = urlObj.pathname.split('/').filter(p => p);
+    
+    if (platform === 'YouTube') {
+      // YouTube bisa berupa /channel/ID, /c/NAME, atau @username
+      if (parts[0] === 'channel' || parts[0] === 'c') return parts[1];
+      if (parts[0]?.startsWith('@')) return parts[0];
+      return parts[0];
+    }
+    
+    return parts[0] || '';
+  } catch (e) {
+    return '';
+  }
+}
+
+// Menentukan URL Widget Counter
+function getWidgetUrl(social: any) {
+  const id = getSocialIdentifier(social.url, social.platform);
+  if (!id) return null;
+
+  switch (social.platform) {
+    case 'YouTube':
+      return `https://socialcounts.org/youtube-live-subscriber-counter/${id}`;
+    case 'TikTok':
+      return `https://tiktokcounter.com/user/${id}`;
+    case 'Instagram':
+      return `https://instastat.net/${id}`;
+    default:
+      return null;
+  }
+}
+
 export default function PublicProfileByUsername({ params }: { params: Promise<{ username: string }> }) {
   const { username } = use(params);
   const db = useFirestore();
@@ -45,8 +80,6 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
   const [isResolving, setIsResolving] = useState(true);
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
   const [selectedSocial, setSelectedSocial] = useState<any>(null);
-  const [isFetchingStats, setIsFetchingStats] = useState(false);
-  const [liveStats, setLiveStats] = useState<{value: string, label: string} | null>(null);
 
   useEffect(() => {
     const resolveUser = async () => {
@@ -56,6 +89,7 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
         if (userSnap.exists()) {
           setResolvedUserId(userSnap.data().userId);
         } else {
+          // Fallback if not mapped
           const profileRef = doc(db, 'userProfiles', username);
           const profileSnap = await getDoc(profileRef);
           if (profileSnap.exists()) setResolvedUserId(username);
@@ -78,40 +112,31 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
   const standaloneLinksQuery = useMemoFirebase(() => resolvedUserId ? query(collection(db, 'userProfiles', resolvedUserId, 'links'), orderBy('createdAt', 'desc')) : null, [db, resolvedUserId]);
   const { data: standaloneLinks, isLoading: isStandaloneLoading } = useCollection(standaloneLinksQuery);
 
-  const handleShare = () => {
-    navigator.clipboard.writeText(window.location.href);
-    toast({ title: "Tersalin", description: "URL profil telah disalin." });
-  };
+  const activeGroup = useMemo(() => groups?.find(g => g.id === activeGroupId), [groups, activeGroupId]);
 
-  const handleSocialClick = async (social: any) => {
-    setSelectedSocial(social);
-    setLiveStats(null);
-    setIsFetchingStats(true);
-    try {
-      const result = await syncSocialStats({ platform: social.platform, url: social.url });
-      setLiveStats(result);
-    } catch (e) {
-      setLiveStats({ value: '?', label: 'Gagal Memuat' });
-    } finally {
-      setIsFetchingStats(false);
+  const handleShare = () => {
+    if (typeof window !== 'undefined') {
+      navigator.clipboard.writeText(window.location.href);
+      toast({ title: "Tersalin", description: "URL profil telah disalin." });
     }
   };
 
-  const handleLinkClick = async (linkId: string, url: string, isStandalone: boolean, groupId?: string) => {
+  const handleLinkClick = (linkId: string, url: string, isStandalone: boolean, groupId?: string) => {
     if (!resolvedUserId) return;
     const linkRef = isStandalone 
       ? doc(db, 'userProfiles', resolvedUserId, 'links', linkId)
       : doc(db, 'userProfiles', resolvedUserId, 'linkGroups', groupId!, 'links', linkId);
     
-    updateDoc(linkRef, { clicks: increment(1) });
+    // Non-blocking update clicks
+    updateDoc(linkRef, { clicks: increment(1) }).catch(() => {});
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   if (isResolving || isProfileLoading || isGroupsLoading || isStandaloneLoading) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
-        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-2xl animate-spin"></div>
-        <p className="text-[10px] font-black uppercase tracking-widest text-primary/50">Membangun Profil...</p>
+        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-2xl animate-spin glow-primary"></div>
+        <p className="text-[10px] font-black uppercase tracking-widest text-primary/50">Membangun Linku...</p>
       </div>
     );
   }
@@ -120,7 +145,7 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center">
         <h1 className="text-3xl font-black text-white tracking-tighter mb-2">Profil Tidak Ditemukan</h1>
-        <p className="text-xs text-white/40 font-bold uppercase tracking-widest">Maaf, username "@{username}" tidak terdaftar.</p>
+        <p className="text-xs text-white/40 font-bold uppercase tracking-widest">Maaf, @{username} tidak terdaftar.</p>
       </div>
     );
   }
@@ -196,10 +221,10 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
                   return (
                     <button
                       key={idx}
-                      onClick={() => handleSocialClick(social)}
-                      className="w-10 h-10 rounded-xl glass-card flex items-center justify-center text-white/60 hover:text-white transition-all hover:scale-110 active:scale-95 border border-white/5"
+                      onClick={() => setSelectedSocial(social)}
+                      className="w-11 h-11 rounded-xl glass-card flex items-center justify-center text-white/60 hover:text-white transition-all hover:scale-110 active:scale-95 border border-white/5 shadow-lg"
                     >
-                      <Icon size={18} />
+                      <Icon size={20} />
                     </button>
                   );
                 })}
@@ -208,154 +233,138 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
           </div>
         </div>
 
-        {!activeGroupId ? (
-          <div className="space-y-6 animate-in">
-            <div className="flex items-center gap-2 px-2">
-              <div className="h-px flex-1 bg-white/10" />
-              <h2 
-                className="text-[10px] font-black uppercase tracking-[0.3em] whitespace-nowrap"
-                style={{ color: primaryColor }}
-              >
-                All Link @{profile.username}
-              </h2>
-              <div className="h-px flex-1 bg-white/10" />
-            </div>
-
-            <div className="space-y-4">
-              {standaloneLinks?.filter(l => l.isEnabled).map(link => (
-                <button
-                  key={link.id}
-                  onClick={() => handleLinkClick(link.id, link.url, true)}
-                  className="w-full p-0.5 rounded-2xl hover:scale-[1.02] transition-transform shadow-xl group/link animate-flowing-gradient"
-                  style={{ 
-                    background: dynamicGradient,
-                    backgroundSize: '200% 200%',
-                    animationDuration: '7s'
-                  }}
-                >
-                  <div className="w-full h-20 bg-black/80 backdrop-blur-xl rounded-[0.95rem] flex items-center px-6 gap-4 border border-white/10">
-                    <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10">
-                      {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <Link2 size={24} style={{ color: primaryColor }} />}
-                    </div>
-                    <div className="flex-1 text-left min-w-0">
-                      <span className="text-base font-black text-white tracking-tight truncate block">{link.title}</span>
-                      <p className="text-[9px] font-black uppercase text-white/30 tracking-widest mt-0.5">Tautan Langsung</p>
-                    </div>
-                    <MousePointer2 size={20} className="text-white/20 group-hover/link:text-primary transition-colors" style={{ color: primaryColor }} />
-                  </div>
-                </button>
-              ))}
-
-              {groups?.filter(g => g.isEnabled).map((group) => (
-                <button
-                  key={group.id}
-                  onClick={() => setActiveGroupId(group.id)}
-                  className="w-full p-0.5 rounded-2xl hover:scale-[1.02] transition-transform shadow-xl group/folder animate-flowing-gradient"
-                  style={{ 
-                    background: dynamicGradient,
-                    backgroundSize: '200% 200%',
-                    animationDuration: '7s'
-                  }}
-                >
-                  <div className="w-full h-24 bg-black/70 backdrop-blur-2xl rounded-[0.95rem] flex items-center px-6 gap-4 border border-white/10 relative overflow-hidden">
-                    <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10 shadow-xl shrink-0">
-                      {group.imageUrl ? <img src={group.imageUrl} className="w-full h-full object-cover" /> : <LayoutGrid size={32} style={{ color: primaryColor }} />}
-                    </div>
-                    <div className="flex-1 text-left">
-                      <span className="text-lg font-black text-white tracking-tight">{group.title}</span>
-                      <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] mt-1 flex items-center gap-2">
-                        Buka Kelompok <ChevronRight size={12} style={{ color: primaryColor }} />
-                      </p>
-                    </div>
-                    <ChevronRight size={24} className="text-white/20 transition-transform group-hover/folder:translate-x-1" />
-                  </div>
-                </button>
-              ))}
-            </div>
+        <div className="space-y-6 animate-in">
+          <div className="flex items-center gap-2 px-2">
+            <div className="h-px flex-1 bg-white/10" />
+            <h2 
+              className="text-[10px] font-black uppercase tracking-[0.3em] whitespace-nowrap"
+              style={{ color: primaryColor }}
+            >
+              {activeGroupId ? activeGroup?.title : `All Link @${profile.username}`}
+            </h2>
+            <div className="h-px flex-1 bg-white/10" />
           </div>
-        ) : (
-          <div className="space-y-6 animate-in slide-in-from-right-10">
-            <div className="flex items-center gap-2 px-2">
-              <div className="h-px flex-1 bg-white/10" />
-              <h2 
-                className="text-[10px] font-black uppercase tracking-[0.3em] whitespace-nowrap"
-                style={{ color: primaryColor }}
-              >
-                {activeGroup?.title}
-              </h2>
-              <div className="h-px flex-1 bg-white/10" />
-            </div>
 
-            <LinksInGroup 
-              userId={resolvedUserId!} 
-              groupId={activeGroupId} 
-              onLinkClick={handleLinkClick} 
-              primaryColor={primaryColor}
-              secondaryColor={secondaryColor}
-            />
+          <div className="space-y-4">
+            {!activeGroupId ? (
+              <>
+                {standaloneLinks?.filter(l => l.isEnabled).map(link => (
+                  <button
+                    key={link.id}
+                    onClick={() => handleLinkClick(link.id, link.url, true)}
+                    className="w-full p-0.5 rounded-2xl hover:scale-[1.02] transition-transform shadow-xl group/link animate-flowing-gradient"
+                    style={{ 
+                      background: dynamicGradient,
+                      backgroundSize: '200% 200%',
+                      animationDuration: '7s'
+                    }}
+                  >
+                    <div className="w-full h-20 bg-black/80 backdrop-blur-xl rounded-[0.95rem] flex items-center px-6 gap-4 border border-white/10">
+                      <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10">
+                        {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <Link2 size={24} style={{ color: primaryColor }} />}
+                      </div>
+                      <div className="flex-1 text-left min-w-0">
+                        <span className="text-base font-black text-white tracking-tight truncate block">{link.title}</span>
+                        <p className="text-[9px] font-black uppercase text-white/30 tracking-widest mt-0.5">Tautan Langsung</p>
+                      </div>
+                      <MousePointer2 size={20} className="text-white/20 group-hover/link:text-primary transition-colors" style={{ color: primaryColor }} />
+                    </div>
+                  </button>
+                ))}
+
+                {groups?.filter(g => g.isEnabled).map((group) => (
+                  <button
+                    key={group.id}
+                    onClick={() => setActiveGroupId(group.id)}
+                    className="w-full p-0.5 rounded-2xl hover:scale-[1.02] transition-transform shadow-xl group/folder animate-flowing-gradient"
+                    style={{ 
+                      background: dynamicGradient,
+                      backgroundSize: '200% 200%',
+                      animationDuration: '7s'
+                    }}
+                  >
+                    <div className="w-full h-24 bg-black/70 backdrop-blur-2xl rounded-[0.95rem] flex items-center px-6 gap-4 border border-white/10 relative overflow-hidden">
+                      <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10 shadow-xl shrink-0">
+                        {group.imageUrl ? <img src={group.imageUrl} className="w-full h-full object-cover" /> : <LayoutGrid size={32} style={{ color: primaryColor }} />}
+                      </div>
+                      <div className="flex-1 text-left">
+                        <span className="text-lg font-black text-white tracking-tight">{group.title}</span>
+                        <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] mt-1 flex items-center gap-2">
+                          Buka Kelompok <ChevronRight size={12} style={{ color: primaryColor }} />
+                        </p>
+                      </div>
+                      <ChevronRight size={24} className="text-white/20 transition-transform group-hover/folder:translate-x-1" />
+                    </div>
+                  </button>
+                ))}
+              </>
+            ) : (
+              <LinksInGroup 
+                userId={resolvedUserId!} 
+                groupId={activeGroupId} 
+                onLinkClick={handleLinkClick} 
+                primaryColor={primaryColor}
+                secondaryColor={secondaryColor}
+              />
+            )}
           </div>
-        )}
+        </div>
 
-        <div className="pt-12 text-center">
-          <div className="flex items-center justify-center gap-2 mb-2 opacity-40">
+        <div className="pt-12 text-center space-y-3">
+          <div className="flex items-center justify-center gap-2 opacity-40">
             <Link2 size={12} style={{ color: primaryColor }} />
             <p className="text-[9px] font-black uppercase tracking-[0.4em] text-white">Powering with Linku Engine</p>
           </div>
-          <Link href="/" className="text-[8px] font-bold text-white/30 hover:text-white transition-colors uppercase tracking-widest underline underline-offset-4">
+          <Link href="/" className="block text-[10px] font-bold text-white/30 hover:text-white transition-colors uppercase tracking-widest underline underline-offset-4">
             Klik untuk bergabung dengan {profile.displayName || profile.username} di Linku
           </Link>
         </div>
       </div>
 
       <Dialog open={!!selectedSocial} onOpenChange={() => setSelectedSocial(null)}>
-        <DialogContent className="glass-card border-none rounded-[2.5rem] bg-background/95 backdrop-blur-3xl p-0 overflow-hidden max-w-[90%] mx-auto shadow-2xl">
-          <div className="p-8 space-y-6">
-            <DialogHeader>
-              <div 
-                className="mx-auto w-20 h-20 rounded-3xl flex items-center justify-center text-white mb-2 animate-flowing-gradient"
-                style={{ 
-                  background: dynamicGradient,
-                  backgroundSize: '200% 200%',
-                  animationDuration: '5s'
-                }}
-              >
-                {selectedSocial && (platformIcons[selectedSocial.platform] ? (() => {
-                  const Icon = platformIcons[selectedSocial.platform];
-                  return <Icon size={40} />;
-                })() : <Link2 size={40} />)}
-              </div>
-              <DialogTitle className="text-center font-black text-2xl tracking-tighter text-white">
-                {selectedSocial?.platform}
-              </DialogTitle>
-            </DialogHeader>
-
-            <div className="space-y-4 text-center">
-              <p className="text-[10px] font-black uppercase text-muted-foreground tracking-[0.2em]">Live Connection Hub</p>
-              
-              <div className="min-h-[80px] flex flex-col items-center justify-center">
-                {isFetchingStats ? (
-                  <div className="space-y-3 flex flex-col items-center">
-                    <Loader2 className="w-8 h-8 text-primary animate-spin" />
-                    <p className="text-[10px] font-bold text-primary animate-pulse uppercase tracking-widest">Checking Live Stats...</p>
-                  </div>
-                ) : (
-                  <div className="animate-in zoom-in-95 duration-500">
-                    <h3 className="text-4xl font-black text-white tracking-tight">{liveStats?.value || '0'}</h3>
-                    <p className="text-[10px] font-black text-primary uppercase tracking-widest mt-1">{liveStats?.label || 'Total Connections'}</p>
-                  </div>
-                )}
+        <DialogContent className="glass-card border-none rounded-[2.5rem] bg-background/95 backdrop-blur-3xl p-0 overflow-hidden max-w-[95%] sm:max-w-md mx-auto shadow-2xl">
+          <div className="p-0 space-y-0">
+            <div className="p-6 pb-2 border-b border-white/5 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                 <div className="w-10 h-10 rounded-xl neon-gradient flex items-center justify-center text-background" style={{ background: dynamicGradient }}>
+                   {selectedSocial && (platformIcons[selectedSocial.platform] ? (() => {
+                     const Icon = platformIcons[selectedSocial.platform];
+                     return <Icon size={20} />;
+                   })() : <Link2 size={20} />)}
+                 </div>
+                 <DialogTitle className="font-black text-lg tracking-tight text-white uppercase">
+                   Live {selectedSocial?.platform}
+                 </DialogTitle>
               </div>
             </div>
 
-            <Button 
-              className="w-full h-14 neon-gradient text-background font-black rounded-2xl glow-primary text-xs uppercase tracking-widest active:scale-95 transition-transform"
-              onClick={() => {
-                window.open(selectedSocial?.url, '_blank', 'noopener,noreferrer');
-                setSelectedSocial(null);
-              }}
-            >
-              Kunjungi {selectedSocial?.platform} <ExternalLink size={16} className="ml-2" />
-            </Button>
+            <div className="w-full aspect-[4/3] bg-black/40 relative">
+               {selectedSocial && getWidgetUrl(selectedSocial) ? (
+                 <iframe 
+                   src={getWidgetUrl(selectedSocial)!} 
+                   className="w-full h-full border-none"
+                   title="Live Counter"
+                 />
+               ) : (
+                 <div className="w-full h-full flex flex-col items-center justify-center gap-4 text-center p-8">
+                   <Loader2 className="w-10 h-10 text-primary animate-spin" />
+                   <p className="text-[10px] font-black uppercase tracking-widest text-white/40">Menghubungkan ke Statistik Live...</p>
+                 </div>
+               )}
+            </div>
+
+            <div className="p-6">
+              <Button 
+                className="w-full h-14 neon-gradient text-background font-black rounded-2xl glow-primary text-xs uppercase tracking-widest active:scale-95 transition-transform"
+                style={{ background: dynamicGradient }}
+                onClick={() => {
+                  window.open(selectedSocial?.url, '_blank', 'noopener,noreferrer');
+                  setSelectedSocial(null);
+                }}
+              >
+                Lihat Profil {selectedSocial?.platform} <ExternalLink size={16} className="ml-2" />
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
