@@ -14,9 +14,7 @@ import { doc, updateDoc, serverTimestamp, getDoc, setDoc, deleteDoc } from 'fire
 import { getAuth, signOut } from 'firebase/auth';
 import ImageCropperModal from '@/components/ImageCropperModal';
 import { extractPaletteFromImage } from '@/lib/utils-app';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { syncSocialStats } from '@/ai/flows/social-stats-flow';
 
 const DEFAULT_PALETTE = ['#ff0000', '#00ffff', '#0000ff', '#00ff00', '#ff00ff', '#ffff00', '#000000', '#ffffff'];
 
@@ -74,7 +72,6 @@ export default function ProfilPage() {
   
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [isSyncing, setIsSyncing] = useState<number | null>(null);
   
   const [cropperOpen, setCropperOpen] = useState(false);
   const [tempImage, setTempImage] = useState<string | null>(null);
@@ -82,8 +79,6 @@ export default function ProfilPage() {
 
   const [newSocialPlatform, setNewSocialPlatform] = useState('');
   const [newSocialUrl, setNewSocialUrl] = useState('');
-  const [newSocialValue, setNewSocialValue] = useState('');
-  const [newSocialLabel, setNewSocialLabel] = useState('');
 
   useEffect(() => {
     if (profile) {
@@ -173,15 +168,13 @@ export default function ProfilPage() {
     if (!newSocialPlatform || !newSocialUrl) return;
     const newLink = {
       platform: newSocialPlatform,
-      url: newSocialUrl,
-      value: newSocialValue || '0',
-      label: newSocialLabel || 'Followers'
+      url: newSocialUrl.startsWith('http') ? newSocialUrl : `https://${newSocialUrl}`,
+      value: 'Live',
+      label: 'Real-time Stats'
     };
     setSocialLinks([...socialLinks, newLink]);
     setNewSocialPlatform('');
     setNewSocialUrl('');
-    setNewSocialValue('');
-    setNewSocialLabel('');
     setIsEditing(true);
   };
 
@@ -190,24 +183,6 @@ export default function ProfilPage() {
     updated.splice(index, 1);
     setSocialLinks(updated);
     setIsEditing(true);
-  };
-
-  const handleSyncStats = async (index: number) => {
-    const link = socialLinks[index];
-    if (!link.url) return;
-    setIsSyncing(index);
-    try {
-      const result = await syncSocialStats({ platform: link.platform, url: link.url });
-      const updated = [...socialLinks];
-      updated[index] = { ...link, value: result.value, label: result.label };
-      setSocialLinks(updated);
-      setIsEditing(true);
-      toast({ title: "Sync Berhasil", description: `Statistik ${link.platform} telah diperbarui.` });
-    } catch (e) {
-      toast({ variant: "destructive", title: "Sync Gagal" });
-    } finally {
-      setIsSyncing(null);
-    }
   };
 
   return (
@@ -228,7 +203,7 @@ export default function ProfilPage() {
            <div className="absolute inset-0 bg-black/20" />
         </div>
         <div className="px-4 text-center">
-          <h1 className="text-2xl font-black text-white tracking-tight">{displayName || profile?.username || 'User Linku'}</h1>
+          <h1 className="text-2xl font-black text-white tracking-tight leading-none">{displayName || profile?.username || 'User Linku'}</h1>
           <div className="flex items-center justify-center gap-1.5 mt-1">
             <AtSign size={12} style={{ color: themeColor }} />
             <p className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: themeColor }}>{profile?.username || 'user'}</p>
@@ -308,14 +283,14 @@ export default function ProfilPage() {
 
         <Card className="glass-card border-white/5 rounded-[2rem] overflow-hidden">
           <CardContent className="p-6 space-y-6">
-            <h3 className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2 text-white"><Share2 size={16} className="text-primary" /> Media Sosial</h3>
+            <h3 className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2 text-white"><Share2 size={16} className="text-primary" /> Media Sosial (Live Stats)</h3>
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3">
                 <div className="space-y-1.5">
                   <label className="text-[9px] font-black text-muted-foreground uppercase ml-1">Platform</label>
                   <Select value={newSocialPlatform} onValueChange={setNewSocialPlatform}>
                     <SelectTrigger className="bg-white/5 border-white/10 h-12 rounded-xl text-xs font-bold">
-                      <SelectValue placeholder="Platform" />
+                      <SelectValue placeholder="Pilih Platform" />
                     </SelectTrigger>
                     <SelectContent className="glass-card border-none rounded-xl">
                       {socialPlatforms.map(p => (
@@ -324,17 +299,13 @@ export default function ProfilPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-[9px] font-black text-muted-foreground uppercase ml-1">Value Manual</label>
-                  <Input value={newSocialValue} onChange={(e) => setNewSocialValue(e.target.value)} placeholder="1.2M" className="bg-white/5 border-white/10 h-12 rounded-xl text-xs font-bold" />
-                </div>
               </div>
               <div className="space-y-1.5">
-                <label className="text-[9px] font-black text-muted-foreground uppercase ml-1">URL Profil</label>
-                <Input value={newSocialUrl} onChange={(e) => setNewSocialUrl(e.target.value)} placeholder="https://..." className="bg-white/5 border-white/10 h-12 rounded-xl text-xs font-bold" />
+                <label className="text-[9px] font-black text-muted-foreground uppercase ml-1">URL Profil Sosmed</label>
+                <Input value={newSocialUrl} onChange={(e) => setNewSocialUrl(e.target.value)} placeholder="https://instagram.com/username" className="bg-white/5 border-white/10 h-12 rounded-xl text-xs font-bold" />
               </div>
               <Button onClick={handleAddSocialLink} disabled={!newSocialPlatform || !newSocialUrl} className="w-full h-12 neon-gradient text-background font-black rounded-xl text-[10px] uppercase tracking-widest glow-primary">
-                <Plus size={16} className="mr-2" /> Tambah Sosmed
+                <Plus size={16} className="mr-2" /> Hubungkan Live Sosmed
               </Button>
             </div>
             <div className="grid gap-3 pt-4 border-t border-white/5">
@@ -348,13 +319,10 @@ export default function ProfilPage() {
                       </div>
                       <div className="min-w-0">
                         <p className="text-xs font-black uppercase truncate">{social.platform}</p>
-                        <p className="text-[10px] text-muted-foreground font-bold truncate">{social.value} {social.label}</p>
+                        <p className="text-[10px] text-primary font-black animate-pulse truncate uppercase tracking-widest">Real-time Connection Ready</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button size="icon" variant="ghost" onClick={() => handleSyncStats(i)} disabled={isSyncing === i} className="h-10 w-10 rounded-xl hover:bg-primary/10 text-primary">
-                        <RefreshCw size={16} className={isSyncing === i ? "animate-spin" : ""} />
-                      </Button>
                       <Button size="icon" variant="ghost" onClick={() => handleRemoveSocialLink(i)} className="text-destructive h-10 w-10 rounded-xl hover:bg-destructive/10">
                         <Trash2 size={16} />
                       </Button>

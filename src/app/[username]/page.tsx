@@ -4,11 +4,12 @@
 import { use, useMemo, useEffect, useState } from 'react';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc, collection, updateDoc, increment, getDoc, query, orderBy } from 'firebase/firestore';
-import { User, Share2, MousePointer2, Link2, ChevronRight, LayoutGrid, ArrowLeft, Instagram, Youtube, Facebook, Mail, MessageCircle, ExternalLink } from 'lucide-react';
+import { User, Share2, MousePointer2, Link2, ChevronRight, LayoutGrid, ArrowLeft, Instagram, Youtube, Facebook, Mail, MessageCircle, ExternalLink, RefreshCw, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { syncSocialStats } from '@/ai/flows/social-stats-flow';
 
 const TikTokIcon = ({ className, size = 20 }: { className?: string, size?: number }) => (
   <svg 
@@ -44,6 +45,8 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
   const [isResolving, setIsResolving] = useState(true);
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
   const [selectedSocial, setSelectedSocial] = useState<any>(null);
+  const [isFetchingStats, setIsFetchingStats] = useState(false);
+  const [liveStats, setLiveStats] = useState<{value: string, label: string} | null>(null);
 
   useEffect(() => {
     const resolveUser = async () => {
@@ -53,7 +56,6 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
         if (userSnap.exists()) {
           setResolvedUserId(userSnap.data().userId);
         } else {
-          // Fallback if the path is actually a UID
           const profileRef = doc(db, 'userProfiles', username);
           const profileSnap = await getDoc(profileRef);
           if (profileSnap.exists()) setResolvedUserId(username);
@@ -76,11 +78,23 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
   const standaloneLinksQuery = useMemoFirebase(() => resolvedUserId ? query(collection(db, 'userProfiles', resolvedUserId, 'links'), orderBy('createdAt', 'desc')) : null, [db, resolvedUserId]);
   const { data: standaloneLinks, isLoading: isStandaloneLoading } = useCollection(standaloneLinksQuery);
 
-  const activeGroup = useMemo(() => groups?.find(g => g.id === activeGroupId), [groups, activeGroupId]);
-
   const handleShare = () => {
     navigator.clipboard.writeText(window.location.href);
     toast({ title: "Tersalin", description: "URL profil telah disalin." });
+  };
+
+  const handleSocialClick = async (social: any) => {
+    setSelectedSocial(social);
+    setLiveStats(null);
+    setIsFetchingStats(true);
+    try {
+      const result = await syncSocialStats({ platform: social.platform, url: social.url });
+      setLiveStats(result);
+    } catch (e) {
+      setLiveStats({ value: '?', label: 'Gagal Memuat' });
+    } finally {
+      setIsFetchingStats(false);
+    }
   };
 
   const handleLinkClick = async (linkId: string, url: string, isStandalone: boolean, groupId?: string) => {
@@ -165,14 +179,15 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
             </div>
           </div>
           <div className="space-y-4 px-4">
-            <div>
-              <h1 className="text-3xl font-black text-white tracking-tight">{profile.displayName || 'User'}</h1>
-              {profile.bio && (
-                <p className="text-sm font-medium text-white/70 max-w-xs mx-auto leading-relaxed mt-2">
-                  {profile.bio}
-                </p>
-              )}
+            <div className="space-y-1">
+              <h1 className="text-3xl font-black text-white tracking-tight leading-none">{profile.displayName || 'User'}</h1>
+              <p className="text-[10px] font-black uppercase text-white/40 tracking-[0.3em]">@{profile.username}</p>
             </div>
+            {profile.bio && (
+              <p className="text-sm font-medium text-white/70 max-w-xs mx-auto leading-relaxed">
+                {profile.bio}
+              </p>
+            )}
 
             {profile.socialLinks && profile.socialLinks.length > 0 && (
               <div className="flex flex-wrap justify-center gap-3 pt-2">
@@ -181,8 +196,8 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
                   return (
                     <button
                       key={idx}
-                      onClick={() => setSelectedSocial(social)}
-                      className="w-10 h-10 rounded-xl glass-card flex items-center justify-center text-white/60 hover:text-white transition-all hover:scale-110 active:scale-95"
+                      onClick={() => handleSocialClick(social)}
+                      className="w-10 h-10 rounded-xl glass-card flex items-center justify-center text-white/60 hover:text-white transition-all hover:scale-110 active:scale-95 border border-white/5"
                     >
                       <Icon size={18} />
                     </button>
@@ -314,10 +329,22 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
               </DialogTitle>
             </DialogHeader>
 
-            <div className="space-y-2 text-center">
-              <p className="text-[10px] font-black uppercase text-muted-foreground tracking-[0.2em]">Koneksi Terverifikasi</p>
-              <h3 className="text-3xl font-black text-white tracking-tight">{selectedSocial?.value || '0'}</h3>
-              <p className="text-[10px] font-black text-primary uppercase tracking-widest">{selectedSocial?.label || 'Total Update'}</p>
+            <div className="space-y-4 text-center">
+              <p className="text-[10px] font-black uppercase text-muted-foreground tracking-[0.2em]">Live Connection Hub</p>
+              
+              <div className="min-h-[80px] flex flex-col items-center justify-center">
+                {isFetchingStats ? (
+                  <div className="space-y-3 flex flex-col items-center">
+                    <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                    <p className="text-[10px] font-bold text-primary animate-pulse uppercase tracking-widest">Checking Live Stats...</p>
+                  </div>
+                ) : (
+                  <div className="animate-in zoom-in-95 duration-500">
+                    <h3 className="text-4xl font-black text-white tracking-tight">{liveStats?.value || '0'}</h3>
+                    <p className="text-[10px] font-black text-primary uppercase tracking-widest mt-1">{liveStats?.label || 'Total Connections'}</p>
+                  </div>
+                )}
+              </div>
             </div>
 
             <Button 
@@ -327,7 +354,7 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
                 setSelectedSocial(null);
               }}
             >
-              Pergi ke {selectedSocial?.platform} <ExternalLink size={16} className="ml-2" />
+              Kunjungi {selectedSocial?.platform} <ExternalLink size={16} className="ml-2" />
             </Button>
           </div>
         </DialogContent>

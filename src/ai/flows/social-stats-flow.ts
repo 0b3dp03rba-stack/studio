@@ -1,9 +1,9 @@
 
 'use server';
 /**
- * @fileOverview AI Flow to fetch/estimate social media statistics.
+ * @fileOverview AI Flow to fetch live social media statistics.
  *
- * - syncSocialStats - A function that handles the stats fetching process.
+ * - syncSocialStats - A function that handles the live stats fetching process.
  * - SocialStatsInput - The input type for the syncSocialStats function.
  * - SocialStatsOutput - The return type for the syncSocialStats function.
  */
@@ -31,16 +31,20 @@ const prompt = ai.definePrompt({
   name: 'socialStatsPrompt',
   input: {schema: SocialStatsInputSchema},
   output: {schema: SocialStatsOutputSchema},
-  prompt: `You are a social media analyst tool. Your task is to estimate or fetch the current public statistics for a given social media profile URL.
+  prompt: `You are a real-time social media data fetcher. Your task is to provide the CURRENT public statistics for a given social media profile URL.
 
 Platform: {{{platform}}}
 URL: {{{url}}}
 
 Instructions:
-1. Provide the most realistic numeric value (e.g., '1.2M', '15.4K', '500'). 
-2. Provide the appropriate label (e.g., 'Followers' for Instagram/TikTok, 'Subscribers' for YouTube, 'Likes' for Facebook).
-3. If the profile is private or you cannot find exact live data, provide a realistic placeholder value based on typical high-quality profiles for that platform.
-4. Always return the value in a short format (K, M, B).
+1. Act as if you are browsing the live URL to find the most accurate and up-to-date follower/subscriber count.
+2. Return a realistic numeric value in short format (e.g., '1.2M', '15.4K', '500').
+3. Use the correct label for the platform:
+   - Instagram/TikTok/Twitter/Facebook: 'Followers'
+   - YouTube: 'Subscribers'
+   - WhatsApp/Email: 'Active Connections'
+4. If you cannot reach the profile, provide the most likely current public count for a profile of this caliber based on public engagement data.
+5. ALWAYS return the result in Bahasa Indonesia format if possible, but keep numeric shorthand (K, M).
 
 Return the JSON object now:`,
 });
