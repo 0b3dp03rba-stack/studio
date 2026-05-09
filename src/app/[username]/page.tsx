@@ -4,7 +4,7 @@
 import { use, useMemo, useEffect, useState } from 'react';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc, collection, updateDoc, increment, getDoc, query, orderBy } from 'firebase/firestore';
-import { User, Share2, MousePointer2, Link2, ChevronRight, LayoutGrid, ArrowLeft, AtSign } from 'lucide-react';
+import { User, Share2, MousePointer2, Link2, ChevronRight, LayoutGrid, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 
@@ -119,9 +119,10 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
 
         <div className="text-center space-y-6">
           <div 
-            className="mx-auto w-32 h-32 rounded-[2.5rem] p-1 shadow-2xl transition-all duration-700"
+            className="mx-auto w-32 h-32 rounded-[2.5rem] p-1 shadow-2xl transition-all duration-700 animate-flowing-gradient"
             style={{ 
-              background: `linear-gradient(-45deg, ${primaryColor}, ${secondaryColor})`,
+              background: `linear-gradient(-45deg, ${primaryColor}, ${secondaryColor}, ${primaryColor})`,
+              backgroundSize: '200% 200%',
               boxShadow: `0 0 50px -10px ${primaryColor}99`
             }}
           >
@@ -149,7 +150,10 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
           <div className="space-y-6 animate-in">
             <div className="flex items-center gap-2 px-2">
               <div className="h-px flex-1 bg-white/10" />
-              <h2 className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] whitespace-nowrap">
+              <h2 
+                className="text-[10px] font-black uppercase tracking-[0.3em] whitespace-nowrap"
+                style={{ color: primaryColor }}
+              >
                 All Link @{profile.username}
               </h2>
               <div className="h-px flex-1 bg-white/10" />
@@ -160,8 +164,11 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
                 <button
                   key={link.id}
                   onClick={() => handleLinkClick(link.id, link.url, true)}
-                  className="w-full p-0.5 rounded-2xl hover:scale-[1.02] transition-transform shadow-xl group/link"
-                  style={{ background: `linear-gradient(-45deg, ${primaryColor}, ${secondaryColor})` }}
+                  className="w-full p-0.5 rounded-2xl hover:scale-[1.02] transition-transform shadow-xl group/link animate-flowing-gradient"
+                  style={{ 
+                    background: `linear-gradient(-45deg, ${primaryColor}, ${secondaryColor}, ${primaryColor})`,
+                    backgroundSize: '200% 200%'
+                  }}
                 >
                   <div className="w-full h-20 bg-black/80 backdrop-blur-xl rounded-[0.95rem] flex items-center px-6 gap-4 border border-white/10">
                     <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10">
@@ -180,8 +187,11 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
                 <button
                   key={group.id}
                   onClick={() => setActiveGroupId(group.id)}
-                  className="w-full p-0.5 rounded-2xl hover:scale-[1.02] transition-transform shadow-xl group/folder"
-                  style={{ background: `linear-gradient(-45deg, ${primaryColor}, ${secondaryColor})` }}
+                  className="w-full p-0.5 rounded-2xl hover:scale-[1.02] transition-transform shadow-xl group/folder animate-flowing-gradient"
+                  style={{ 
+                    background: `linear-gradient(-45deg, ${primaryColor}, ${secondaryColor}, ${primaryColor})`,
+                    backgroundSize: '200% 200%'
+                  }}
                 >
                   <div className="w-full h-24 bg-black/70 backdrop-blur-2xl rounded-[0.95rem] flex items-center px-6 gap-4 border border-white/10 relative overflow-hidden">
                     <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10 shadow-xl shrink-0">
@@ -190,7 +200,7 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
                     <div className="flex-1 text-left">
                       <span className="text-lg font-black text-white tracking-tight">{group.title}</span>
                       <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] mt-1 flex items-center gap-2">
-                        Buka Kelompok <ChevronRight size={12} className="text-primary" />
+                        Buka Kelompok <ChevronRight size={12} style={{ color: primaryColor }} />
                       </p>
                     </div>
                     <ChevronRight size={24} className="text-white/20 transition-transform group-hover/folder:translate-x-1" />
@@ -203,7 +213,10 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
           <div className="space-y-6 animate-in slide-in-from-right-10">
             <div className="flex items-center gap-2 px-2">
               <div className="h-px flex-1 bg-white/10" />
-              <h2 className="text-[10px] font-black text-primary uppercase tracking-[0.3em] whitespace-nowrap">
+              <h2 
+                className="text-[10px] font-black uppercase tracking-[0.3em] whitespace-nowrap"
+                style={{ color: primaryColor }}
+              >
                 {activeGroup?.title}
               </h2>
               <div className="h-px flex-1 bg-white/10" />
@@ -213,7 +226,8 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
               userId={resolvedUserId!} 
               groupId={activeGroupId} 
               onLinkClick={handleLinkClick} 
-              accentColor={primaryColor} 
+              primaryColor={primaryColor}
+              secondaryColor={secondaryColor}
             />
           </div>
         )}
@@ -229,7 +243,7 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
   );
 }
 
-function LinksInGroup({ userId, groupId, onLinkClick, accentColor }: { userId: string, groupId: string, onLinkClick: any, accentColor: string }) {
+function LinksInGroup({ userId, groupId, onLinkClick, primaryColor, secondaryColor }: { userId: string, groupId: string, onLinkClick: any, primaryColor: string, secondaryColor: string }) {
   const db = useFirestore();
   const linksQuery = useMemoFirebase(() => query(collection(db, 'userProfiles', userId, 'linkGroups', groupId, 'links'), orderBy('order', 'asc')), [db, userId, groupId]);
   const { data: links } = useCollection(linksQuery);
@@ -240,16 +254,22 @@ function LinksInGroup({ userId, groupId, onLinkClick, accentColor }: { userId: s
         <button
           key={link.id}
           onClick={() => onLinkClick(link.id, link.url, false, groupId)}
-          className="w-full glass-card hover:bg-white/10 rounded-2xl p-5 flex items-center gap-4 transition-all active:scale-95 group/link border-white/5"
+          className="w-full p-0.5 rounded-2xl hover:scale-[1.02] transition-transform shadow-xl group/link animate-flowing-gradient"
+          style={{ 
+            background: `linear-gradient(-45deg, ${primaryColor}, ${secondaryColor}, ${primaryColor})`,
+            backgroundSize: '200% 200%'
+          }}
         >
-          <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/5 group-hover/link:border-primary/40" style={{ borderColor: `${accentColor}40` } as any}>
-            {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <Link2 size={20} className="text-white/20" />}
+          <div className="w-full h-20 bg-black/80 backdrop-blur-xl rounded-[0.95rem] flex items-center px-6 gap-4 border border-white/10">
+            <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10">
+              {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <Link2 size={24} style={{ color: primaryColor }} />}
+            </div>
+            <div className="flex-1 text-left min-w-0">
+              <span className="text-base font-black text-white tracking-tight truncate block">{link.title}</span>
+              <p className="text-[9px] font-black uppercase text-white/30 tracking-widest mt-0.5">Tautan Kelompok</p>
+            </div>
+            <MousePointer2 size={20} className="text-white/20 group-hover/link:text-primary transition-colors" style={{ color: primaryColor }} />
           </div>
-          <div className="flex-1 text-left min-w-0">
-            <p className="text-sm font-black text-white tracking-tight truncate">{link.title}</p>
-            <p className="text-[9px] font-bold text-white/30 truncate mt-0.5">{link.url.replace('https://', '')}</p>
-          </div>
-          <MousePointer2 size={16} className="text-white/10 transition-colors group-hover/link:text-primary" style={{ color: accentColor } as any} />
         </button>
       ))}
       {!links?.length && (
