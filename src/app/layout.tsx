@@ -6,8 +6,8 @@ import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 
 export const metadata: Metadata = {
-  title: 'GmailKu',
-  description: 'Platform Setoran Gmail Modern',
+  title: 'Linku - Premium Link Hub',
+  description: 'Platform Manajemen Tautan Modern dengan Tema Neon',
 };
 
 export default function RootLayout({

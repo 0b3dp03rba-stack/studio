@@ -4,7 +4,7 @@
 import { use, useMemo } from 'react';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc, collection, updateDoc, increment } from 'firebase/firestore';
-import { User, Share2, MousePointer2 } from 'lucide-react';
+import { User, Share2, MousePointer2, Link2, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 
@@ -25,7 +25,6 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userId
   }, [links]);
 
   const handleLinkClick = async (linkId: string, url: string) => {
-    // Background click tracking
     updateDoc(doc(db, 'userProfiles', userId, 'links', linkId), {
       clicks: increment(1)
     });
@@ -56,7 +55,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userId
   }
 
   return (
-    <div className="min-h-screen bg-background bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-primary/10 via-background to-background p-6 pb-20">
+    <div className="min-h-screen bg-background bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-primary/10 via-background to-background p-6 pb-24">
       <div className="max-w-md mx-auto space-y-8 animate-in">
         
         <div className="flex justify-end">
@@ -70,9 +69,9 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userId
           </Button>
         </div>
 
-        <div className="text-center space-y-4">
+        <div className="text-center space-y-6">
           <div className="mx-auto w-32 h-32 rounded-[3rem] neon-gradient p-1 shadow-2xl glow-primary">
-            <div className="w-full h-full rounded-[2.8rem] bg-background flex items-center justify-center overflow-hidden border-4 border-background">
+            <div className="w-full h-full rounded-[2.8rem] bg-background flex items-center justify-center overflow-hidden border-4 border-background relative">
               {profile.avatarUrl ? (
                 <img src={profile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
@@ -80,9 +79,9 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userId
               )}
             </div>
           </div>
-          <div>
-            <h1 className="text-4xl font-black text-white tracking-tighter uppercase neon-text-pulse">{profile.displayName || profile.username}</h1>
-            <p className="text-[10px] font-black text-primary uppercase tracking-[0.4em] mt-1">Verified Member</p>
+          <div className="space-y-2">
+            <h1 className="text-4xl font-black text-white tracking-tighter uppercase animate-text-fast-pulse">{profile.displayName || profile.username || 'User Linku'}</h1>
+            <p className="text-[10px] font-black text-primary uppercase tracking-[0.4em] mt-1">Verified Link Member</p>
           </div>
           {profile.bio && (
             <p className="text-sm font-medium text-white/60 leading-relaxed max-w-xs mx-auto">
@@ -100,8 +99,8 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userId
                 className="w-full relative group"
               >
                 <div className="absolute inset-0 neon-gradient opacity-0 group-hover:opacity-100 blur-xl transition-all duration-500 rounded-3xl" />
-                <div className="relative h-20 neon-gradient p-1 rounded-3xl transition-transform group-hover:scale-[1.02] group-active:scale-[0.98] shadow-2xl">
-                   <div className="w-full h-full bg-black/40 backdrop-blur-xl rounded-[1.4rem] flex items-center px-8 border border-white/10 group-hover:bg-black/10 transition-all">
+                <div className="relative h-20 neon-gradient p-0.5 rounded-3xl transition-transform group-hover:scale-[1.02] group-active:scale-[0.98] shadow-2xl">
+                   <div className="w-full h-full bg-black/60 backdrop-blur-xl rounded-[1.4rem] flex items-center px-8 border border-white/10 group-hover:bg-black/20 transition-all">
                       <div className="flex-1 text-left">
                         <span className="text-sm font-black text-white uppercase tracking-wider">{link.title}</span>
                       </div>
@@ -117,8 +116,11 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userId
           )}
         </div>
 
-        <div className="pt-12 text-center opacity-30">
-          <p className="text-[9px] font-black uppercase tracking-[0.4em] text-white">Powering with Neon Linktree</p>
+        <div className="pt-12 text-center opacity-40">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <Link2 size={12} className="text-primary" />
+            <p className="text-[9px] font-black uppercase tracking-[0.4em] text-white">Powering with Linku Engine</p>
+          </div>
         </div>
       </div>
     </div>
