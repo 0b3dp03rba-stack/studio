@@ -4,17 +4,18 @@
 import { use, useMemo, useEffect, useState } from 'react';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc, collection, updateDoc, increment, getDoc, query, orderBy } from 'firebase/firestore';
-import { User, Share2, MousePointer2, Link2, ChevronRight, LayoutGrid } from 'lucide-react';
+import { User, Share2, MousePointer2, Link2, ChevronRight, LayoutGrid, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 
 export default function PublicProfileByUsername({ params }: { params: Promise<{ username: string }> }) {
   const { username } = use(params);
   const db = useFirestore();
   const { toast } = useToast();
+  
   const [resolvedUserId, setResolvedUserId] = useState<string | null>(null);
   const [isResolving, setIsResolving] = useState(true);
+  const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
 
   useEffect(() => {
     const resolveUser = async () => {
@@ -24,7 +25,6 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
         if (userSnap.exists()) {
           setResolvedUserId(userSnap.data().userId);
         } else {
-          // Fallback check by userId direct
           const profileRef = doc(db, 'userProfiles', username);
           const profileSnap = await getDoc(profileRef);
           if (profileSnap.exists()) setResolvedUserId(username);
@@ -46,6 +46,8 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
 
   const standaloneLinksQuery = useMemoFirebase(() => resolvedUserId ? query(collection(db, 'userProfiles', resolvedUserId, 'links'), orderBy('createdAt', 'desc')) : null, [db, resolvedUserId]);
   const { data: standaloneLinks, isLoading: isStandaloneLoading } = useCollection(standaloneLinksQuery);
+
+  const activeGroup = useMemo(() => groups?.find(g => g.id === activeGroupId), [groups, activeGroupId]);
 
   const handleShare = () => {
     navigator.clipboard.writeText(window.location.href);
@@ -85,14 +87,25 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
 
   return (
     <div 
-      className="min-h-screen bg-background p-6 pb-24 transition-colors duration-1000"
+      className="min-h-screen bg-background p-6 pb-24 transition-colors duration-1000 relative"
       style={{ 
-        backgroundImage: `radial-gradient(circle at top, ${primaryColor}33, transparent, transparent)`
+        backgroundImage: `radial-gradient(circle at top, ${primaryColor}44, transparent, transparent), radial-gradient(circle at bottom right, ${secondaryColor}11, transparent)`
       } as React.CSSProperties}
     >
-      <div className="max-w-md mx-auto space-y-8 animate-in">
+      <div className="max-w-md mx-auto space-y-8 animate-in relative z-10">
         
-        <div className="flex justify-end">
+        <div className="flex justify-between items-center">
+          {activeGroupId ? (
+            <Button 
+              variant="ghost" 
+              onClick={() => setActiveGroupId(null)}
+              className="glass-card text-white hover:bg-white/10 border-none px-4 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2"
+            >
+              <ArrowLeft size={16} /> Kembali
+            </Button>
+          ) : (
+            <div className="w-10 h-10" /> 
+          )}
           <Button 
             variant="ghost" 
             size="icon" 
@@ -104,93 +117,105 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
           </Button>
         </div>
 
-        <div className="text-center space-y-6">
-          <div 
-            className="mx-auto w-32 h-32 rounded-[2.5rem] p-1 shadow-2xl transition-all duration-700"
-            style={{ 
-              background: `linear-gradient(-45deg, ${primaryColor}, ${secondaryColor})`,
-              boxShadow: `0 0 40px -10px ${primaryColor}99`
-            }}
-          >
-            <div className="w-full h-full rounded-[2.3rem] bg-background flex items-center justify-center overflow-hidden border-4 border-background relative">
-              {profile.avatarUrl ? (
-                <img src={profile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-              ) : (
-                <User size={64} className="text-white/20" />
-              )}
+        {!activeGroupId ? (
+          <>
+            <div className="text-center space-y-6">
+              <div 
+                className="mx-auto w-32 h-32 rounded-[2.5rem] p-1 shadow-2xl transition-all duration-700"
+                style={{ 
+                  background: `linear-gradient(-45deg, ${primaryColor}, ${secondaryColor})`,
+                  boxShadow: `0 0 50px -10px ${primaryColor}99`
+                }}
+              >
+                <div className="w-full h-full rounded-[2.3rem] bg-background flex items-center justify-center overflow-hidden border-4 border-background relative">
+                  {profile.avatarUrl ? (
+                    <img src={profile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    <User size={64} className="text-white/20" />
+                  )}
+                </div>
+              </div>
+              <div className="space-y-3 px-4">
+                <h1 className="text-4xl font-black text-white tracking-tighter">All Link {profile.username || 'User'}</h1>
+                {profile.bio ? (
+                  <p className="text-sm font-medium text-white/70 max-w-xs mx-auto leading-relaxed">
+                    {profile.bio}
+                  </p>
+                ) : (
+                  <p className="text-[10px] font-black uppercase tracking-[0.4em] mt-1 opacity-30">Personal Hub</p>
+                )}
+              </div>
             </div>
-          </div>
-          <div className="space-y-3 px-4">
-            <h1 className="text-3xl font-black text-white tracking-tighter">{profile.displayName || profile.username || 'User Linku'}</h1>
-            {profile.bio ? (
-              <p className="text-sm font-medium text-white/70 max-w-xs mx-auto leading-relaxed">
-                {profile.bio}
-              </p>
-            ) : (
-              <p className="text-[10px] font-black uppercase tracking-[0.4em] mt-1 opacity-30">Personal Link Hub</p>
-            )}
-          </div>
-        </div>
 
-        <div className="space-y-6">
-          <div className="grid gap-4">
-            {standaloneLinks?.filter(l => l.isEnabled).map(link => (
-              <button
-                key={link.id}
-                onClick={() => handleLinkClick(link.id, link.url, true)}
-                className="w-full p-0.5 rounded-2xl hover:scale-[1.02] transition-transform shadow-xl group/link"
+            <div className="space-y-4">
+              {standaloneLinks?.filter(l => l.isEnabled).map(link => (
+                <button
+                  key={link.id}
+                  onClick={() => handleLinkClick(link.id, link.url, true)}
+                  className="w-full p-0.5 rounded-2xl hover:scale-[1.02] transition-transform shadow-xl group/link"
+                  style={{ background: `linear-gradient(-45deg, ${primaryColor}, ${secondaryColor})` }}
+                >
+                  <div className="w-full h-20 bg-black/80 backdrop-blur-xl rounded-[0.95rem] flex items-center px-6 gap-4 border border-white/10">
+                    <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10">
+                      {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <Link2 size={24} style={{ color: primaryColor }} />}
+                    </div>
+                    <div className="flex-1 text-left min-w-0">
+                      <span className="text-base font-black text-white tracking-tight truncate block">{link.title}</span>
+                      <p className="text-[9px] font-black uppercase text-white/30 tracking-widest mt-0.5">Link Mandiri</p>
+                    </div>
+                    <MousePointer2 size={20} className="text-white/20 group-hover/link:text-primary transition-colors" style={{ color: primaryColor }} />
+                  </div>
+                </button>
+              ))}
+
+              {groups?.filter(g => g.isEnabled).map((group) => (
+                <button
+                  key={group.id}
+                  onClick={() => setActiveGroupId(group.id)}
+                  className="w-full p-0.5 rounded-2xl hover:scale-[1.02] transition-transform shadow-xl group/folder"
+                  style={{ background: `linear-gradient(-45deg, ${primaryColor}, ${secondaryColor})` }}
+                >
+                  <div className="w-full h-24 bg-black/70 backdrop-blur-2xl rounded-[0.95rem] flex items-center px-6 gap-4 border border-white/10 relative overflow-hidden">
+                    <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10 shadow-xl shrink-0">
+                      {group.imageUrl ? <img src={group.imageUrl} className="w-full h-full object-cover" /> : <LayoutGrid size={32} style={{ color: primaryColor }} />}
+                    </div>
+                    <div className="flex-1 text-left">
+                      <span className="text-lg font-black text-white tracking-tight">{group.title}</span>
+                      <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] mt-1 flex items-center gap-2">
+                        Kelompok <ChevronRight size={12} className="text-primary" />
+                      </p>
+                    </div>
+                    <ChevronRight size={24} className="text-white/20 transition-transform group-hover/folder:translate-x-1" />
+                  </div>
+                </button>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="space-y-8 animate-in slide-in-from-right-10">
+            <div className="text-center space-y-4">
+              <div 
+                className="mx-auto w-24 h-24 rounded-3xl p-0.5 shadow-2xl"
                 style={{ background: `linear-gradient(-45deg, ${primaryColor}, ${secondaryColor})` }}
               >
-                <div className="w-full h-16 bg-black/80 backdrop-blur-xl rounded-[0.95rem] flex items-center px-6 gap-4 border border-white/10">
-                  <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10">
-                    {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <Link2 size={20} style={{ color: primaryColor }} />}
-                  </div>
-                  <div className="flex-1 text-left">
-                    <span className="text-sm font-bold text-white tracking-tight">{link.title}</span>
-                  </div>
-                  <MousePointer2 size={16} className="text-white/20 transition-colors" style={{ color: primaryColor }} />
+                <div className="w-full h-full rounded-[1.4rem] bg-black/80 backdrop-blur-xl flex items-center justify-center overflow-hidden">
+                   {activeGroup?.imageUrl ? <img src={activeGroup.imageUrl} className="w-full h-full object-cover" /> : <LayoutGrid size={40} style={{ color: primaryColor }} />}
                 </div>
-              </button>
-            ))}
-          </div>
-
-          <Accordion type="single" collapsible className="space-y-4">
-            {groups?.filter(g => g.isEnabled).map((group) => (
-              <AccordionItem key={group.id} value={group.id} className="border-none">
-                <div className="relative group">
-                  <div 
-                    className="absolute inset-0 opacity-0 group-hover:opacity-30 blur-2xl transition-all duration-500 rounded-2xl" 
-                    style={{ background: primaryColor }}
-                  />
-                  <AccordionTrigger 
-                    className="relative h-24 p-0.5 rounded-2xl hover:no-underline shadow-2xl transition-transform hover:scale-[1.01] group-data-[state=open]:scale-[1.02]"
-                    style={{ background: `linear-gradient(-45deg, ${primaryColor}, ${secondaryColor})` }}
-                  >
-                    <div className="w-full h-full bg-black/70 backdrop-blur-xl rounded-[0.95rem] flex items-center px-6 gap-4 border border-white/10">
-                      <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10 shadow-xl shrink-0">
-                        {group.imageUrl ? <img src={group.imageUrl} className="w-full h-full object-cover" /> : <LayoutGrid size={24} style={{ color: primaryColor }} />}
-                      </div>
-                      <div className="flex-1 text-left">
-                        <span className="text-sm font-bold text-white tracking-tight">{group.title}</span>
-                        <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mt-1">Buka Koleksi</p>
-                      </div>
-                      <ChevronRight size={20} className="text-white/40 transition-transform group-data-[state=open]:rotate-90" />
-                    </div>
-                  </AccordionTrigger>
-                </div>
-                <AccordionContent className="pt-3 pb-0 px-2 space-y-3">
-                  <LinksInGroup userId={resolvedUserId!} groupId={group.id} onLinkClick={handleLinkClick} accentColor={primaryColor} />
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
-
-          {(!groups?.length && !standaloneLinks?.length) && (
-            <div className="text-center py-20 opacity-20 font-black uppercase tracking-widest text-[10px]">
-              Belum ada tautan aktif.
+              </div>
+              <div className="space-y-1">
+                <h2 className="text-3xl font-black text-white tracking-tight uppercase">{activeGroup?.title}</h2>
+                <p className="text-[10px] font-black text-primary uppercase tracking-[0.4em]">Daftar Tautan Kelompok</p>
+              </div>
             </div>
-          )}
-        </div>
+
+            <LinksInGroup 
+              userId={resolvedUserId!} 
+              groupId={activeGroupId} 
+              onLinkClick={handleLinkClick} 
+              accentColor={primaryColor} 
+            />
+          </div>
+        )}
 
         <div className="pt-12 text-center opacity-40">
           <div className="flex items-center justify-center gap-2 mb-2">
@@ -209,22 +234,26 @@ function LinksInGroup({ userId, groupId, onLinkClick, accentColor }: { userId: s
   const { data: links } = useCollection(linksQuery);
 
   return (
-    <div className="grid gap-3">
+    <div className="grid gap-4 animate-in">
       {links?.filter(l => l.isEnabled).map(link => (
         <button
           key={link.id}
           onClick={() => onLinkClick(link.id, link.url, false, groupId)}
-          className="w-full glass-card hover:bg-white/10 rounded-2xl p-4 flex items-center gap-4 transition-all active:scale-95 group/link"
+          className="w-full glass-card hover:bg-white/10 rounded-2xl p-5 flex items-center gap-4 transition-all active:scale-95 group/link border-white/5"
         >
-          <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/5 group-hover/link:border-primary/40" style={{ borderColor: `${accentColor}40` } as any}>
-            {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <Link2 size={16} className="text-white/20" />}
+          <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/5 group-hover/link:border-primary/40" style={{ borderColor: `${accentColor}40` } as any}>
+            {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <Link2 size={20} className="text-white/20" />}
           </div>
-          <div className="flex-1 text-left">
-            <p className="text-xs font-bold text-white tracking-tight">{link.title}</p>
+          <div className="flex-1 text-left min-w-0">
+            <p className="text-sm font-black text-white tracking-tight truncate">{link.title}</p>
+            <p className="text-[9px] font-bold text-white/30 truncate mt-0.5">{link.url.replace('https://', '')}</p>
           </div>
-          <MousePointer2 size={14} className="text-white/20 transition-colors" style={{ color: accentColor } as any} />
+          <MousePointer2 size={16} className="text-white/10 transition-colors group-hover/link:text-primary" style={{ color: accentColor } as any} />
         </button>
       ))}
+      {!links?.length && (
+        <div className="text-center py-20 opacity-20 font-black uppercase text-[10px] tracking-widest">Belum ada tautan di kelompok ini.</div>
+      )}
     </div>
   );
 }
