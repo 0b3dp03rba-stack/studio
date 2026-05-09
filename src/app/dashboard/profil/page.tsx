@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { User, LogOut, Shield, Mail, Edit3, Image as ImageIcon, CheckCircle2 } from 'lucide-react';
+import { User, LogOut, Shield, Mail, Edit3, Image as ImageIcon, CheckCircle2, Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -34,6 +34,19 @@ export default function ProfilPage() {
       setAvatarUrl(profile.avatarUrl || '');
     }
   }, [profile]);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 1024 * 500) {
+        toast({ variant: "destructive", title: "File Terlalu Besar", description: "Maksimal ukuran foto profil adalah 500KB." });
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => setAvatarUrl(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleLogout = async () => {
     await signOut(getAuth());
@@ -93,15 +106,18 @@ export default function ProfilPage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-muted-foreground uppercase ml-1">URL Avatar (Link Gambar)</label>
-                  <div className="relative">
-                    <ImageIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={18} />
-                    <Input 
-                      value={avatarUrl} 
-                      onChange={(e) => setAvatarUrl(e.target.value)} 
-                      placeholder="https://..."
-                      className="bg-white/5 h-14 pl-12 text-sm rounded-2xl border-white/10 text-white font-medium" 
-                    />
+                  <label className="text-[10px] font-black text-muted-foreground uppercase ml-1">Foto Profil</label>
+                  <div className="flex items-center gap-4">
+                    <label className="flex-1 flex items-center justify-center gap-3 h-14 bg-white/5 border border-dashed border-white/20 rounded-2xl cursor-pointer hover:bg-white/10 transition-all group">
+                      <Upload size={18} className="text-primary group-hover:scale-110 transition-transform" />
+                      <span className="text-xs font-bold text-white/40 uppercase">Unggah Foto Baru</span>
+                      <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
+                    </label>
+                    {avatarUrl && (
+                      <Button variant="ghost" size="icon" onClick={() => setAvatarUrl('')} className="h-14 w-14 rounded-2xl bg-destructive/10 text-destructive">
+                        <X size={20} />
+                      </Button>
+                    )}
                   </div>
                 </div>
                 <div className="space-y-1.5">

@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Trash2, Link as LinkIcon, ExternalLink, AtSign, FolderPlus, Image as ImageIcon, ChevronDown, ChevronUp, Eye, EyeOff, LayoutGrid } from 'lucide-react';
+import { Plus, Trash2, Link as LinkIcon, ExternalLink, AtSign, FolderPlus, Image as ImageIcon, LayoutGrid, Upload, X } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, addDoc, serverTimestamp, doc, deleteDoc, updateDoc, query, orderBy, increment } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
@@ -40,6 +40,19 @@ export default function DashboardPage() {
     return query(collection(db, 'userProfiles', user.uid, 'links'), orderBy('createdAt', 'desc'));
   }, [db, user?.uid]);
   const { data: standaloneLinks, isLoading: isStandaloneLoading } = useCollection(standaloneLinksQuery);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, setter: (val: string) => void) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 1024 * 500) {
+        toast({ variant: "destructive", title: "File Terlalu Besar", description: "Maksimal ukuran foto adalah 500KB." });
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => setter(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleAddGroup = async () => {
     if (!user || !newGroupTitle) return;
@@ -142,12 +155,23 @@ export default function DashboardPage() {
                   onChange={(e) => setNewGroupTitle(e.target.value)}
                   className="bg-white/5 border-white/5 h-12 rounded-xl px-4 font-bold"
                 />
-                <Input 
-                  placeholder="URL Gambar Ikon (Opsional)" 
-                  value={newGroupImage}
-                  onChange={(e) => setNewGroupImage(e.target.value)}
-                  className="bg-white/5 border-white/5 h-12 rounded-xl px-4 text-xs"
-                />
+                <div className="flex items-center gap-3">
+                  <div className="flex-1">
+                    <label className="flex items-center justify-center gap-2 w-full h-12 bg-white/5 border border-dashed border-white/20 rounded-xl cursor-pointer hover:bg-white/10 transition-all">
+                      <Upload size={16} className="text-primary" />
+                      <span className="text-[10px] font-black uppercase text-white/60">{newGroupImage ? 'Ganti Ikon' : 'Unggah Ikon'}</span>
+                      <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, setNewGroupImage)} />
+                    </label>
+                  </div>
+                  {newGroupImage && (
+                    <div className="relative w-12 h-12 rounded-xl overflow-hidden border border-primary/50">
+                      <img src={newGroupImage} className="w-full h-full object-cover" />
+                      <button onClick={() => setNewGroupImage('')} className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                        <X size={14} className="text-white" />
+                      </button>
+                    </div>
+                  )}
+                </div>
                 <Button onClick={handleAddGroup} disabled={!newGroupTitle} className="w-full h-12 neon-gradient text-white font-black rounded-xl glow-primary uppercase text-[10px] shadow-xl">
                   Tambah Kelompok
                 </Button>
@@ -164,7 +188,23 @@ export default function DashboardPage() {
               <div className="space-y-3">
                 <Input placeholder="Judul Link" value={newLinkTitle} onChange={(e) => setNewLinkTitle(e.target.value)} className="bg-white/5 h-12 rounded-xl px-4 font-bold" />
                 <Input placeholder="URL Tautan" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} className="bg-white/5 h-12 rounded-xl px-4 font-bold" />
-                <Input placeholder="URL Gambar Ikon Link" value={newLinkImage} onChange={(e) => setNewLinkImage(e.target.value)} className="bg-white/5 h-12 rounded-xl px-4 text-xs" />
+                <div className="flex items-center gap-3">
+                  <div className="flex-1">
+                    <label className="flex items-center justify-center gap-2 w-full h-12 bg-white/5 border border-dashed border-white/20 rounded-xl cursor-pointer hover:bg-white/10 transition-all">
+                      <Upload size={16} className="text-primary" />
+                      <span className="text-[10px] font-black uppercase text-white/60">{newLinkImage ? 'Ganti Foto' : 'Unggah Foto'}</span>
+                      <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, setNewLinkImage)} />
+                    </label>
+                  </div>
+                  {newLinkImage && (
+                    <div className="relative w-12 h-12 rounded-xl overflow-hidden border border-primary/50">
+                      <img src={newLinkImage} className="w-full h-full object-cover" />
+                      <button onClick={() => setNewLinkImage('')} className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                        <X size={14} className="text-white" />
+                      </button>
+                    </div>
+                  )}
+                </div>
                 <Button onClick={handleAddLink} disabled={!newLinkTitle || !newLinkUrl} className="w-full h-12 neon-gradient text-white font-black rounded-xl glow-primary uppercase text-[10px] shadow-xl">
                   Simpan Link Mandiri
                 </Button>
@@ -186,7 +226,23 @@ export default function DashboardPage() {
               <div className="space-y-3">
                 <Input placeholder="Judul Link" value={newLinkTitle} onChange={(e) => setNewLinkTitle(e.target.value)} className="bg-white/5 h-12 rounded-xl px-4 font-bold" />
                 <Input placeholder="URL Tautan" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} className="bg-white/5 h-12 rounded-xl px-4 font-bold" />
-                <Input placeholder="URL Gambar Ikon Link" value={newLinkImage} onChange={(e) => setNewLinkImage(e.target.value)} className="bg-white/5 h-12 rounded-xl px-4 text-xs" />
+                <div className="flex items-center gap-3">
+                  <div className="flex-1">
+                    <label className="flex items-center justify-center gap-2 w-full h-12 bg-white/5 border border-dashed border-white/20 rounded-xl cursor-pointer hover:bg-white/10 transition-all">
+                      <Upload size={16} className="text-primary" />
+                      <span className="text-[10px] font-black uppercase text-white/60">{newLinkImage ? 'Ganti Foto' : 'Unggah Foto'}</span>
+                      <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, setNewLinkImage)} />
+                    </label>
+                  </div>
+                  {newLinkImage && (
+                    <div className="relative w-12 h-12 rounded-xl overflow-hidden border border-primary/50">
+                      <img src={newLinkImage} className="w-full h-full object-cover" />
+                      <button onClick={() => setNewLinkImage('')} className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                        <X size={14} className="text-white" />
+                      </button>
+                    </div>
+                  )}
+                </div>
                 <Button onClick={handleAddLink} disabled={!newLinkTitle || !newLinkUrl} className="w-full h-12 neon-gradient text-white font-black rounded-xl glow-primary uppercase text-[10px] shadow-xl">
                   Simpan Link ke Kelompok
                 </Button>
@@ -205,7 +261,6 @@ export default function DashboardPage() {
           <div className="py-20 text-center animate-pulse text-primary font-black uppercase text-[10px]">Memuat Linku...</div>
         ) : (
           <div className="space-y-4">
-            {/* Render Standalone Links First or Mixed */}
             {standaloneLinks?.map(link => (
               <StandaloneLinkItem key={link.id} link={link} />
             ))}
@@ -213,7 +268,7 @@ export default function DashboardPage() {
             {groups?.map((group) => (
               <GroupItem key={group.id} group={group} onAddLink={() => {
                 setSelectedGroupId(group.id);
-                setActiveTab('group'); // Scroll or just focus
+                setActiveTab('group');
               }} onDelete={() => handleDeleteGroup(group.id)} />
             ))}
 

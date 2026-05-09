@@ -80,19 +80,19 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userId
               )}
             </div>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-3">
             <h1 className="text-4xl font-black text-white tracking-tighter uppercase animate-text-fast-pulse">{profile.displayName || profile.username || 'User Linku'}</h1>
-            <p className="text-[10px] font-black text-primary uppercase tracking-[0.4em] mt-1">Verified Link Member</p>
+            {profile.bio ? (
+              <p className="text-xs font-bold text-primary uppercase tracking-[0.2em] max-w-xs mx-auto leading-relaxed">
+                {profile.bio}
+              </p>
+            ) : (
+              <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.4em] mt-1">Personal Link Hub</p>
+            )}
           </div>
-          {profile.bio && (
-            <p className="text-sm font-medium text-white/60 leading-relaxed max-w-xs mx-auto">
-              {profile.bio}
-            </p>
-          )}
         </div>
 
         <div className="space-y-6">
-          {/* Standalone Links appear at the same level as groups */}
           <div className="grid gap-4">
             {standaloneLinks?.filter(l => l.isEnabled).map(link => (
               <button
