@@ -60,10 +60,6 @@
   @apply fixed bottom-0 left-0 right-0 h-20 bg-black/95 backdrop-blur-3xl border-t border-white/5 flex items-center justify-around px-4 z-50 rounded-t-[2.5rem];
 }
 
-.floating-btn {
-  @apply fixed bottom-24 right-6 w-14 h-14 rounded-full neon-gradient flex items-center justify-center text-white shadow-xl shadow-primary/30 hover:scale-110 active:scale-90 z-40;
-}
-
 .animate-in {
   animation: animate-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }

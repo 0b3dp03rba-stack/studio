@@ -1,16 +1,14 @@
-
 "use client";
 
 import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Trash2, Link as LinkIcon, ExternalLink, AtSign, FolderPlus, Image as ImageIcon, LayoutGrid, Upload, X } from 'lucide-react';
+import { Plus, Trash2, Link as LinkIcon, ExternalLink, AtSign, FolderPlus, Upload, X, LayoutGrid } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, addDoc, serverTimestamp, doc, deleteDoc, updateDoc, query, orderBy, increment } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, deleteDoc, query, orderBy } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
-import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 
 export default function DashboardPage() {
   const { user } = useUser();
@@ -44,8 +42,8 @@ export default function DashboardPage() {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, setter: (val: string) => void) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 1024 * 500) {
-        toast({ variant: "destructive", title: "File Terlalu Besar", description: "Maksimal ukuran foto adalah 500KB." });
+      if (file.size > 1024 * 1024 * 5) {
+        toast({ variant: "destructive", title: "File Terlalu Besar", description: "Maksimal ukuran foto adalah 5MB." });
         return;
       }
       const reader = new FileReader();
@@ -67,7 +65,7 @@ export default function DashboardPage() {
       });
       setNewGroupTitle('');
       setNewGroupImage('');
-      toast({ title: "Kelompok Dibuat", description: "Sekarang Anda bisa menambah link ke dalamnya." });
+      toast({ title: "Kelompok Dibuat", description: "Berhasil menambahkan kelompok baru." });
     } catch (e) {
       toast({ variant: "destructive", title: "Gagal", description: "Terjadi kesalahan." });
     }
@@ -103,7 +101,7 @@ export default function DashboardPage() {
   const handleDeleteGroup = async (groupId: string) => {
     if (!user) return;
     await deleteDoc(doc(db, 'userProfiles', user.uid, 'linkGroups', groupId));
-    toast({ title: "Kelompok Dihapus", description: "Semua data di dalamnya telah hilang." });
+    toast({ title: "Kelompok Dihapus", description: "Kelompok telah dihapus." });
   };
 
   const publicUrl = profile?.username ? `${window.location.origin}/${profile.username}` : `${window.location.origin}/u/${user?.uid}`;
@@ -111,7 +109,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8 animate-in pb-12">
       <div className="space-y-2">
-        <h1 className="text-4xl font-black tracking-tighter uppercase text-white">Linku Manager</h1>
+        <h1 className="text-4xl font-black tracking-tighter text-white">Linku Manager</h1>
         <div className="flex items-center gap-2 p-3 bg-white/5 rounded-xl border border-white/5 w-fit">
            <AtSign size={14} className="text-primary" />
            <span className="text-[10px] font-black text-white uppercase tracking-widest">{profile?.username || 'Belum ada username'}</span>
@@ -155,16 +153,16 @@ export default function DashboardPage() {
                   onChange={(e) => setNewGroupTitle(e.target.value)}
                   className="bg-white/5 border-white/5 h-12 rounded-xl px-4 font-bold"
                 />
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-4">
                   <div className="flex-1">
                     <label className="flex items-center justify-center gap-2 w-full h-12 bg-white/5 border border-dashed border-white/20 rounded-xl cursor-pointer hover:bg-white/10 transition-all">
                       <Upload size={16} className="text-primary" />
-                      <span className="text-[10px] font-black uppercase text-white/60">{newGroupImage ? 'Ganti Ikon' : 'Unggah Ikon'}</span>
+                      <span className="text-[10px] font-black uppercase text-white/60">{newGroupImage ? 'Ganti Foto' : 'Unggah Foto (1:1)'}</span>
                       <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, setNewGroupImage)} />
                     </label>
                   </div>
                   {newGroupImage && (
-                    <div className="relative w-12 h-12 rounded-xl overflow-hidden border border-primary/50">
+                    <div className="relative w-12 h-12 rounded-xl overflow-hidden border border-primary/50 aspect-square">
                       <img src={newGroupImage} className="w-full h-full object-cover" />
                       <button onClick={() => setNewGroupImage('')} className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
                         <X size={14} className="text-white" />
@@ -173,7 +171,7 @@ export default function DashboardPage() {
                   )}
                 </div>
                 <Button onClick={handleAddGroup} disabled={!newGroupTitle} className="w-full h-12 neon-gradient text-white font-black rounded-xl glow-primary uppercase text-[10px] shadow-xl">
-                  Tambah Kelompok
+                  Simpan Kelompok
                 </Button>
               </div>
             </CardContent>
@@ -182,22 +180,22 @@ export default function DashboardPage() {
           <Card className="glass-card border-none rounded-[2rem] p-6 shadow-2xl animate-in">
             <CardContent className="p-0 space-y-4">
               <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase tracking-widest">
-                <Plus size={16} />
+                <LinkIcon size={16} />
                 <span>Tambah Link Mandiri</span>
               </div>
               <div className="space-y-3">
-                <Input placeholder="Judul Link" value={newLinkTitle} onChange={(e) => setNewLinkTitle(e.target.value)} className="bg-white/5 h-12 rounded-xl px-4 font-bold" />
-                <Input placeholder="URL Tautan" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} className="bg-white/5 h-12 rounded-xl px-4 font-bold" />
-                <div className="flex items-center gap-3">
+                <Input placeholder="Judul Tautan" value={newLinkTitle} onChange={(e) => setNewLinkTitle(e.target.value)} className="bg-white/5 h-12 rounded-xl px-4 font-bold" />
+                <Input placeholder="URL (Misal: instagram.com/user)" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} className="bg-white/5 h-12 rounded-xl px-4 font-bold" />
+                <div className="flex items-center gap-4">
                   <div className="flex-1">
                     <label className="flex items-center justify-center gap-2 w-full h-12 bg-white/5 border border-dashed border-white/20 rounded-xl cursor-pointer hover:bg-white/10 transition-all">
                       <Upload size={16} className="text-primary" />
-                      <span className="text-[10px] font-black uppercase text-white/60">{newLinkImage ? 'Ganti Foto' : 'Unggah Foto'}</span>
+                      <span className="text-[10px] font-black uppercase text-white/60">{newLinkImage ? 'Ganti Foto' : 'Unggah Foto (1:1)'}</span>
                       <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, setNewLinkImage)} />
                     </label>
                   </div>
                   {newLinkImage && (
-                    <div className="relative w-12 h-12 rounded-xl overflow-hidden border border-primary/50">
+                    <div className="relative w-12 h-12 rounded-xl overflow-hidden border border-primary/50 aspect-square">
                       <img src={newLinkImage} className="w-full h-full object-cover" />
                       <button onClick={() => setNewLinkImage('')} className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
                         <X size={14} className="text-white" />
@@ -206,7 +204,7 @@ export default function DashboardPage() {
                   )}
                 </div>
                 <Button onClick={handleAddLink} disabled={!newLinkTitle || !newLinkUrl} className="w-full h-12 neon-gradient text-white font-black rounded-xl glow-primary uppercase text-[10px] shadow-xl">
-                  Simpan Link Mandiri
+                  Simpan Tautan Mandiri
                 </Button>
               </div>
             </CardContent>
@@ -214,28 +212,28 @@ export default function DashboardPage() {
         )}
 
         {selectedGroupId && (
-          <Card className="glass-card border-primary/20 rounded-[2rem] p-6 shadow-2xl animate-in">
+          <Card className="glass-card border-primary/20 rounded-[2rem] p-6 shadow-2xl animate-in border">
             <CardContent className="p-0 space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase tracking-widest">
                   <Plus size={16} />
-                  <span>Tambah Link ke Kelompok</span>
+                  <span>Tambah Tautan ke Kelompok</span>
                 </div>
                 <Button variant="ghost" size="sm" onClick={() => setSelectedGroupId(null)} className="text-[10px] font-black uppercase">Batal</Button>
               </div>
               <div className="space-y-3">
-                <Input placeholder="Judul Link" value={newLinkTitle} onChange={(e) => setNewLinkTitle(e.target.value)} className="bg-white/5 h-12 rounded-xl px-4 font-bold" />
-                <Input placeholder="URL Tautan" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} className="bg-white/5 h-12 rounded-xl px-4 font-bold" />
-                <div className="flex items-center gap-3">
+                <Input placeholder="Judul Tautan" value={newLinkTitle} onChange={(e) => setNewLinkTitle(e.target.value)} className="bg-white/5 h-12 rounded-xl px-4 font-bold" />
+                <Input placeholder="URL" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} className="bg-white/5 h-12 rounded-xl px-4 font-bold" />
+                <div className="flex items-center gap-4">
                   <div className="flex-1">
                     <label className="flex items-center justify-center gap-2 w-full h-12 bg-white/5 border border-dashed border-white/20 rounded-xl cursor-pointer hover:bg-white/10 transition-all">
                       <Upload size={16} className="text-primary" />
-                      <span className="text-[10px] font-black uppercase text-white/60">{newLinkImage ? 'Ganti Foto' : 'Unggah Foto'}</span>
+                      <span className="text-[10px] font-black uppercase text-white/60">{newLinkImage ? 'Ganti Foto' : 'Unggah Foto (1:1)'}</span>
                       <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, setNewLinkImage)} />
                     </label>
                   </div>
                   {newLinkImage && (
-                    <div className="relative w-12 h-12 rounded-xl overflow-hidden border border-primary/50">
+                    <div className="relative w-12 h-12 rounded-xl overflow-hidden border border-primary/50 aspect-square">
                       <img src={newLinkImage} className="w-full h-full object-cover" />
                       <button onClick={() => setNewLinkImage('')} className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
                         <X size={14} className="text-white" />
@@ -244,7 +242,7 @@ export default function DashboardPage() {
                   )}
                 </div>
                 <Button onClick={handleAddLink} disabled={!newLinkTitle || !newLinkUrl} className="w-full h-12 neon-gradient text-white font-black rounded-xl glow-primary uppercase text-[10px] shadow-xl">
-                  Simpan Link ke Kelompok
+                  Simpan Tautan
                 </Button>
               </div>
             </CardContent>
@@ -254,11 +252,11 @@ export default function DashboardPage() {
 
       <div className="space-y-5">
         <h3 className="font-black text-[11px] uppercase tracking-[0.3em] text-white/50 flex items-center gap-2 px-1">
-          <LinkIcon size={16} className="text-primary" /> Daftar Kelompok & Linku
+          <LayoutGrid size={16} className="text-primary" /> Daftar Kelompok & Tautan
         </h3>
         
         {isGroupsLoading || isStandaloneLoading ? (
-          <div className="py-20 text-center animate-pulse text-primary font-black uppercase text-[10px]">Memuat Linku...</div>
+          <div className="py-20 text-center animate-pulse text-primary font-black uppercase text-[10px]">Memuat data...</div>
         ) : (
           <div className="space-y-4">
             {standaloneLinks?.map(link => (
@@ -298,12 +296,12 @@ function StandaloneLinkItem({ link }: { link: any }) {
 
   return (
     <Card className="glass-card border-none rounded-2xl overflow-hidden shadow-xl p-4 flex items-center gap-4 group">
-      <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/5 shrink-0">
+      <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/5 shrink-0 aspect-square">
         {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <LinkIcon size={18} className="text-primary" />}
       </div>
-      <div className="flex-1 min-w-0">
-        <h4 className="font-black text-white uppercase text-xs truncate">{link.title}</h4>
-        <p className="text-[8px] text-white/40 truncate font-mono">{link.url}</p>
+      <div className="flex-1 min-w-0 text-left">
+        <h4 className="font-bold text-white text-sm truncate">{link.title}</h4>
+        <p className="text-[10px] text-white/40 truncate font-mono">{link.url}</p>
       </div>
       <div className="flex gap-2">
          <Button size="icon" variant="ghost" onClick={handleDelete} className="h-10 w-10 rounded-xl text-destructive hover:bg-destructive/10"><Trash2 size={16} /></Button>
@@ -317,7 +315,7 @@ function GroupItem({ group, onAddLink, onDelete }: { group: any; onAddLink: () =
   const db = useFirestore();
   const linksQuery = useMemoFirebase(() => {
     if (!user) return null;
-    return query(collection(db, 'userProfiles', user.uid, 'linkGroups', group.id, 'links'), orderBy('createdAt', 'desc'));
+    return query(collection(db, 'userProfiles', user.uid, 'linkGroups', group.id, 'links'), orderBy('order', 'asc'));
   }, [db, user?.uid, group.id]);
   const { data: links } = useCollection(linksQuery);
 
@@ -325,14 +323,14 @@ function GroupItem({ group, onAddLink, onDelete }: { group: any; onAddLink: () =
     <Card className="glass-card border-none rounded-[2rem] overflow-hidden shadow-xl">
       <CardContent className="p-0">
         <div className="p-6 flex items-center gap-4 bg-white/5">
-          <div className="w-12 h-12 rounded-2xl neon-gradient p-0.5 glow-primary shrink-0">
+          <div className="w-12 h-12 rounded-2xl neon-gradient p-0.5 glow-primary shrink-0 aspect-square">
             <div className="w-full h-full bg-black rounded-[0.9rem] flex items-center justify-center overflow-hidden">
               {group.imageUrl ? <img src={group.imageUrl} className="w-full h-full object-cover" /> : <LayoutGrid size={20} className="text-primary" />}
             </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <h4 className="font-black text-white uppercase text-sm truncate">{group.title}</h4>
-            <p className="text-[8px] text-white/30 uppercase font-black tracking-widest">{links?.length || 0} Tautan</p>
+          <div className="flex-1 min-w-0 text-left">
+            <h4 className="font-bold text-white text-base truncate">{group.title}</h4>
+            <p className="text-[10px] text-white/30 uppercase font-black tracking-widest">{links?.length || 0} Tautan</p>
           </div>
           <div className="flex gap-2">
             <Button size="icon" variant="ghost" onClick={onAddLink} className="h-10 w-10 rounded-xl text-primary hover:bg-primary/10"><Plus size={18} /></Button>
@@ -342,12 +340,12 @@ function GroupItem({ group, onAddLink, onDelete }: { group: any; onAddLink: () =
         <div className="p-4 space-y-2">
           {links?.map(link => (
             <div key={link.id} className="flex items-center gap-3 p-3 bg-white/[0.02] rounded-xl border border-white/5">
-               <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center overflow-hidden border border-white/10 shrink-0">
+               <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center overflow-hidden border border-white/10 shrink-0 aspect-square">
                   {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <LinkIcon size={12} className="text-white/40" />}
                </div>
-               <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold text-white uppercase truncate">{link.title}</p>
-                  <p className="text-[8px] text-white/40 truncate font-mono">{link.url}</p>
+               <div className="flex-1 min-w-0 text-left">
+                  <p className="text-xs font-bold text-white truncate">{link.title}</p>
+                  <p className="text-[9px] text-white/40 truncate font-mono">{link.url}</p>
                </div>
                <div className="flex items-center gap-1">
                  <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive/50 hover:text-destructive" onClick={async () => {

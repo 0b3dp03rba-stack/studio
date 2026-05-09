@@ -1,9 +1,8 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { User, LogOut, Shield, Mail, Edit3, Image as ImageIcon, CheckCircle2, Upload, X } from 'lucide-react';
+import { User, LogOut, Mail, Edit3, CheckCircle2, Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -38,8 +37,8 @@ export default function ProfilPage() {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 1024 * 500) {
-        toast({ variant: "destructive", title: "File Terlalu Besar", description: "Maksimal ukuran foto profil adalah 500KB." });
+      if (file.size > 1024 * 1024 * 5) {
+        toast({ variant: "destructive", title: "File Terlalu Besar", description: "Maksimal ukuran foto profil adalah 5MB." });
         return;
       }
       const reader = new FileReader();
@@ -56,21 +55,24 @@ export default function ProfilPage() {
   const handleSaveProfile = async () => {
     if (!profileRef) return;
     
-    await updateDoc(profileRef, {
-      displayName,
-      bio,
-      avatarUrl,
-      updatedAt: serverTimestamp()
-    });
-    
-    toast({ title: "Berhasil", description: "Profil Anda telah diperbarui." });
-    setIsEditing(false);
+    try {
+      await updateDoc(profileRef, {
+        displayName,
+        bio,
+        avatarUrl,
+        updatedAt: serverTimestamp()
+      });
+      toast({ title: "Berhasil", description: "Profil Anda telah diperbarui." });
+      setIsEditing(false);
+    } catch (e) {
+      toast({ variant: "destructive", title: "Gagal", description: "Terjadi kesalahan saat menyimpan." });
+    }
   };
 
   return (
     <div className="space-y-6 animate-in">
       <div className="text-center space-y-4 py-8">
-        <div className="mx-auto w-28 h-28 rounded-[2.5rem] neon-gradient flex items-center justify-center glow-primary border-4 border-background shadow-2xl overflow-hidden relative group">
+        <div className="mx-auto w-28 h-28 rounded-[2.5rem] neon-gradient flex items-center justify-center glow-primary border-4 border-background shadow-2xl overflow-hidden relative group aspect-square">
            {avatarUrl ? (
              <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover relative z-10" />
            ) : (
@@ -78,9 +80,9 @@ export default function ProfilPage() {
            )}
            <div className="absolute inset-0 bg-black/20" />
         </div>
-        <div>
-          <h1 className="text-3xl font-black text-white tracking-tighter uppercase">{displayName || user?.email?.split('@')[0]}</h1>
-          <p className="text-primary text-[10px] font-black uppercase tracking-[0.4em] neon-text-pulse">Verified {profile?.role || 'User'}</p>
+        <div className="px-4">
+          <h1 className="text-2xl font-black text-white tracking-tight">{displayName || user?.email?.split('@')[0]}</h1>
+          <p className="text-primary text-[10px] font-black uppercase tracking-[0.4em] neon-text-pulse">Penyedia Tautan</p>
         </div>
       </div>
 
@@ -88,7 +90,7 @@ export default function ProfilPage() {
         <Card className="glass-card border-white/5 rounded-[2rem] overflow-hidden">
           <CardContent className="p-6 space-y-5">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2 text-white"><Edit3 size={16} className="text-primary" /> Edit Profil</h3>
+              <h3 className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2 text-white"><Edit3 size={16} className="text-primary" /> Pengaturan Profil</h3>
               {!isEditing && (
                 <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)} className="h-8 px-4 text-[10px] font-black text-primary rounded-xl hover:bg-primary/10">EDIT</Button>
               )}
@@ -96,8 +98,8 @@ export default function ProfilPage() {
 
             {isEditing ? (
               <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-muted-foreground uppercase ml-1">Nama Tampilan</label>
+                <div className="space-y-1.5 text-left">
+                  <label className="text-[10px] font-black text-muted-foreground uppercase ml-1">Nama Lengkap</label>
                   <Input 
                     value={displayName} 
                     onChange={(e) => setDisplayName(e.target.value)} 
@@ -105,12 +107,12 @@ export default function ProfilPage() {
                     className="bg-white/5 h-14 text-sm rounded-2xl border-white/10 text-white font-bold" 
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-muted-foreground uppercase ml-1">Foto Profil</label>
+                <div className="space-y-1.5 text-left">
+                  <label className="text-[10px] font-black text-muted-foreground uppercase ml-1">Foto Profil (1:1)</label>
                   <div className="flex items-center gap-4">
                     <label className="flex-1 flex items-center justify-center gap-3 h-14 bg-white/5 border border-dashed border-white/20 rounded-2xl cursor-pointer hover:bg-white/10 transition-all group">
                       <Upload size={18} className="text-primary group-hover:scale-110 transition-transform" />
-                      <span className="text-xs font-bold text-white/40 uppercase">Unggah Foto Baru</span>
+                      <span className="text-xs font-bold text-white/40 uppercase">Ganti Foto</span>
                       <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
                     </label>
                     {avatarUrl && (
@@ -120,33 +122,30 @@ export default function ProfilPage() {
                     )}
                   </div>
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 text-left">
                   <label className="text-[10px] font-black text-muted-foreground uppercase ml-1">Bio Singkat</label>
                   <Textarea 
                     value={bio} 
                     onChange={(e) => setBio(e.target.value)} 
-                    placeholder="Ceritakan sedikit tentang Anda..."
+                    placeholder="Tulis bio singkat Anda di sini..."
                     className="bg-white/5 h-24 text-sm rounded-2xl border-white/10 text-white font-medium leading-relaxed" 
                   />
                 </div>
                 <div className="flex gap-2 pt-2">
                   <Button variant="outline" onClick={() => setIsEditing(false)} className="flex-1 h-14 text-xs font-black rounded-2xl border-white/10 text-white">BATAL</Button>
-                  <Button onClick={handleSaveProfile} className="flex-1 h-14 text-xs neon-gradient text-background font-black rounded-2xl glow-primary shadow-xl">SIMPAN PROFIL</Button>
+                  <Button onClick={handleSaveProfile} className="flex-1 h-14 text-xs neon-gradient text-background font-black rounded-2xl glow-primary shadow-xl">SIMPAN</Button>
                 </div>
               </div>
             ) : (
-              <div className="space-y-5">
-                <div className="flex items-start gap-4 p-4 bg-white/[0.02] rounded-2xl border border-white/5">
-                  <div className="p-2.5 bg-primary/10 rounded-xl text-primary"><Shield size={18} /></div>
-                  <div className="flex-1">
-                    <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Bio Anda</p>
-                    <p className="text-xs font-medium text-white/80 leading-relaxed mt-1">{bio || 'Belum ada bio.'}</p>
-                  </div>
+              <div className="space-y-5 text-left">
+                <div className="p-4 bg-white/[0.02] rounded-2xl border border-white/5">
+                  <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">Bio Anda</p>
+                  <p className="text-sm font-medium text-white/80 leading-relaxed">{bio || 'Anda belum menuliskan bio apapun.'}</p>
                 </div>
                 <div className="flex items-center gap-4 px-4">
                   <Mail size={16} className="text-white/20" />
                   <div className="flex-1">
-                    <p className="text-[8px] font-black text-muted-foreground uppercase">Email Terhubung</p>
+                    <p className="text-[8px] font-black text-muted-foreground uppercase">Email Akun</p>
                     <p className="text-xs font-bold text-white/60">{user?.email}</p>
                   </div>
                   <CheckCircle2 size={14} className="text-primary" />
@@ -157,7 +156,7 @@ export default function ProfilPage() {
         </Card>
 
         <Button variant="destructive" className="w-full h-16 rounded-[1.5rem] font-black text-sm uppercase mt-6 group shadow-2xl active:scale-95 transition-all" onClick={handleLogout}>
-          <LogOut size={20} className="mr-3 group-hover:rotate-12 transition-transform" /> Keluar Akun
+          <LogOut size={20} className="mr-3 group-hover:rotate-12 transition-transform" /> Keluar Dari Akun
         </Button>
       </div>
     </div>
