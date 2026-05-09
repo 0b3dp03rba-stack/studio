@@ -2,11 +2,47 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Aturan paling sederhana: Baca publik untuk semua
-    // Tulis hanya jika user terautentikasi
-    match /{document=**} {
+    // Allow anyone to read user profiles and their public content
+    match /userProfiles/{userId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId;
+      
+      match /links/{linkId} {
+        allow read: if true;
+        allow write: if request.auth != null && request.auth.uid == userId;
+      }
+      
+      match /linkGroups/{groupId} {
+        allow read: if true;
+        allow write: if request.auth != null && request.auth.uid == userId;
+        
+        match /links/{linkId} {
+          allow read: if true;
+          allow write: if request.auth != null && request.auth.uid == userId;
+        }
+      }
+    }
+    
+    // Public username mapping for resolution
+    match /usernames/{username} {
       allow read: if true;
       allow write: if request.auth != null;
+    }
+    
+    // App Config and Global trackers
+    match /appConfig/{document=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    
+    match /submittedEmails/{email} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // Default catch-all for other collections used in the app (messages, batches, etc)
+    match /{document=**} {
+      allow read, write: if request.auth != null;
     }
   }
 }

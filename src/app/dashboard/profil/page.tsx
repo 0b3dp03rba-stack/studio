@@ -14,7 +14,7 @@ import { doc, updateDoc, serverTimestamp, getDoc, setDoc, deleteDoc } from 'fire
 import { getAuth, signOut } from 'firebase/auth';
 import ImageCropperModal from '@/components/ImageCropperModal';
 import { extractPaletteFromImage } from '@/lib/utils-app';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { syncSocialStats } from '@/ai/flows/social-stats-flow';
 
@@ -78,10 +78,8 @@ export default function ProfilPage() {
   
   const [cropperOpen, setCropperOpen] = useState(false);
   const [tempImage, setTempImage] = useState<string | null>(null);
-  const [paletteOpen, setPaletteOpen] = useState(false);
   const [fullUrl, setFullUrl] = useState('');
 
-  // New Social Link Form State
   const [newSocialPlatform, setNewSocialPlatform] = useState('');
   const [newSocialUrl, setNewSocialUrl] = useState('');
   const [newSocialValue, setNewSocialValue] = useState('');
@@ -106,19 +104,12 @@ export default function ProfilPage() {
   const handleCopyUrl = () => {
     if (!fullUrl) return;
     navigator.clipboard.writeText(fullUrl);
-    toast({
-      title: "Berhasil Salin",
-      description: "URL profil Linku Anda telah disalin.",
-    });
+    toast({ title: "Berhasil Salin", description: "URL profil Linku Anda telah disalin." });
   };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 1024 * 1024 * 5) {
-        toast({ variant: "destructive", title: "File terlalu besar", description: "Maksimal 5MB." });
-        return;
-      }
       const reader = new FileReader();
       reader.onload = () => {
         setTempImage(reader.result as string);
@@ -148,20 +139,15 @@ export default function ProfilPage() {
     setIsSaving(true);
     try {
       const cleanUsername = username.toLowerCase().trim().replace(/[^a-z0-9_]/g, '');
-      if (cleanUsername.length < 3) {
-        toast({ variant: "destructive", title: "Username terlalu pendek", description: "Minimal 3 karakter." });
-        setIsSaving(false);
-        return;
-      }
       if (cleanUsername !== profile?.username) {
         const usernameRef = doc(db, 'usernames', cleanUsername);
         const usernameSnap = await getDoc(usernameRef);
         if (usernameSnap.exists()) {
-          toast({ variant: "destructive", title: "Username tidak tersedia", description: "Silakan pilih username lain." });
+          toast({ variant: "destructive", title: "Username tidak tersedia" });
           setIsSaving(false);
           return;
         }
-        if (profile?.username) await deleteDoc(doc(db, 'usernames', profile.username)).catch(() => {});
+        if (profile?.username) await deleteDoc(doc(db, 'usernames', profile.username));
         await setDoc(usernameRef, { userId: user.uid, createdAt: serverTimestamp() });
       }
       await updateDoc(profileRef, {
@@ -177,7 +163,7 @@ export default function ProfilPage() {
       toast({ title: "Tersimpan", description: "Profil Linku Anda telah diperbarui." });
       setIsEditing(false);
     } catch (e: any) {
-      toast({ variant: "destructive", title: "Gagal menyimpan", description: "Gagal memperbarui profil." });
+      toast({ variant: "destructive", title: "Gagal menyimpan" });
     } finally {
       setIsSaving(false);
     }
@@ -216,9 +202,9 @@ export default function ProfilPage() {
       updated[index] = { ...link, value: result.value, label: result.label };
       setSocialLinks(updated);
       setIsEditing(true);
-      toast({ title: "Sync Berhasil", description: `Statistik ${link.platform} telah diperbarui oleh AI.` });
+      toast({ title: "Sync Berhasil", description: `Statistik ${link.platform} telah diperbarui.` });
     } catch (e) {
-      toast({ variant: "destructive", title: "Sync Gagal", description: "Gagal mengambil data real-time." });
+      toast({ variant: "destructive", title: "Sync Gagal" });
     } finally {
       setIsSyncing(null);
     }
@@ -306,7 +292,7 @@ export default function ProfilPage() {
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-muted-foreground uppercase ml-1">Bio</label>
-                  <Textarea value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Tulis sedikit tentang Anda..." className="bg-white/5 h-24 text-sm rounded-2xl border-white/10 text-white font-medium" />
+                  <Textarea value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Bio..." className="bg-white/5 h-24 text-sm rounded-2xl border-white/10 text-white font-medium" />
                 </div>
               </div>
             ) : (
@@ -322,14 +308,14 @@ export default function ProfilPage() {
 
         <Card className="glass-card border-white/5 rounded-[2rem] overflow-hidden">
           <CardContent className="p-6 space-y-6">
-            <h3 className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2 text-white"><Share2 size={16} className="text-primary" /> Media Sosial & Real-time Stats</h3>
+            <h3 className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2 text-white"><Share2 size={16} className="text-primary" /> Media Sosial</h3>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <label className="text-[9px] font-black text-muted-foreground uppercase ml-1">Platform</label>
                   <Select value={newSocialPlatform} onValueChange={setNewSocialPlatform}>
                     <SelectTrigger className="bg-white/5 border-white/10 h-12 rounded-xl text-xs font-bold">
-                      <SelectValue placeholder="Pilih Sosmed" />
+                      <SelectValue placeholder="Platform" />
                     </SelectTrigger>
                     <SelectContent className="glass-card border-none rounded-xl">
                       {socialPlatforms.map(p => (
@@ -339,8 +325,8 @@ export default function ProfilPage() {
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-black text-muted-foreground uppercase ml-1">Statistik Manual</label>
-                  <Input value={newSocialValue} onChange={(e) => setNewSocialValue(e.target.value)} placeholder="Contoh: 1.2M" className="bg-white/5 border-white/10 h-12 rounded-xl text-xs font-bold" />
+                  <label className="text-[9px] font-black text-muted-foreground uppercase ml-1">Value Manual</label>
+                  <Input value={newSocialValue} onChange={(e) => setNewSocialValue(e.target.value)} placeholder="1.2M" className="bg-white/5 border-white/10 h-12 rounded-xl text-xs font-bold" />
                 </div>
               </div>
               <div className="space-y-1.5">
@@ -384,7 +370,7 @@ export default function ProfilPage() {
           <div className="flex gap-2 pt-4">
             <Button variant="outline" onClick={() => setIsEditing(false)} disabled={isSaving} className="flex-1 h-14 rounded-2xl">Batal</Button>
             <Button onClick={handleSaveProfile} disabled={isSaving} className="flex-1 h-14 neon-gradient text-background font-black rounded-2xl shadow-xl">
-              {isSaving ? <Loader2 className="animate-spin" size={20} /> : "Simpan Semua Perubahan"}
+              {isSaving ? <Loader2 className="animate-spin" size={20} /> : "Simpan Semua"}
             </Button>
           </div>
         )}

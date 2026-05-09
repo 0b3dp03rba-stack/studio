@@ -53,6 +53,7 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
         if (userSnap.exists()) {
           setResolvedUserId(userSnap.data().userId);
         } else {
+          // Fallback if the path is actually a UID
           const profileRef = doc(db, 'userProfiles', username);
           const profileSnap = await getDoc(profileRef);
           if (profileSnap.exists()) setResolvedUserId(username);
@@ -140,7 +141,6 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
             size="icon" 
             onClick={handleShare}
             className="w-12 h-12 rounded-2xl glass-card text-white hover:bg-white/10 border-none shadow-xl"
-            style={{ '--glow-color': primaryColor } as any}
           >
             <Share2 size={20} />
           </Button>
@@ -174,7 +174,6 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
               )}
             </div>
 
-            {/* Social Icons Section */}
             {profile.socialLinks && profile.socialLinks.length > 0 && (
               <div className="flex flex-wrap justify-center gap-3 pt-2">
                 {profile.socialLinks.map((social: any, idx: number) => {
@@ -184,7 +183,6 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
                       key={idx}
                       onClick={() => setSelectedSocial(social)}
                       className="w-10 h-10 rounded-xl glass-card flex items-center justify-center text-white/60 hover:text-white transition-all hover:scale-110 active:scale-95"
-                      style={{ '--glow-color': primaryColor } as any}
                     >
                       <Icon size={18} />
                     </button>
@@ -294,7 +292,6 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
         </div>
       </div>
 
-      {/* Social Stats Dialog */}
       <Dialog open={!!selectedSocial} onOpenChange={() => setSelectedSocial(null)}>
         <DialogContent className="glass-card border-none rounded-[2.5rem] bg-background/95 backdrop-blur-3xl p-0 overflow-hidden max-w-[90%] mx-auto shadow-2xl">
           <div className="p-8 space-y-6">
