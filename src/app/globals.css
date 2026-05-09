@@ -45,7 +45,7 @@
     @apply bg-white/[0.03] backdrop-blur-2xl border border-white/5 shadow-2xl;
   }
   .neon-gradient {
-    background: linear-gradient(-45deg, #ff0000, #ffea00, #ff0000, #ffea00);
+    background: linear-gradient(-45deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 50%, hsl(var(--primary)) 100%);
     background-size: 200% 200%;
     @apply animate-flowing-gradient;
   }
@@ -81,4 +81,13 @@
 
 .animate-pulse-glow {
   animation: pulse-glow 8s ease-in-out infinite;
+}
+
+@keyframes flowing-gradient {
+  0%, 100% { background-position: 0% 50% }
+  50% { background-position: 100% 50% }
+}
+
+.animate-flowing-gradient {
+  animation: flowing-gradient 7s ease infinite;
 }

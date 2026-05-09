@@ -54,6 +54,7 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
         if (userSnap.exists()) {
           setResolvedUserId(userSnap.data().userId);
         } else {
+          // Fallback check if it was already a userId
           const profileRef = doc(db, 'userProfiles', username);
           const profileSnap = await getDoc(profileRef);
           if (profileSnap.exists()) setResolvedUserId(username);
