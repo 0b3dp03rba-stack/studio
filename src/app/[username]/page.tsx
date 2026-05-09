@@ -30,7 +30,7 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
           if (profileSnap.exists()) setResolvedUserId(username);
         }
       } catch (e) {
-        console.error(e);
+        console.error("Resolution failed:", e);
       } finally {
         setIsResolving(false);
       }
@@ -87,7 +87,7 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
     <div 
       className="min-h-screen bg-background p-6 pb-24 transition-colors duration-1000"
       style={{ 
-        backgroundImage: `radial-gradient(circle at top, ${primaryColor}1a, transparent, transparent)`
+        backgroundImage: `radial-gradient(circle at top, ${primaryColor}33, transparent, transparent)`
       } as React.CSSProperties}
     >
       <div className="max-w-md mx-auto space-y-8 animate-in">
@@ -109,7 +109,7 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
             className="mx-auto w-32 h-32 rounded-[2.5rem] p-1 shadow-2xl transition-all duration-700"
             style={{ 
               background: `linear-gradient(-45deg, ${primaryColor}, ${secondaryColor})`,
-              boxShadow: `0 0 30px -5px ${primaryColor}80`
+              boxShadow: `0 0 40px -10px ${primaryColor}99`
             }}
           >
             <div className="w-full h-full rounded-[2.3rem] bg-background flex items-center justify-center overflow-hidden border-4 border-background relative">
@@ -148,7 +148,7 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
                   <div className="flex-1 text-left">
                     <span className="text-sm font-bold text-white tracking-tight">{link.title}</span>
                   </div>
-                  <MousePointer2 size={16} className="text-white/20 group-hover/link:opacity-100 transition-colors" style={{ color: `${primaryColor}66` }} />
+                  <MousePointer2 size={16} className="text-white/20 transition-colors" style={{ color: primaryColor }} />
                 </div>
               </button>
             ))}
@@ -159,7 +159,7 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
               <AccordionItem key={group.id} value={group.id} className="border-none">
                 <div className="relative group">
                   <div 
-                    className="absolute inset-0 opacity-0 group-hover:opacity-40 blur-2xl transition-all duration-500 rounded-2xl" 
+                    className="absolute inset-0 opacity-0 group-hover:opacity-30 blur-2xl transition-all duration-500 rounded-2xl" 
                     style={{ background: primaryColor }}
                   />
                   <AccordionTrigger 
@@ -216,13 +216,13 @@ function LinksInGroup({ userId, groupId, onLinkClick, accentColor }: { userId: s
           onClick={() => onLinkClick(link.id, link.url, false, groupId)}
           className="w-full glass-card hover:bg-white/10 rounded-2xl p-4 flex items-center gap-4 transition-all active:scale-95 group/link"
         >
-          <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/5 group-hover/link:border-primary/40" style={{ '--tw-border-opacity': '0.2', borderColor: accentColor } as any}>
+          <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/5 group-hover/link:border-primary/40" style={{ borderColor: `${accentColor}40` } as any}>
             {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <Link2 size={16} className="text-white/20" />}
           </div>
           <div className="flex-1 text-left">
             <p className="text-xs font-bold text-white tracking-tight">{link.title}</p>
           </div>
-          <MousePointer2 size={14} className="text-white/20 group-hover/link:text-primary transition-colors" style={{ color: accentColor } as any} />
+          <MousePointer2 size={14} className="text-white/20 transition-colors" style={{ color: accentColor } as any} />
         </button>
       ))}
     </div>
