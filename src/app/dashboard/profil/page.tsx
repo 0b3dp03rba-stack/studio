@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { User, LogOut, Mail, Edit3, Upload, AtSign, Loader2, Palette, Check, Copy, Share2 } from 'lucide-react';
+import { User, LogOut, Mail, Edit3, Upload, AtSign, Loader2, Palette, Check, Copy, Share2, Plus, Trash2, Instagram, Youtube, Facebook, MessageCircle, Link2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,8 +15,34 @@ import { getAuth, signOut } from 'firebase/auth';
 import ImageCropperModal from '@/components/ImageCropperModal';
 import { extractPaletteFromImage } from '@/lib/utils-app';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const DEFAULT_PALETTE = ['#ff0000', '#00ffff', '#0000ff', '#00ff00', '#ff00ff', '#ffff00', '#000000', '#ffffff'];
+
+const TikTokIcon = ({ className, size = 16 }: { className?: string, size?: number }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round" 
+    className={className}
+  >
+    <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" />
+  </svg>
+);
+
+const socialPlatforms = [
+  { name: 'Instagram', icon: Instagram },
+  { name: 'YouTube', icon: Youtube },
+  { name: 'TikTok', icon: TikTokIcon },
+  { name: 'Facebook', icon: Facebook },
+  { name: 'WhatsApp', icon: MessageCircle },
+  { name: 'Email', icon: Mail },
+];
 
 export default function ProfilPage() {
   const { user } = useUser();
@@ -34,6 +60,7 @@ export default function ProfilPage() {
   const [themeColor, setThemeColor] = useState('#ff0000');
   const [themeColorSecondary, setThemeColorSecondary] = useState('#ffea00');
   const [customPalette, setCustomPalette] = useState<string[]>(DEFAULT_PALETTE);
+  const [socialLinks, setSocialLinks] = useState<any[]>([]);
   
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -43,6 +70,12 @@ export default function ProfilPage() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [fullUrl, setFullUrl] = useState('');
 
+  // New Social Link Form State
+  const [newSocialPlatform, setNewSocialPlatform] = useState('');
+  const [newSocialUrl, setNewSocialUrl] = useState('');
+  const [newSocialValue, setNewSocialValue] = useState('');
+  const [newSocialLabel, setNewSocialLabel] = useState('');
+
   useEffect(() => {
     if (profile) {
       setDisplayName(profile.displayName || '');
@@ -51,6 +84,7 @@ export default function ProfilPage() {
       setAvatarUrl(profile.avatarUrl || '');
       setThemeColor(profile.themeColor || '#ff0000');
       setThemeColorSecondary(profile.themeColorSecondary || '#ffea00');
+      setSocialLinks(profile.socialLinks || []);
       
       if (typeof window !== 'undefined') {
         setFullUrl(`${window.location.origin}/${profile.username || profile.id}`);
@@ -144,6 +178,7 @@ export default function ProfilPage() {
         avatarUrl,
         themeColor,
         themeColorSecondary,
+        socialLinks,
         updatedAt: serverTimestamp()
       });
 
@@ -156,8 +191,31 @@ export default function ProfilPage() {
     }
   };
 
+  const handleAddSocialLink = () => {
+    if (!newSocialPlatform || !newSocialUrl) return;
+    const newLink = {
+      platform: newSocialPlatform,
+      url: newSocialUrl,
+      value: newSocialValue || '0',
+      label: newSocialLabel || 'Followers'
+    };
+    setSocialLinks([...socialLinks, newLink]);
+    setNewSocialPlatform('');
+    setNewSocialUrl('');
+    setNewSocialValue('');
+    setNewSocialLabel('');
+    setIsEditing(true);
+  };
+
+  const handleRemoveSocialLink = (index: number) => {
+    const updated = [...socialLinks];
+    updated.splice(index, 1);
+    setSocialLinks(updated);
+    setIsEditing(true);
+  };
+
   return (
-    <div className="space-y-6 animate-in">
+    <div className="space-y-6 animate-in pb-12">
       <div className="text-center space-y-4 py-8">
         <div 
           className="mx-auto w-28 h-28 rounded-[2rem] flex items-center justify-center border-4 border-background shadow-2xl overflow-hidden relative group aspect-square"
@@ -202,6 +260,7 @@ export default function ProfilPage() {
       </Card>
 
       <div className="space-y-4">
+        {/* Profile Settings Section */}
         <Card className="glass-card border-white/5 rounded-[2rem] overflow-hidden">
           <CardContent className="p-6 space-y-5">
             <div className="flex items-center justify-between">
@@ -297,13 +356,6 @@ export default function ProfilPage() {
                     className="bg-white/5 h-24 text-sm rounded-2xl border-white/10 text-white font-medium" 
                   />
                 </div>
-
-                <div className="flex gap-2 pt-2">
-                  <Button variant="outline" onClick={() => setIsEditing(false)} disabled={isSaving} className="flex-1 h-14 rounded-2xl">Batal</Button>
-                  <Button onClick={handleSaveProfile} disabled={isSaving} className="flex-1 h-14 neon-gradient text-background font-black rounded-2xl shadow-xl">
-                    {isSaving ? <Loader2 className="animate-spin" size={20} /> : "Simpan Profil"}
-                  </Button>
-                </div>
               </div>
             ) : (
               <div className="space-y-5">
@@ -311,19 +363,104 @@ export default function ProfilPage() {
                   <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">Bio</p>
                   <p className="text-sm font-medium text-white/80 leading-relaxed">{bio || 'Belum ada bio.'}</p>
                 </div>
-                <div className="flex items-center gap-4 px-4">
-                  <Mail size={16} className="text-white/20" />
-                  <div className="flex-1">
-                    <p className="text-[8px] font-black text-muted-foreground uppercase">Email Terhubung</p>
-                    <p className="text-xs font-bold text-white/60">{user?.email}</p>
-                  </div>
-                </div>
               </div>
             )}
           </CardContent>
         </Card>
 
-        <Button variant="destructive" className="w-full h-16 rounded-[1.5rem] font-black text-sm uppercase mt-6" onClick={handleLogout}>
+        {/* Social Links Manager */}
+        <Card className="glass-card border-white/5 rounded-[2rem] overflow-hidden">
+          <CardContent className="p-6 space-y-6">
+            <h3 className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2 text-white"><Share2 size={16} className="text-primary" /> Media Sosial & Statistik</h3>
+            
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-black text-muted-foreground uppercase ml-1">Platform</label>
+                  <Select value={newSocialPlatform} onValueChange={setNewSocialPlatform}>
+                    <SelectTrigger className="bg-white/5 border-white/10 h-12 rounded-xl text-xs font-bold">
+                      <SelectValue placeholder="Pilih Sosmed" />
+                    </SelectTrigger>
+                    <SelectContent className="glass-card border-none rounded-xl">
+                      {socialPlatforms.map(p => (
+                        <SelectItem key={p.name} value={p.name} className="text-xs font-bold">{p.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-black text-muted-foreground uppercase ml-1">Nilai Statistik</label>
+                  <Input 
+                    value={newSocialValue} 
+                    onChange={(e) => setNewSocialValue(e.target.value)} 
+                    placeholder="Contoh: 1.2M"
+                    className="bg-white/5 border-white/10 h-12 rounded-xl text-xs font-bold" 
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-black text-muted-foreground uppercase ml-1">URL Profil</label>
+                <Input 
+                  value={newSocialUrl} 
+                  onChange={(e) => setNewSocialUrl(e.target.value)} 
+                  placeholder="https://..."
+                  className="bg-white/5 border-white/10 h-12 rounded-xl text-xs font-bold" 
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-black text-muted-foreground uppercase ml-1">Label Statistik</label>
+                <Input 
+                  value={newSocialLabel} 
+                  onChange={(e) => setNewSocialLabel(e.target.value)} 
+                  placeholder="Contoh: Followers / Subscribers"
+                  className="bg-white/5 border-white/10 h-12 rounded-xl text-xs font-bold" 
+                />
+              </div>
+
+              <Button onClick={handleAddSocialLink} disabled={!newSocialPlatform || !newSocialUrl} className="w-full h-12 neon-gradient text-background font-black rounded-xl text-[10px] uppercase tracking-widest glow-primary">
+                <Plus size={16} className="mr-2" /> Tambah Sosmed
+              </Button>
+            </div>
+
+            <div className="grid gap-3 pt-4 border-t border-white/5">
+              {socialLinks.map((social, i) => {
+                const Icon = platformIcons[social.platform] || Link2;
+                return (
+                  <div key={i} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
+                    <div className="flex items-center gap-4 min-w-0">
+                      <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-primary">
+                        <Icon size={20} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-black uppercase truncate">{social.platform}</p>
+                        <p className="text-[10px] text-muted-foreground font-bold truncate">{social.value} {social.label}</p>
+                      </div>
+                    </div>
+                    <Button size="icon" variant="ghost" onClick={() => handleRemoveSocialLink(i)} className="text-destructive h-10 w-10 rounded-xl hover:bg-destructive/10">
+                      <Trash2 size={16} />
+                    </Button>
+                  </div>
+                );
+              })}
+              {socialLinks.length === 0 && (
+                <p className="text-center py-6 text-[10px] font-black uppercase text-muted-foreground opacity-50">Belum ada sosmed ditambahkan.</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {isEditing && (
+          <div className="flex gap-2 pt-4">
+            <Button variant="outline" onClick={() => setIsEditing(false)} disabled={isSaving} className="flex-1 h-14 rounded-2xl">Batal</Button>
+            <Button onClick={handleSaveProfile} disabled={isSaving} className="flex-1 h-14 neon-gradient text-background font-black rounded-2xl shadow-xl">
+              {isSaving ? <Loader2 className="animate-spin" size={20} /> : "Simpan Semua Perubahan"}
+            </Button>
+          </div>
+        )}
+
+        <Button variant="destructive" className="w-full h-16 rounded-[2rem] font-black text-sm uppercase mt-6" onClick={handleLogout}>
           <LogOut size={20} className="mr-3" /> Keluar Sesi
         </Button>
       </div>
@@ -337,3 +474,12 @@ export default function ProfilPage() {
     </div>
   );
 }
+
+const platformIcons: Record<string, any> = {
+  Instagram: Instagram,
+  YouTube: Youtube,
+  TikTok: TikTokIcon,
+  Facebook: Facebook,
+  WhatsApp: MessageCircle,
+  Email: Mail
+};

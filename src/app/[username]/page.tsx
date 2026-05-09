@@ -4,10 +4,36 @@
 import { use, useMemo, useEffect, useState } from 'react';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc, collection, updateDoc, increment, getDoc, query, orderBy } from 'firebase/firestore';
-import { User, Share2, MousePointer2, Link2, ChevronRight, LayoutGrid, ArrowLeft } from 'lucide-react';
+import { User, Share2, MousePointer2, Link2, ChevronRight, LayoutGrid, ArrowLeft, Instagram, Youtube, Facebook, Mail, MessageCircle, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+
+const TikTokIcon = ({ className, size = 20 }: { className?: string, size?: number }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round" 
+    className={className}
+  >
+    <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" />
+  </svg>
+);
+
+const platformIcons: Record<string, any> = {
+  Instagram: Instagram,
+  YouTube: Youtube,
+  TikTok: TikTokIcon,
+  Facebook: Facebook,
+  WhatsApp: MessageCircle,
+  Email: Mail
+};
 
 export default function PublicProfileByUsername({ params }: { params: Promise<{ username: string }> }) {
   const { username } = use(params);
@@ -17,6 +43,7 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
   const [resolvedUserId, setResolvedUserId] = useState<string | null>(null);
   const [isResolving, setIsResolving] = useState(true);
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
+  const [selectedSocial, setSelectedSocial] = useState<any>(null);
 
   useEffect(() => {
     const resolveUser = async () => {
@@ -137,14 +164,33 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
               )}
             </div>
           </div>
-          <div className="space-y-3 px-4">
-            <h1 className="text-3xl font-black text-white tracking-tight">{profile.displayName || 'User'}</h1>
-            {profile.bio ? (
-              <p className="text-sm font-medium text-white/70 max-w-xs mx-auto leading-relaxed">
-                {profile.bio}
-              </p>
-            ) : (
-              <p className="text-[10px] font-black uppercase tracking-[0.4em] mt-1 opacity-30">Personal Hub</p>
+          <div className="space-y-4 px-4">
+            <div>
+              <h1 className="text-3xl font-black text-white tracking-tight">{profile.displayName || 'User'}</h1>
+              {profile.bio && (
+                <p className="text-sm font-medium text-white/70 max-w-xs mx-auto leading-relaxed mt-2">
+                  {profile.bio}
+                </p>
+              )}
+            </div>
+
+            {/* Social Icons Section */}
+            {profile.socialLinks && profile.socialLinks.length > 0 && (
+              <div className="flex flex-wrap justify-center gap-3 pt-2">
+                {profile.socialLinks.map((social: any, idx: number) => {
+                  const Icon = platformIcons[social.platform] || Link2;
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => setSelectedSocial(social)}
+                      className="w-10 h-10 rounded-xl glass-card flex items-center justify-center text-white/60 hover:text-white transition-all hover:scale-110 active:scale-95"
+                      style={{ '--glow-color': primaryColor } as any}
+                    >
+                      <Icon size={18} />
+                    </button>
+                  );
+                })}
+              </div>
             )}
           </div>
         </div>
@@ -247,6 +293,48 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
           </Link>
         </div>
       </div>
+
+      {/* Social Stats Dialog */}
+      <Dialog open={!!selectedSocial} onOpenChange={() => setSelectedSocial(null)}>
+        <DialogContent className="glass-card border-none rounded-[2.5rem] bg-background/95 backdrop-blur-3xl p-0 overflow-hidden max-w-[90%] mx-auto shadow-2xl">
+          <div className="p-8 space-y-6">
+            <DialogHeader>
+              <div 
+                className="mx-auto w-20 h-20 rounded-3xl flex items-center justify-center text-white mb-2 animate-flowing-gradient"
+                style={{ 
+                  background: dynamicGradient,
+                  backgroundSize: '200% 200%',
+                  animationDuration: '5s'
+                }}
+              >
+                {selectedSocial && (platformIcons[selectedSocial.platform] ? (() => {
+                  const Icon = platformIcons[selectedSocial.platform];
+                  return <Icon size={40} />;
+                })() : <Link2 size={40} />)}
+              </div>
+              <DialogTitle className="text-center font-black text-2xl tracking-tighter text-white">
+                {selectedSocial?.platform}
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-2 text-center">
+              <p className="text-[10px] font-black uppercase text-muted-foreground tracking-[0.2em]">Koneksi Terverifikasi</p>
+              <h3 className="text-3xl font-black text-white tracking-tight">{selectedSocial?.value || '0'}</h3>
+              <p className="text-[10px] font-black text-primary uppercase tracking-widest">{selectedSocial?.label || 'Total Update'}</p>
+            </div>
+
+            <Button 
+              className="w-full h-14 neon-gradient text-background font-black rounded-2xl glow-primary text-xs uppercase tracking-widest active:scale-95 transition-transform"
+              onClick={() => {
+                window.open(selectedSocial?.url, '_blank', 'noopener,noreferrer');
+                setSelectedSocial(null);
+              }}
+            >
+              Pergi ke {selectedSocial?.platform} <ExternalLink size={16} className="ml-2" />
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
