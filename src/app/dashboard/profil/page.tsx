@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { User, LogOut, Mail, Edit3, CheckCircle2, Upload, X, AtSign, Loader2, Palette, Check } from 'lucide-react';
+import { User, LogOut, Mail, Edit3, Upload, AtSign, Loader2, Palette, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -13,19 +13,10 @@ import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, serverTimestamp, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { getAuth, signOut } from 'firebase/auth';
 import ImageCropperModal from '@/components/ImageCropperModal';
-import { extractThemeColors } from '@/lib/utils-app';
+import { extractPaletteFromImage } from '@/lib/utils-app';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
-const PRESET_COLORS = [
-  { name: 'Red', hex: '#ff0000', secondary: '#ff4d4d' },
-  { name: 'Cyan', hex: '#00ffff', secondary: '#4dffff' },
-  { name: 'Blue', hex: '#0000ff', secondary: '#4d4dff' },
-  { name: 'Green', hex: '#00ff00', secondary: '#4dff4d' },
-  { name: 'Magenta', hex: '#ff00ff', secondary: '#ff4dff' },
-  { name: 'Yellow', hex: '#ffff00', secondary: '#ffff4d' },
-  { name: 'Black', hex: '#000000', secondary: '#333333' },
-  { name: 'White', hex: '#ffffff', secondary: '#cccccc' },
-];
+const DEFAULT_PALETTE = ['#ff0000', '#00ffff', '#0000ff', '#00ff00', '#ff00ff', '#ffff00', '#000000', '#ffffff'];
 
 export default function ProfilPage() {
   const { user } = useUser();
@@ -42,6 +33,7 @@ export default function ProfilPage() {
   const [avatarUrl, setAvatarUrl] = useState('');
   const [themeColor, setThemeColor] = useState('#ff0000');
   const [themeColorSecondary, setThemeColorSecondary] = useState('#ffea00');
+  const [customPalette, setCustomPalette] = useState<string[]>(DEFAULT_PALETTE);
   
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -81,14 +73,17 @@ export default function ProfilPage() {
     setAvatarUrl(cropped);
     setIsEditing(true);
     
-    // Auto extract colors from profile photo
-    const colors = await extractThemeColors(cropped);
-    setThemeColor(colors.primary);
-    setThemeColorSecondary(colors.secondary);
+    // Extract dynamic palette from cropped image
+    const palette = await extractPaletteFromImage(cropped);
+    setCustomPalette(palette);
+    
+    // Automatically set the top two colors
+    setThemeColor(palette[0]);
+    setThemeColorSecondary(palette[1] || palette[0]);
     
     toast({ 
-      title: "Warna Diekstrak", 
-      description: "Warna tema telah disesuaikan dengan foto Anda." 
+      title: "Palet Diperbarui", 
+      description: "Warna tema telah disesuaikan dengan foto profil Anda." 
     });
   };
 
@@ -149,16 +144,11 @@ export default function ProfilPage() {
     }
   };
 
-  const selectPreset = (color: typeof PRESET_COLORS[0]) => {
-    setThemeColor(color.hex);
-    setThemeColorSecondary(color.secondary);
-  };
-
   return (
     <div className="space-y-6 animate-in">
       <div className="text-center space-y-4 py-8">
         <div 
-          className="mx-auto w-28 h-28 rounded-[2.5rem] flex items-center justify-center border-4 border-background shadow-2xl overflow-hidden relative group aspect-square"
+          className="mx-auto w-28 h-28 rounded-[2rem] flex items-center justify-center border-4 border-background shadow-2xl overflow-hidden relative group aspect-square"
           style={{ 
             background: `linear-gradient(-45deg, ${themeColor}, ${themeColorSecondary})`,
             boxShadow: `0 0 25px -5px ${themeColor}99`
@@ -215,17 +205,20 @@ export default function ProfilPage() {
                 </div>
                 
                 <div className="space-y-3">
-                  <label className="text-[10px] font-black text-muted-foreground uppercase ml-1 flex items-center gap-2"><Palette size={14} /> Pilih Warna</label>
+                  <label className="text-[10px] font-black text-muted-foreground uppercase ml-1 flex items-center gap-2"><Palette size={14} /> Palet Warna Foto</label>
                   
                   <div className="grid grid-cols-4 gap-3">
-                    {PRESET_COLORS.map((c) => (
+                    {customPalette.map((color, i) => (
                       <button
-                        key={c.name}
-                        onClick={() => selectPreset(c)}
-                        className={`aspect-square rounded-xl border-2 transition-all flex items-center justify-center ${themeColor === c.hex ? 'border-white scale-105 shadow-lg' : 'border-transparent opacity-70 hover:opacity-100'}`}
-                        style={{ backgroundColor: c.hex }}
+                        key={i}
+                        onClick={() => {
+                          setThemeColor(color);
+                          setThemeColorSecondary(color);
+                        }}
+                        className={`aspect-square rounded-xl border-2 transition-all flex items-center justify-center ${themeColor === color ? 'border-white scale-105 shadow-lg' : 'border-transparent opacity-70 hover:opacity-100'}`}
+                        style={{ backgroundColor: color }}
                       >
-                        {themeColor === c.hex && <Check size={16} className={c.hex === '#ffffff' ? 'text-black' : 'text-white'} />}
+                        {themeColor === color && <Check size={16} className="text-white mix-blend-difference" />}
                       </button>
                     ))}
                   </div>
@@ -233,7 +226,7 @@ export default function ProfilPage() {
                   <Dialog open={paletteOpen} onOpenChange={setPaletteOpen}>
                     <DialogTrigger asChild>
                       <Button variant="outline" className="w-full h-12 rounded-xl border-white/5 text-[10px] font-black uppercase tracking-widest">
-                        Sesuaikan Kustom
+                        Sesuaikan Manual
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="glass-card border-none rounded-[2rem] max-w-[90%] mx-auto">
@@ -241,15 +234,15 @@ export default function ProfilPage() {
                       <div className="space-y-4 py-4">
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-1">
-                            <p className="text-[8px] font-black uppercase text-muted-foreground">Utama</p>
+                            <p className="text-[8px] font-black uppercase text-muted-foreground">Warna Utama</p>
                             <input type="color" value={themeColor} onChange={(e) => setThemeColor(e.target.value)} className="w-full h-12 rounded-xl bg-white/5 cursor-pointer" />
                           </div>
                           <div className="space-y-1">
-                            <p className="text-[8px] font-black uppercase text-muted-foreground">Sekunder</p>
+                            <p className="text-[8px] font-black uppercase text-muted-foreground">Warna Sekunder</p>
                             <input type="color" value={themeColorSecondary} onChange={(e) => setThemeColorSecondary(e.target.value)} className="w-full h-12 rounded-xl bg-white/5 cursor-pointer" />
                           </div>
                         </div>
-                        <Button onClick={() => setPaletteOpen(false)} className="w-full h-12 neon-gradient text-background font-black rounded-xl">Setel Warna</Button>
+                        <Button onClick={() => setPaletteOpen(false)} className="w-full h-12 neon-gradient text-background font-black rounded-xl">Terapkan Warna</Button>
                       </div>
                     </DialogContent>
                   </Dialog>
@@ -259,7 +252,7 @@ export default function ProfilPage() {
                   <label className="text-[10px] font-black text-muted-foreground uppercase ml-1">Foto Profil</label>
                   <label className="flex items-center justify-center gap-3 h-14 bg-white/5 border border-dashed border-white/20 rounded-2xl cursor-pointer hover:bg-white/10 transition-all">
                     <Upload size={18} className="text-primary" />
-                    <span className="text-xs font-bold text-white/40 uppercase">Unggah Foto</span>
+                    <span className="text-xs font-bold text-white/40 uppercase">Ganti Foto</span>
                     <input type="file" className="hidden" accept="image/*" onChange={handleImageSelect} />
                   </label>
                 </div>
@@ -269,7 +262,7 @@ export default function ProfilPage() {
                   <Textarea 
                     value={bio} 
                     onChange={(e) => setBio(e.target.value)} 
-                    placeholder="Tulis bio..."
+                    placeholder="Tulis sedikit tentang Anda..."
                     className="bg-white/5 h-24 text-sm rounded-2xl border-white/10 text-white font-medium" 
                   />
                 </div>
@@ -290,7 +283,7 @@ export default function ProfilPage() {
                 <div className="flex items-center gap-4 px-4">
                   <Mail size={16} className="text-white/20" />
                   <div className="flex-1">
-                    <p className="text-[8px] font-black text-muted-foreground uppercase">Email</p>
+                    <p className="text-[8px] font-black text-muted-foreground uppercase">Email Terhubung</p>
                     <p className="text-xs font-bold text-white/60">{user?.email}</p>
                   </div>
                 </div>
@@ -300,7 +293,7 @@ export default function ProfilPage() {
         </Card>
 
         <Button variant="destructive" className="w-full h-16 rounded-[1.5rem] font-black text-sm uppercase mt-6" onClick={handleLogout}>
-          <LogOut size={20} className="mr-3" /> Keluar
+          <LogOut size={20} className="mr-3" /> Keluar Sesi
         </Button>
       </div>
 

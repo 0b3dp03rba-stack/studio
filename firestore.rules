@@ -2,26 +2,18 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Profil pengguna dan semua sub-koleksinya (links, linkGroups) dapat dibaca siapa saja
     match /userProfiles/{userId} {
       allow read: if true;
       allow write: if request.auth != null && request.auth.uid == userId;
       
-      match /links/{linkId} {
+      match /{allPaths=**} {
         allow read: if true;
         allow write: if request.auth != null && request.auth.uid == userId;
-      }
-
-      match /linkGroups/{groupId} {
-        allow read: if true;
-        allow write: if request.auth != null && request.auth.uid == userId;
-        
-        match /links/{linkId} {
-          allow read: if true;
-          allow write: if request.auth != null && request.auth.uid == userId;
-        }
       }
     }
     
+    // Pemetaan username unik
     match /usernames/{username} {
       allow read: if true;
       allow create: if request.auth != null;
@@ -29,25 +21,7 @@ service cloud.firestore {
       allow update: if false;
     }
 
-    match /submittedEmails/{email} {
-      allow read, write: if request.auth != null;
-    }
-
-    match /appConfig/{docId} {
-      allow read: if true;
-      allow write: if request.auth != null && get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == 'Admin';
-    }
-
-    match /messages/{msgId} {
-      allow read, write: if request.auth != null;
-    }
-    
-    match /withdrawalRequests/{reqId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update: if request.auth != null && get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == 'Admin';
-    }
-
+    // Default deny untuk koleksi lain yang tidak didefinisikan
     match /{document=**} {
       allow read: if true;
       allow write: if request.auth != null && 
