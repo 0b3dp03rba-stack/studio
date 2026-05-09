@@ -24,6 +24,7 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
         if (userSnap.exists()) {
           setResolvedUserId(userSnap.data().userId);
         } else {
+          // Fallback to userId if username is actually a userId
           const profileRef = doc(db, 'userProfiles', username);
           const profileSnap = await getDoc(profileRef);
           if (profileSnap.exists()) setResolvedUserId(username);
@@ -43,12 +44,24 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
   const groupsQuery = useMemoFirebase(() => resolvedUserId ? query(collection(db, 'userProfiles', resolvedUserId, 'linkGroups'), orderBy('order', 'asc')) : null, [db, resolvedUserId]);
   const { data: groups, isLoading: isGroupsLoading } = useCollection(groupsQuery);
 
+  const standaloneLinksQuery = useMemoFirebase(() => resolvedUserId ? query(collection(db, 'userProfiles', resolvedUserId, 'links'), orderBy('createdAt', 'desc')) : null, [db, resolvedUserId]);
+  const { data: standaloneLinks, isLoading: isStandaloneLoading } = useCollection(standaloneLinksQuery);
+
   const handleShare = () => {
     navigator.clipboard.writeText(window.location.href);
     toast({ title: "Tersalin", description: "URL profil telah disalin ke clipboard." });
   };
 
-  if (isResolving || isProfileLoading || isGroupsLoading) {
+  const handleLinkClick = async (linkId: string, url: string, isStandalone: boolean, groupId?: string) => {
+    const linkRef = isStandalone 
+      ? doc(db, 'userProfiles', resolvedUserId!, 'links', linkId)
+      : doc(db, 'userProfiles', resolvedUserId!, 'linkGroups', groupId!, 'links', linkId);
+    
+    updateDoc(linkRef, { clicks: increment(1) });
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  if (isResolving || isProfileLoading || isGroupsLoading || isStandaloneLoading) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
         <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
@@ -103,6 +116,27 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
         </div>
 
         <div className="space-y-6">
+          {/* Standalone Links appear at the same level as groups */}
+          <div className="grid gap-4">
+            {standaloneLinks?.filter(l => l.isEnabled).map(link => (
+              <button
+                key={link.id}
+                onClick={() => handleLinkClick(link.id, link.url, true)}
+                className="w-full neon-gradient p-0.5 rounded-[2rem] hover:scale-[1.02] transition-transform shadow-xl group/link"
+              >
+                <div className="w-full h-16 bg-black/80 backdrop-blur-xl rounded-[1.8rem] flex items-center px-6 gap-4 border border-white/10">
+                  <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10">
+                    {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <Link2 size={20} className="text-primary" />}
+                  </div>
+                  <div className="flex-1 text-left">
+                    <span className="text-sm font-black text-white uppercase tracking-wider">{link.title}</span>
+                  </div>
+                  <MousePointer2 size={16} className="text-white/20 group-hover/link:text-primary transition-colors" />
+                </div>
+              </button>
+            ))}
+          </div>
+
           <Accordion type="single" collapsible className="space-y-4">
             {groups?.filter(g => g.isEnabled).map((group) => (
               <AccordionItem key={group.id} value={group.id} className="border-none">
@@ -122,13 +156,13 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
                   </AccordionTrigger>
                 </div>
                 <AccordionContent className="pt-3 pb-0 px-2 space-y-3">
-                  <LinksInGroup userId={resolvedUserId!} groupId={group.id} />
+                  <LinksInGroup userId={resolvedUserId!} groupId={group.id} onLinkClick={handleLinkClick} />
                 </AccordionContent>
               </AccordionItem>
             ))}
           </Accordion>
 
-          {!groups?.length && (
+          {(!groups?.length && !standaloneLinks?.length) && (
             <div className="text-center py-20 opacity-20 font-black uppercase tracking-widest text-[10px]">
               Belum ada tautan aktif.
             </div>
@@ -146,24 +180,17 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
   );
 }
 
-function LinksInGroup({ userId, groupId }: { userId: string, groupId: string }) {
+function LinksInGroup({ userId, groupId, onLinkClick }: { userId: string, groupId: string, onLinkClick: any }) {
   const db = useFirestore();
   const linksQuery = useMemoFirebase(() => query(collection(db, 'userProfiles', userId, 'linkGroups', groupId, 'links'), orderBy('createdAt', 'desc')), [db, userId, groupId]);
   const { data: links } = useCollection(linksQuery);
-
-  const handleLinkClick = async (linkId: string, url: string) => {
-    updateDoc(doc(db, 'userProfiles', userId, 'linkGroups', groupId, 'links', linkId), {
-      clicks: increment(1)
-    });
-    window.open(url, '_blank', 'noopener,noreferrer');
-  };
 
   return (
     <div className="grid gap-3">
       {links?.filter(l => l.isEnabled).map(link => (
         <button
           key={link.id}
-          onClick={() => handleLinkClick(link.id, link.url)}
+          onClick={() => onLinkClick(link.id, link.url, false, groupId)}
           className="w-full glass-card hover:bg-white/10 rounded-2xl p-4 flex items-center gap-4 transition-all active:scale-95 group/link"
         >
           <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/5 group-hover/link:border-primary/40">

@@ -34,10 +34,10 @@
     "Link": {
       "title": "Link",
       "type": "object",
-      "description": "Tautan individu di dalam kelompok.",
+      "description": "Tautan individu.",
       "properties": {
         "id": { "type": "string" },
-        "groupId": { "type": "string" },
+        "groupId": { "type": "string", "description": "Optional, jika masuk kelompok" },
         "title": { "type": "string" },
         "url": { "type": "string" },
         "imageUrl": { "type": "string" },
@@ -45,7 +45,7 @@
         "isEnabled": { "type": "boolean" },
         "clicks": { "type": "number" }
       },
-      "required": ["id", "groupId", "title", "url", "isEnabled"]
+      "required": ["id", "title", "url", "isEnabled"]
     }
   },
   "auth": {
@@ -55,6 +55,10 @@
     "/userProfiles/{userId}": {
       "schema": { "$ref": "#/backend/entities/UserProfile" },
       "description": "Profil pengguna."
+    },
+    "/userProfiles/{userId}/links/{linkId}": {
+      "schema": { "$ref": "#/backend/entities/Link" },
+      "description": "Tautan mandiri milik pengguna."
     },
     "/userProfiles/{userId}/linkGroups/{groupId}": {
       "schema": { "$ref": "#/backend/entities/LinkGroup" },

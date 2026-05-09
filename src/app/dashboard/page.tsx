@@ -5,9 +5,9 @@ import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Trash2, Link as LinkIcon, ExternalLink, AtSign, FolderPlus, Image as ImageIcon, ChevronDown, ChevronUp, Eye, EyeOff } from 'lucide-react';
+import { Plus, Trash2, Link as LinkIcon, ExternalLink, AtSign, FolderPlus, Image as ImageIcon, ChevronDown, ChevronUp, Eye, EyeOff, LayoutGrid } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, addDoc, serverTimestamp, doc, deleteDoc, updateDoc, query, orderBy } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, deleteDoc, updateDoc, query, orderBy, increment } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
@@ -17,6 +17,7 @@ export default function DashboardPage() {
   const db = useFirestore();
   const { toast } = useToast();
   
+  const [activeTab, setActiveTab] = useState<'group' | 'link'>('group');
   const [newGroupTitle, setNewGroupTitle] = useState('');
   const [newGroupImage, setNewGroupImage] = useState('');
   
@@ -33,6 +34,12 @@ export default function DashboardPage() {
     return query(collection(db, 'userProfiles', user.uid, 'linkGroups'), orderBy('order', 'asc'));
   }, [db, user?.uid]);
   const { data: groups, isLoading: isGroupsLoading } = useCollection(groupsQuery);
+
+  const standaloneLinksQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(collection(db, 'userProfiles', user.uid, 'links'), orderBy('createdAt', 'desc'));
+  }, [db, user?.uid]);
+  const { data: standaloneLinks, isLoading: isStandaloneLoading } = useCollection(standaloneLinksQuery);
 
   const handleAddGroup = async () => {
     if (!user || !newGroupTitle) return;
@@ -54,15 +61,19 @@ export default function DashboardPage() {
   };
 
   const handleAddLink = async () => {
-    if (!user || !selectedGroupId || !newLinkTitle || !newLinkUrl) return;
+    if (!user || !newLinkTitle || !newLinkUrl) return;
     try {
-      await addDoc(collection(db, 'userProfiles', user.uid, 'linkGroups', selectedGroupId, 'links'), {
-        groupId: selectedGroupId,
+      const colPath = selectedGroupId 
+        ? collection(db, 'userProfiles', user.uid, 'linkGroups', selectedGroupId, 'links')
+        : collection(db, 'userProfiles', user.uid, 'links');
+
+      await addDoc(colPath, {
+        groupId: selectedGroupId || null,
         title: newLinkTitle,
         url: newLinkUrl.startsWith('http') ? newLinkUrl : `https://${newLinkUrl}`,
         imageUrl: newLinkImage || '',
         isEnabled: true,
-        order: 1, // Logic order can be improved
+        order: 1,
         clicks: 0,
         createdAt: serverTimestamp()
       });
@@ -98,32 +109,69 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-6">
-        <Card className="glass-card border-none rounded-[2rem] p-6 shadow-2xl relative overflow-hidden group">
-          <div className="absolute inset-0 neon-gradient opacity-5"></div>
-          <CardContent className="p-0 space-y-4 relative z-10">
-            <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase tracking-widest">
-              <FolderPlus size={16} />
-              <span>Buat Kelompok Baru</span>
-            </div>
-            <div className="space-y-3">
-              <Input 
-                placeholder="Nama Kelompok (Misal: Media Sosial)" 
-                value={newGroupTitle}
-                onChange={(e) => setNewGroupTitle(e.target.value)}
-                className="bg-white/5 border-white/5 h-12 rounded-xl px-4 font-bold"
-              />
-              <Input 
-                placeholder="URL Gambar Ikon (Opsional)" 
-                value={newGroupImage}
-                onChange={(e) => setNewGroupImage(e.target.value)}
-                className="bg-white/5 border-white/5 h-12 rounded-xl px-4 text-xs"
-              />
-              <Button onClick={handleAddGroup} disabled={!newGroupTitle} className="w-full h-12 neon-gradient text-white font-black rounded-xl glow-primary uppercase text-[10px] shadow-xl">
-                Tambah Kelompok
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex bg-white/5 p-1 rounded-2xl">
+          <button 
+            onClick={() => setActiveTab('group')}
+            className={`flex-1 py-3 text-[10px] font-black uppercase rounded-xl transition-all ${activeTab === 'group' ? 'neon-gradient text-white glow-primary' : 'text-white/40'}`}
+          >
+            Buat Kelompok
+          </button>
+          <button 
+            onClick={() => {
+              setActiveTab('link');
+              setSelectedGroupId(null);
+            }}
+            className={`flex-1 py-3 text-[10px] font-black uppercase rounded-xl transition-all ${activeTab === 'link' ? 'neon-gradient text-white glow-primary' : 'text-white/40'}`}
+          >
+            Tambah Link Mandiri
+          </button>
+        </div>
+
+        {activeTab === 'group' ? (
+          <Card className="glass-card border-none rounded-[2rem] p-6 shadow-2xl relative overflow-hidden group">
+            <div className="absolute inset-0 neon-gradient opacity-5"></div>
+            <CardContent className="p-0 space-y-4 relative z-10">
+              <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase tracking-widest">
+                <FolderPlus size={16} />
+                <span>Buat Kelompok Baru</span>
+              </div>
+              <div className="space-y-3">
+                <Input 
+                  placeholder="Nama Kelompok (Misal: Media Sosial)" 
+                  value={newGroupTitle}
+                  onChange={(e) => setNewGroupTitle(e.target.value)}
+                  className="bg-white/5 border-white/5 h-12 rounded-xl px-4 font-bold"
+                />
+                <Input 
+                  placeholder="URL Gambar Ikon (Opsional)" 
+                  value={newGroupImage}
+                  onChange={(e) => setNewGroupImage(e.target.value)}
+                  className="bg-white/5 border-white/5 h-12 rounded-xl px-4 text-xs"
+                />
+                <Button onClick={handleAddGroup} disabled={!newGroupTitle} className="w-full h-12 neon-gradient text-white font-black rounded-xl glow-primary uppercase text-[10px] shadow-xl">
+                  Tambah Kelompok
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="glass-card border-none rounded-[2rem] p-6 shadow-2xl animate-in">
+            <CardContent className="p-0 space-y-4">
+              <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase tracking-widest">
+                <Plus size={16} />
+                <span>Tambah Link Mandiri</span>
+              </div>
+              <div className="space-y-3">
+                <Input placeholder="Judul Link" value={newLinkTitle} onChange={(e) => setNewLinkTitle(e.target.value)} className="bg-white/5 h-12 rounded-xl px-4 font-bold" />
+                <Input placeholder="URL Tautan" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} className="bg-white/5 h-12 rounded-xl px-4 font-bold" />
+                <Input placeholder="URL Gambar Ikon Link" value={newLinkImage} onChange={(e) => setNewLinkImage(e.target.value)} className="bg-white/5 h-12 rounded-xl px-4 text-xs" />
+                <Button onClick={handleAddLink} disabled={!newLinkTitle || !newLinkUrl} className="w-full h-12 neon-gradient text-white font-black rounded-xl glow-primary uppercase text-[10px] shadow-xl">
+                  Simpan Link Mandiri
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {selectedGroupId && (
           <Card className="glass-card border-primary/20 rounded-[2rem] p-6 shadow-2xl animate-in">
@@ -140,7 +188,7 @@ export default function DashboardPage() {
                 <Input placeholder="URL Tautan" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} className="bg-white/5 h-12 rounded-xl px-4 font-bold" />
                 <Input placeholder="URL Gambar Ikon Link" value={newLinkImage} onChange={(e) => setNewLinkImage(e.target.value)} className="bg-white/5 h-12 rounded-xl px-4 text-xs" />
                 <Button onClick={handleAddLink} disabled={!newLinkTitle || !newLinkUrl} className="w-full h-12 neon-gradient text-white font-black rounded-xl glow-primary uppercase text-[10px] shadow-xl">
-                  Simpan Link
+                  Simpan Link ke Kelompok
                 </Button>
               </div>
             </CardContent>
@@ -153,22 +201,59 @@ export default function DashboardPage() {
           <LinkIcon size={16} className="text-primary" /> Daftar Kelompok & Linku
         </h3>
         
-        {isGroupsLoading ? (
+        {isGroupsLoading || isStandaloneLoading ? (
           <div className="py-20 text-center animate-pulse text-primary font-black uppercase text-[10px]">Memuat Linku...</div>
-        ) : groups && groups.length > 0 ? (
-          <div className="space-y-4">
-            {groups.map((group) => (
-              <GroupItem key={group.id} group={group} onAddLink={() => setSelectedGroupId(group.id)} onDelete={() => handleDeleteGroup(group.id)} />
-            ))}
-          </div>
         ) : (
-          <div className="py-24 text-center glass-card rounded-[3rem] opacity-20 border-none">
-            <LinkIcon size={64} className="mx-auto mb-6" />
-            <p className="text-xl font-black uppercase tracking-widest">Belum Ada Kelompok</p>
+          <div className="space-y-4">
+            {/* Render Standalone Links First or Mixed */}
+            {standaloneLinks?.map(link => (
+              <StandaloneLinkItem key={link.id} link={link} />
+            ))}
+
+            {groups?.map((group) => (
+              <GroupItem key={group.id} group={group} onAddLink={() => {
+                setSelectedGroupId(group.id);
+                setActiveTab('group'); // Scroll or just focus
+              }} onDelete={() => handleDeleteGroup(group.id)} />
+            ))}
+
+            {(!groups?.length && !standaloneLinks?.length) && (
+              <div className="py-24 text-center glass-card rounded-[3rem] opacity-20 border-none">
+                <LinkIcon size={64} className="mx-auto mb-6" />
+                <p className="text-xl font-black uppercase tracking-widest">Belum Ada Tautan</p>
+              </div>
+            )}
           </div>
         )}
       </div>
     </div>
+  );
+}
+
+function StandaloneLinkItem({ link }: { link: any }) {
+  const { user } = useUser();
+  const db = useFirestore();
+  const { toast } = useToast();
+
+  const handleDelete = async () => {
+    if (!user) return;
+    await deleteDoc(doc(db, 'userProfiles', user.uid, 'links', link.id));
+    toast({ title: "Tautan Dihapus", description: "Link mandiri telah dihapus." });
+  };
+
+  return (
+    <Card className="glass-card border-none rounded-2xl overflow-hidden shadow-xl p-4 flex items-center gap-4 group">
+      <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/5 shrink-0">
+        {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <LinkIcon size={18} className="text-primary" />}
+      </div>
+      <div className="flex-1 min-w-0">
+        <h4 className="font-black text-white uppercase text-xs truncate">{link.title}</h4>
+        <p className="text-[8px] text-white/40 truncate font-mono">{link.url}</p>
+      </div>
+      <div className="flex gap-2">
+         <Button size="icon" variant="ghost" onClick={handleDelete} className="h-10 w-10 rounded-xl text-destructive hover:bg-destructive/10"><Trash2 size={16} /></Button>
+      </div>
+    </Card>
   );
 }
 
@@ -187,7 +272,7 @@ function GroupItem({ group, onAddLink, onDelete }: { group: any; onAddLink: () =
         <div className="p-6 flex items-center gap-4 bg-white/5">
           <div className="w-12 h-12 rounded-2xl neon-gradient p-0.5 glow-primary shrink-0">
             <div className="w-full h-full bg-black rounded-[0.9rem] flex items-center justify-center overflow-hidden">
-              {group.imageUrl ? <img src={group.imageUrl} className="w-full h-full object-cover" /> : <LinkIcon size={20} className="text-primary" />}
+              {group.imageUrl ? <img src={group.imageUrl} className="w-full h-full object-cover" /> : <LayoutGrid size={20} className="text-primary" />}
             </div>
           </div>
           <div className="flex-1 min-w-0">
