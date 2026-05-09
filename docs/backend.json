@@ -15,6 +15,18 @@
         "themeColor": { "type": "string", "description": "Primary theme color in hex (e.g. #ff0000)" },
         "themeColorSecondary": { "type": "string", "description": "Secondary theme color in hex (e.g. #ffea00)" },
         "role": { "type": "string", "enum": ["User", "Admin"] },
+        "socialLinks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "platform": { "type": "string" },
+              "url": { "type": "string" },
+              "value": { "type": "string" },
+              "label": { "type": "string" }
+            }
+          }
+        },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "email", "username", "role"]

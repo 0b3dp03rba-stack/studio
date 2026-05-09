@@ -2,8 +2,8 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Aturan yang sangat sederhana: Semua data bisa dibaca publik
-    // Tulis hanya untuk user yang login
+    // Aturan paling sederhana: Baca publik untuk semua
+    // Tulis hanya jika user terautentikasi
     match /{document=**} {
       allow read: if true;
       allow write: if request.auth != null;
