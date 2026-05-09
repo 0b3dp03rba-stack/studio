@@ -4,7 +4,7 @@
     "UserProfile": {
       "title": "UserProfile",
       "type": "object",
-      "description": "Profil pengguna Linktree.",
+      "description": "Profil pengguna Linku.",
       "properties": {
         "id": { "type": "string" },
         "email": { "type": "string", "format": "email" },
@@ -17,21 +17,35 @@
       },
       "required": ["id", "email", "username", "role"]
     },
-    "Link": {
-      "title": "Link",
+    "LinkGroup": {
+      "title": "LinkGroup",
       "type": "object",
-      "description": "Tautan yang ditampilkan di profil.",
+      "description": "Kelompok atau folder tautan.",
       "properties": {
         "id": { "type": "string" },
         "userId": { "type": "string" },
         "title": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "order": { "type": "number" },
+        "isEnabled": { "type": "boolean" }
+      },
+      "required": ["id", "userId", "title", "isEnabled"]
+    },
+    "Link": {
+      "title": "Link",
+      "type": "object",
+      "description": "Tautan individu di dalam kelompok.",
+      "properties": {
+        "id": { "type": "string" },
+        "groupId": { "type": "string" },
+        "title": { "type": "string" },
         "url": { "type": "string" },
-        "icon": { "type": "string" },
+        "imageUrl": { "type": "string" },
         "order": { "type": "number" },
         "isEnabled": { "type": "boolean" },
         "clicks": { "type": "number" }
       },
-      "required": ["id", "userId", "title", "url", "isEnabled"]
+      "required": ["id", "groupId", "title", "url", "isEnabled"]
     }
   },
   "auth": {
@@ -42,9 +56,13 @@
       "schema": { "$ref": "#/backend/entities/UserProfile" },
       "description": "Profil pengguna."
     },
-    "/userProfiles/{userId}/links/{linkId}": {
+    "/userProfiles/{userId}/linkGroups/{groupId}": {
+      "schema": { "$ref": "#/backend/entities/LinkGroup" },
+      "description": "Kelompok link milik pengguna."
+    },
+    "/userProfiles/{userId}/linkGroups/{groupId}/links/{linkId}": {
       "schema": { "$ref": "#/backend/entities/Link" },
-      "description": "Daftar tautan milik pengguna."
+      "description": "Daftar tautan di dalam kelompok."
     },
     "/usernames/{username}": {
       "schema": { "type": "object" },

@@ -3,10 +3,11 @@
 
 import { use, useMemo, useEffect, useState } from 'react';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc, collection, updateDoc, increment, getDoc, query, where, limit } from 'firebase/firestore';
-import { User, Share2, MousePointer2, Link2 } from 'lucide-react';
+import { doc, collection, updateDoc, increment, getDoc, query, orderBy } from 'firebase/firestore';
+import { User, Share2, MousePointer2, Link2, ChevronRight, LayoutGrid } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 
 export default function PublicProfileByUsername({ params }: { params: Promise<{ username: string }> }) {
   const { username } = use(params);
@@ -18,22 +19,17 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
   useEffect(() => {
     const resolveUser = async () => {
       try {
-        // Cek apakah username ada di koleksi usernames
         const userRef = doc(db, 'usernames', username.toLowerCase());
         const userSnap = await getDoc(userRef);
-        
         if (userSnap.exists()) {
           setResolvedUserId(userSnap.data().userId);
         } else {
-          // Jika tidak ada di usernames, coba cek apakah ini adalah userId langsung
           const profileRef = doc(db, 'userProfiles', username);
           const profileSnap = await getDoc(profileRef);
-          if (profileSnap.exists()) {
-            setResolvedUserId(username);
-          }
+          if (profileSnap.exists()) setResolvedUserId(username);
         }
       } catch (e) {
-        console.error("Gagal memuat profil:", e);
+        console.error(e);
       } finally {
         setIsResolving(false);
       }
@@ -44,28 +40,15 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
   const profileRef = useMemoFirebase(() => resolvedUserId ? doc(db, 'userProfiles', resolvedUserId) : null, [db, resolvedUserId]);
   const { data: profile, isLoading: isProfileLoading } = useDoc(profileRef);
 
-  const linksQuery = useMemoFirebase(() => resolvedUserId ? collection(db, 'userProfiles', resolvedUserId, 'links') : null, [db, resolvedUserId]);
-  const { data: links, isLoading: isLinksLoading } = useCollection(linksQuery);
-
-  const activeLinks = useMemo(() => {
-    if (!links) return [];
-    return links.filter(l => l.isEnabled).sort((a,b) => (a.order || 0) - (b.order || 0));
-  }, [links]);
-
-  const handleLinkClick = async (linkId: string, url: string) => {
-    if (!resolvedUserId) return;
-    updateDoc(doc(db, 'userProfiles', resolvedUserId, 'links', linkId), {
-      clicks: increment(1)
-    });
-    window.open(url, '_blank', 'noopener,noreferrer');
-  };
+  const groupsQuery = useMemoFirebase(() => resolvedUserId ? query(collection(db, 'userProfiles', resolvedUserId, 'linkGroups'), orderBy('order', 'asc')) : null, [db, resolvedUserId]);
+  const { data: groups, isLoading: isGroupsLoading } = useCollection(groupsQuery);
 
   const handleShare = () => {
     navigator.clipboard.writeText(window.location.href);
     toast({ title: "Tersalin", description: "URL profil telah disalin ke clipboard." });
   };
 
-  if (isResolving || isProfileLoading || isLinksLoading) {
+  if (isResolving || isProfileLoading || isGroupsLoading) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
         <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
@@ -99,8 +82,8 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
         </div>
 
         <div className="text-center space-y-6">
-          <div className="mx-auto w-32 h-32 rounded-[3rem] neon-gradient p-1 shadow-2xl glow-primary">
-            <div className="w-full h-full rounded-[2.8rem] bg-background flex items-center justify-center overflow-hidden border-4 border-background relative">
+          <div className="mx-auto w-32 h-32 rounded-[3.5rem] neon-gradient p-1 shadow-2xl glow-primary">
+            <div className="w-full h-full rounded-[3.3rem] bg-background flex items-center justify-center overflow-hidden border-4 border-background relative">
               {profile.avatarUrl ? (
                 <img src={profile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
@@ -109,7 +92,7 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
             </div>
           </div>
           <div className="space-y-2">
-            <h1 className="text-4xl font-black text-white tracking-tighter uppercase">{profile.displayName || profile.username || 'User Linku'}</h1>
+            <h1 className="text-4xl font-black text-white tracking-tighter uppercase animate-text-fast-pulse">{profile.displayName || profile.username || 'User Linku'}</h1>
             <p className="text-[10px] font-black text-primary uppercase tracking-[0.4em] mt-1">Verified Link Member</p>
           </div>
           {profile.bio && (
@@ -119,26 +102,33 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
           )}
         </div>
 
-        <div className="space-y-4">
-          {activeLinks.length > 0 ? (
-            activeLinks.map((link) => (
-              <button
-                key={link.id}
-                onClick={() => handleLinkClick(link.id, link.url)}
-                className="w-full relative group"
-              >
-                <div className="absolute inset-0 neon-gradient opacity-0 group-hover:opacity-100 blur-xl transition-all duration-500 rounded-3xl" />
-                <div className="relative h-20 neon-gradient p-0.5 rounded-3xl transition-transform group-hover:scale-[1.02] group-active:scale-[0.98] shadow-2xl">
-                   <div className="w-full h-full bg-black/60 backdrop-blur-xl rounded-[1.4rem] flex items-center px-8 border border-white/10 group-hover:bg-black/20 transition-all">
-                      <div className="flex-1 text-left">
-                        <span className="text-sm font-black text-white uppercase tracking-wider">{link.title}</span>
+        <div className="space-y-6">
+          <Accordion type="single" collapsible className="space-y-4">
+            {groups?.filter(g => g.isEnabled).map((group) => (
+              <AccordionItem key={group.id} value={group.id} className="border-none">
+                <div className="relative group">
+                  <div className="absolute inset-0 neon-gradient opacity-0 group-hover:opacity-100 blur-2xl transition-all duration-500 rounded-3xl" />
+                  <AccordionTrigger className="relative h-24 neon-gradient p-0.5 rounded-[2rem] hover:no-underline shadow-2xl transition-transform hover:scale-[1.01] group-data-[state=open]:scale-[1.02]">
+                    <div className="w-full h-full bg-black/70 backdrop-blur-xl rounded-[1.8rem] flex items-center px-6 gap-4 border border-white/10">
+                      <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10 shadow-xl shrink-0">
+                        {group.imageUrl ? <img src={group.imageUrl} className="w-full h-full object-cover" /> : <LayoutGrid size={24} className="text-primary" />}
                       </div>
-                      <MousePointer2 size={18} className="text-white/40 group-hover:text-white transition-colors" />
-                   </div>
+                      <div className="flex-1 text-left">
+                        <span className="text-sm font-black text-white uppercase tracking-wider">{group.title}</span>
+                        <p className="text-[8px] font-black text-white/30 uppercase tracking-[0.2em] mt-1">Buka Koleksi</p>
+                      </div>
+                      <ChevronRight size={20} className="text-white/40 transition-transform group-data-[state=open]:rotate-90" />
+                    </div>
+                  </AccordionTrigger>
                 </div>
-              </button>
-            ))
-          ) : (
+                <AccordionContent className="pt-3 pb-0 px-2 space-y-3">
+                  <LinksInGroup userId={resolvedUserId!} groupId={group.id} />
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+
+          {!groups?.length && (
             <div className="text-center py-20 opacity-20 font-black uppercase tracking-widest text-[10px]">
               Belum ada tautan aktif.
             </div>
@@ -148,10 +138,43 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
         <div className="pt-12 text-center opacity-40">
           <div className="flex items-center justify-center gap-2 mb-2">
             <Link2 size={12} className="text-primary" />
-            <p className="text-[9px] font-black uppercase tracking-[0.4em] text-white">Powered by Linku</p>
+            <p className="text-[9px] font-black uppercase tracking-[0.4em] text-white">Powering with Linku Engine</p>
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function LinksInGroup({ userId, groupId }: { userId: string, groupId: string }) {
+  const db = useFirestore();
+  const linksQuery = useMemoFirebase(() => query(collection(db, 'userProfiles', userId, 'linkGroups', groupId, 'links'), orderBy('createdAt', 'desc')), [db, userId, groupId]);
+  const { data: links } = useCollection(linksQuery);
+
+  const handleLinkClick = async (linkId: string, url: string) => {
+    updateDoc(doc(db, 'userProfiles', userId, 'linkGroups', groupId, 'links', linkId), {
+      clicks: increment(1)
+    });
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  return (
+    <div className="grid gap-3">
+      {links?.filter(l => l.isEnabled).map(link => (
+        <button
+          key={link.id}
+          onClick={() => handleLinkClick(link.id, link.url)}
+          className="w-full glass-card hover:bg-white/10 rounded-2xl p-4 flex items-center gap-4 transition-all active:scale-95 group/link"
+        >
+          <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/5 group-hover/link:border-primary/40">
+            {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <Link2 size={16} className="text-white/20" />}
+          </div>
+          <div className="flex-1 text-left">
+            <p className="text-xs font-black text-white uppercase tracking-tight">{link.title}</p>
+          </div>
+          <MousePointer2 size={14} className="text-white/20 group-hover/link:text-primary transition-colors" />
+        </button>
+      ))}
     </div>
   );
 }

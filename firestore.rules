@@ -2,39 +2,30 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Profil publik dan linknya harus bisa dibaca oleh siapa saja (tanpa login)
     match /userProfiles/{userId} {
       allow read: if true;
       allow write: if request.auth != null && request.auth.uid == userId;
       
-      match /links/{linkId} {
+      match /linkGroups/{groupId} {
         allow read: if true;
         allow write: if request.auth != null && request.auth.uid == userId;
+        
+        match /links/{linkId} {
+          allow read: if true;
+          allow write: if request.auth != null && request.auth.uid == userId;
+        }
       }
     }
     
-    // Mapping username unik
     match /usernames/{username} {
       allow read: if true;
       allow create: if request.auth != null;
-      allow update, delete: if false; // Username bersifat permanen untuk keamanan
+      allow update, delete: if false;
     }
 
-    // Koleksi pesan (Chat Bantuan)
-    match /messages/{messageId} {
-      allow read, write: if request.auth != null;
-    }
-
-    // Konfigurasi aplikasi
-    match /appConfig/{configId} {
+    match /{document=**} {
       allow read: if true;
       allow write: if request.auth != null && 
-        get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == 'Admin';
-    }
-    
-    // Default fallback
-    match /{document=**} {
-      allow read, write: if request.auth != null && 
         get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == 'Admin';
     }
   }
