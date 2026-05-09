@@ -13,6 +13,7 @@ import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, serverTimestamp, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { getAuth, signOut } from 'firebase/auth';
 import ImageCropperModal from '@/components/ImageCropperModal';
+import { extractThemeColors } from '@/lib/utils-app';
 
 export default function ProfilPage() {
   const { user } = useUser();
@@ -61,6 +62,21 @@ export default function ProfilPage() {
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const onCropComplete = async (cropped: string) => {
+    setAvatarUrl(cropped);
+    setIsEditing(true); // Pastikan masuk mode edit untuk melihat perubahan
+    
+    // Otomatis ekstrak warna dari foto profil
+    const colors = await extractThemeColors(cropped);
+    setThemeColor(colors.primary);
+    setThemeColorSecondary(colors.secondary);
+    
+    toast({ 
+      title: "Warna Diekstrak", 
+      description: "Tema warna profil telah disesuaikan dengan foto Anda secara otomatis." 
+    });
   };
 
   const handleLogout = async () => {
@@ -129,7 +145,7 @@ export default function ProfilPage() {
     <div className="space-y-6 animate-in">
       <div className="text-center space-y-4 py-8">
         <div 
-          className="mx-auto w-28 h-28 rounded-[2.5rem] flex items-center justify-center border-4 border-background shadow-2xl overflow-hidden relative group aspect-square glow-primary"
+          className="mx-auto w-28 h-28 rounded-[2.5rem] flex items-center justify-center border-4 border-background shadow-2xl overflow-hidden relative group aspect-square"
           style={{ 
             background: `linear-gradient(-45deg, ${themeColor}, ${themeColorSecondary})`,
             boxShadow: `0 0 25px -5px ${themeColor}99`
@@ -145,7 +161,7 @@ export default function ProfilPage() {
         <div className="px-4 text-left sm:text-center">
           <h1 className="text-2xl font-black text-white tracking-tight">{displayName || profile?.username || 'User Linku'}</h1>
           <div className="flex items-center sm:justify-center gap-1.5 mt-1">
-            <AtSign size={12} className="text-primary" style={{ color: themeColor }} />
+            <AtSign size={12} style={{ color: themeColor }} />
             <p className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: themeColor }}>{profile?.username || 'user'}</p>
           </div>
         </div>
@@ -207,6 +223,7 @@ export default function ProfilPage() {
                       />
                     </div>
                   </div>
+                  <p className="text-[8px] text-muted-foreground italic px-1">*Saran: Ganti foto profil untuk ekstraksi warna otomatis.</p>
                 </div>
 
                 <div className="space-y-1.5 text-left">
@@ -268,7 +285,7 @@ export default function ProfilPage() {
         imageSrc={tempImage}
         isOpen={cropperOpen}
         onClose={() => setCropperOpen(false)}
-        onCropComplete={(cropped) => setAvatarUrl(cropped)}
+        onCropComplete={onCropComplete}
       />
     </div>
   );

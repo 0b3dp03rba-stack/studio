@@ -83,3 +83,45 @@ export async function compressAndCropImage(file: File, targetSize = 400): Promis
     reader.onerror = (err) => reject(err);
   });
 }
+
+/**
+ * Mengekstrak warna tema dominan dari string base64 gambar
+ */
+export async function extractThemeColors(base64: string): Promise<{ primary: string; secondary: string }> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.src = base64;
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return resolve({ primary: '#ff0000', secondary: '#ffea00' });
+
+      // Gunakan ukuran sampel kecil untuk performa
+      canvas.width = 10;
+      canvas.height = 10;
+      ctx.drawImage(img, 0, 0, 10, 10);
+      const data = ctx.getImageData(0, 0, 10, 10).data;
+
+      let r = 0, g = 0, b = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        r += data[i];
+        g += data[i + 1];
+        b += data[i + 2];
+      }
+
+      const count = data.length / 4;
+      const avgR = Math.round(r / count);
+      const avgG = Math.round(g / count);
+      const avgB = Math.round(b / count);
+
+      const toHex = (c: number) => c.toString(16).padStart(2, '0');
+      const primary = `#${toHex(avgR)}${toHex(avgG)}${toHex(avgB)}`;
+
+      // Generate warna sekunder yang lebih cerah/kontras untuk gradasi
+      const secondary = `#${toHex(Math.min(255, avgR + 50))}${toHex(Math.min(255, avgG + 30))}${toHex(Math.max(0, avgB - 30))}`;
+
+      resolve({ primary, secondary });
+    };
+    img.onerror = () => resolve({ primary: '#ff0000', secondary: '#ffea00' });
+  });
+}
