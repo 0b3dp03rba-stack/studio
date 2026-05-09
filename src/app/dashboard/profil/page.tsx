@@ -1,15 +1,16 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { User, LogOut, Mail, Edit3, CheckCircle2, Upload, X, AtSign } from 'lucide-react';
+import { User, LogOut, Mail, Edit3, CheckCircle2, Upload, X, AtSign, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { getAuth, signOut } from 'firebase/auth';
 
 export default function ProfilPage() {
@@ -22,13 +23,16 @@ export default function ProfilPage() {
   const { data: profile } = useDoc(profileRef);
 
   const [displayName, setDisplayName] = useState('');
+  const [username, setUsername] = useState('');
   const [bio, setBio] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (profile) {
       setDisplayName(profile.displayName || '');
+      setUsername(profile.username || '');
       setBio(profile.bio || '');
       setAvatarUrl(profile.avatarUrl || '');
     }
@@ -53,26 +57,62 @@ export default function ProfilPage() {
   };
 
   const handleSaveProfile = async () => {
-    if (!profileRef) return;
+    if (!profileRef || !user) return;
     
+    setIsSaving(true);
     try {
+      const cleanUsername = username.toLowerCase().trim().replace(/[^a-z0-9_]/g, '');
+      
+      if (cleanUsername.length < 3) {
+        toast({ variant: "destructive", title: "Username terlalu pendek", description: "Minimal 3 karakter." });
+        setIsSaving(false);
+        return;
+      }
+
+      // Check if username changed and handle uniqueness
+      if (cleanUsername !== profile?.username) {
+        const usernameRef = doc(db, 'usernames', cleanUsername);
+        const usernameSnap = await getDoc(usernameRef);
+        
+        if (usernameSnap.exists()) {
+          toast({ variant: "destructive", title: "Username tidak tersedia", description: "Username sudah digunakan oleh user lain." });
+          setIsSaving(false);
+          return;
+        }
+
+        // Delete old mapping if exists
+        if (profile?.username) {
+          await deleteDoc(doc(db, 'usernames', profile.username));
+        }
+        
+        // Set new mapping
+        await setDoc(usernameRef, {
+          userId: user.uid,
+          createdAt: serverTimestamp()
+        });
+      }
+
       await updateDoc(profileRef, {
         displayName,
+        username: cleanUsername,
         bio,
         avatarUrl,
         updatedAt: serverTimestamp()
       });
+
       toast({ title: "Berhasil", description: "Profil Anda telah diperbarui." });
-      setIsEditing(false); // Keluar dari mode edit setelah simpan
-    } catch (e) {
+      setIsEditing(false);
+    } catch (e: any) {
       toast({ variant: "destructive", title: "Gagal", description: "Terjadi kesalahan saat menyimpan." });
+    } finally {
+      setIsSaving(false);
     }
   };
 
   return (
     <div className="space-y-6 animate-in">
       <div className="text-center space-y-4 py-8">
-        <div className="mx-auto w-28 h-28 rounded-[2.5rem] neon-gradient flex items-center justify-center glow-primary border-4 border-background shadow-2xl overflow-hidden relative group aspect-square">
+        <div className="mx-auto w-28 h-28 rounded-[2rem] neon-gradient flex items-center justify-center glow-primary border-4 border-background shadow-2xl overflow-hidden relative group aspect-square">
            {avatarUrl ? (
              <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover relative z-10" />
            ) : (
@@ -81,7 +121,7 @@ export default function ProfilPage() {
            <div className="absolute inset-0 bg-black/20" />
         </div>
         <div className="px-4">
-          <h1 className="text-2xl font-black text-white tracking-tight">{displayName || profile?.username || user?.email?.split('@')[0]}</h1>
+          <h1 className="text-2xl font-black text-white tracking-tight">{displayName || profile?.username || 'User Linku'}</h1>
           <div className="flex items-center justify-center gap-1.5 mt-1">
             <AtSign size={12} className="text-primary" />
             <p className="text-primary text-[10px] font-black uppercase tracking-[0.2em]">{profile?.username || 'user'}</p>
@@ -102,7 +142,7 @@ export default function ProfilPage() {
             {isEditing ? (
               <div className="space-y-4">
                 <div className="space-y-1.5 text-left">
-                  <label className="text-[10px] font-black text-muted-foreground uppercase ml-1">Nama Lengkap</label>
+                  <label className="text-[10px] font-black text-muted-foreground uppercase ml-1">Nama Tampilan</label>
                   <Input 
                     value={displayName} 
                     onChange={(e) => setDisplayName(e.target.value)} 
@@ -111,11 +151,24 @@ export default function ProfilPage() {
                   />
                 </div>
                 <div className="space-y-1.5 text-left">
+                  <label className="text-[10px] font-black text-muted-foreground uppercase ml-1">Username (URL Unik)</label>
+                  <div className="relative">
+                    <AtSign className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
+                    <Input 
+                      value={username} 
+                      onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))} 
+                      placeholder="username_kamu"
+                      className="bg-white/5 h-14 text-sm pl-10 rounded-2xl border-white/10 text-white font-bold" 
+                    />
+                  </div>
+                  <p className="text-[9px] text-muted-foreground ml-1">URL Profil: domain.com/{username || 'username'}</p>
+                </div>
+                <div className="space-y-1.5 text-left">
                   <label className="text-[10px] font-black text-muted-foreground uppercase ml-1">Foto Profil (1:1)</label>
                   <div className="flex items-center gap-4">
                     <label className="flex-1 flex items-center justify-center gap-3 h-14 bg-white/5 border border-dashed border-white/20 rounded-2xl cursor-pointer hover:bg-white/10 transition-all group">
                       <Upload size={18} className="text-primary group-hover:scale-110 transition-transform" />
-                      <span className="text-xs font-bold text-white/40 uppercase">Ganti Foto</span>
+                      <span className="text-xs font-bold text-white/40 uppercase">Pilih Foto</span>
                       <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
                     </label>
                     {avatarUrl && (
@@ -135,15 +188,17 @@ export default function ProfilPage() {
                   />
                 </div>
                 <div className="flex gap-2 pt-2">
-                  <Button variant="outline" onClick={() => setIsEditing(false)} className="flex-1 h-14 text-xs font-black rounded-2xl border-white/10 text-white">BATAL</Button>
-                  <Button onClick={handleSaveProfile} className="flex-1 h-14 text-xs neon-gradient text-background font-black rounded-2xl glow-primary shadow-xl">SIMPAN</Button>
+                  <Button variant="outline" onClick={() => setIsEditing(false)} disabled={isSaving} className="flex-1 h-14 text-xs font-black rounded-2xl border-white/10 text-white">BATAL</Button>
+                  <Button onClick={handleSaveProfile} disabled={isSaving} className="flex-1 h-14 text-xs neon-gradient text-background font-black rounded-2xl glow-primary shadow-xl">
+                    {isSaving ? <Loader2 className="animate-spin" size={20} /> : "SIMPAN"}
+                  </Button>
                 </div>
               </div>
             ) : (
               <div className="space-y-5 text-left">
                 <div className="p-4 bg-white/[0.02] rounded-2xl border border-white/5">
                   <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">Bio Anda</p>
-                  <p className="text-sm font-medium text-white/80 leading-relaxed">{bio || 'Anda belum menuliskan bio apapun.'}</p>
+                  <p className="text-sm font-medium text-white/80 leading-relaxed">{bio || 'Belum ada bio.'}</p>
                 </div>
                 <div className="flex items-center gap-4 px-4">
                   <Mail size={16} className="text-white/20" />
@@ -159,7 +214,7 @@ export default function ProfilPage() {
         </Card>
 
         <Button variant="destructive" className="w-full h-16 rounded-[1.5rem] font-black text-sm uppercase mt-6 group shadow-2xl active:scale-95 transition-all" onClick={handleLogout}>
-          <LogOut size={20} className="mr-3 group-hover:rotate-12 transition-transform" /> Keluar Dari Akun
+          <LogOut size={20} className="mr-3 group-hover:rotate-12 transition-transform" /> Keluar
         </Button>
       </div>
     </div>

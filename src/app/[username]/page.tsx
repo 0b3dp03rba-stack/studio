@@ -1,3 +1,4 @@
+
 "use client";
 
 import { use, useMemo, useEffect, useState } from 'react';
@@ -48,7 +49,7 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
 
   const handleShare = () => {
     navigator.clipboard.writeText(window.location.href);
-    toast({ title: "Tersalin", description: "URL profil telah disalin ke clipboard." });
+    toast({ title: "Tersalin", description: "URL profil telah disalin." });
   };
 
   const handleLinkClick = async (linkId: string, url: string, isStandalone: boolean, groupId?: string) => {
@@ -95,8 +96,8 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
         </div>
 
         <div className="text-center space-y-6">
-          <div className="mx-auto w-32 h-32 rounded-[3.5rem] neon-gradient p-1 shadow-2xl glow-primary">
-            <div className="w-full h-full rounded-[3.3rem] bg-background flex items-center justify-center overflow-hidden border-4 border-background relative">
+          <div className="mx-auto w-32 h-32 rounded-[3rem] neon-gradient p-1 shadow-2xl glow-primary">
+            <div className="w-full h-full rounded-[2.8rem] bg-background flex items-center justify-center overflow-hidden border-4 border-background relative">
               {profile.avatarUrl ? (
                 <img src={profile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
@@ -122,9 +123,9 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
               <button
                 key={link.id}
                 onClick={() => handleLinkClick(link.id, link.url, true)}
-                className="w-full neon-gradient p-0.5 rounded-[2rem] hover:scale-[1.02] transition-transform shadow-xl group/link"
+                className="w-full neon-gradient p-0.5 rounded-[1.5rem] hover:scale-[1.02] transition-transform shadow-xl group/link"
               >
-                <div className="w-full h-16 bg-black/80 backdrop-blur-xl rounded-[1.8rem] flex items-center px-6 gap-4 border border-white/10">
+                <div className="w-full h-16 bg-black/80 backdrop-blur-xl rounded-[1.4rem] flex items-center px-6 gap-4 border border-white/10">
                   <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10">
                     {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <Link2 size={20} className="text-primary" />}
                   </div>
@@ -142,8 +143,8 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
               <AccordionItem key={group.id} value={group.id} className="border-none">
                 <div className="relative group">
                   <div className="absolute inset-0 neon-gradient opacity-0 group-hover:opacity-100 blur-2xl transition-all duration-500 rounded-3xl" />
-                  <AccordionTrigger className="relative h-24 neon-gradient p-0.5 rounded-[2rem] hover:no-underline shadow-2xl transition-transform hover:scale-[1.01] group-data-[state=open]:scale-[1.02]">
-                    <div className="w-full h-full bg-black/70 backdrop-blur-xl rounded-[1.8rem] flex items-center px-6 gap-4 border border-white/10">
+                  <AccordionTrigger className="relative h-24 neon-gradient p-0.5 rounded-[1.5rem] hover:no-underline shadow-2xl transition-transform hover:scale-[1.01] group-data-[state=open]:scale-[1.02]">
+                    <div className="w-full h-full bg-black/70 backdrop-blur-xl rounded-[1.4rem] flex items-center px-6 gap-4 border border-white/10">
                       <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10 shadow-xl shrink-0">
                         {group.imageUrl ? <img src={group.imageUrl} className="w-full h-full object-cover" /> : <LayoutGrid size={24} className="text-primary" />}
                       </div>
@@ -191,7 +192,7 @@ function LinksInGroup({ userId, groupId, onLinkClick }: { userId: string, groupI
         <button
           key={link.id}
           onClick={() => onLinkClick(link.id, link.url, false, groupId)}
-          className="w-full glass-card hover:bg-white/10 rounded-2xl p-4 flex items-center gap-4 transition-all active:scale-95 group/link"
+          className="w-full glass-card hover:bg-white/10 rounded-[1.2rem] p-4 flex items-center gap-4 transition-all active:scale-95 group/link"
         >
           <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/5 group-hover/link:border-primary/40">
             {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <Link2 size={16} className="text-white/20" />}
