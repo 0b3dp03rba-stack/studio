@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { User, LogOut, Mail, Edit3, Upload, AtSign, Loader2, Palette, Check } from 'lucide-react';
+import { User, LogOut, Mail, Edit3, Upload, AtSign, Loader2, Palette, Check, Copy, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -41,6 +41,7 @@ export default function ProfilPage() {
   const [cropperOpen, setCropperOpen] = useState(false);
   const [tempImage, setTempImage] = useState<string | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [fullUrl, setFullUrl] = useState('');
 
   useEffect(() => {
     if (profile) {
@@ -50,8 +51,21 @@ export default function ProfilPage() {
       setAvatarUrl(profile.avatarUrl || '');
       setThemeColor(profile.themeColor || '#ff0000');
       setThemeColorSecondary(profile.themeColorSecondary || '#ffea00');
+      
+      if (typeof window !== 'undefined') {
+        setFullUrl(`${window.location.origin}/${profile.username || profile.id}`);
+      }
     }
   }, [profile]);
+
+  const handleCopyUrl = () => {
+    if (!fullUrl) return;
+    navigator.clipboard.writeText(fullUrl);
+    toast({
+      title: "Berhasil Salin",
+      description: "URL profil Linku Anda telah disalin.",
+    });
+  };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -73,11 +87,9 @@ export default function ProfilPage() {
     setAvatarUrl(cropped);
     setIsEditing(true);
     
-    // Extract dynamic palette from cropped image
     const palette = await extractPaletteFromImage(cropped);
     setCustomPalette(palette);
     
-    // Automatically set the top two colors
     setThemeColor(palette[0]);
     setThemeColorSecondary(palette[1] || palette[0]);
     
@@ -135,10 +147,10 @@ export default function ProfilPage() {
         updatedAt: serverTimestamp()
       });
 
-      toast({ title: "Tersimpan", description: "Profil Anda telah diperbarui." });
+      toast({ title: "Tersimpan", description: "Profil Linku Anda telah diperbarui." });
       setIsEditing(false);
     } catch (e: any) {
-      toast({ variant: "destructive", title: "Gagal menyimpan", description: e.message });
+      toast({ variant: "destructive", title: "Gagal menyimpan", description: "Gagal memperbarui profil. Silakan coba lagi." });
     } finally {
       setIsSaving(false);
     }
@@ -169,6 +181,25 @@ export default function ProfilPage() {
           </div>
         </div>
       </div>
+
+      <Card className="glass-card border-none bg-primary/5 rounded-[2rem] overflow-hidden">
+        <CardContent className="p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <p className="text-[10px] font-black uppercase text-primary tracking-widest">URL Profil Linku</p>
+              <p className="text-sm font-bold text-white truncate max-w-[220px]">{fullUrl || 'Menyiapkan URL...'}</p>
+            </div>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={handleCopyUrl}
+              className="h-12 w-12 rounded-2xl bg-white/5 hover:bg-primary/20 hover:text-primary shadow-xl"
+            >
+              <Copy size={20} />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="space-y-4">
         <Card className="glass-card border-white/5 rounded-[2rem] overflow-hidden">
@@ -229,7 +260,7 @@ export default function ProfilPage() {
                         Sesuaikan Manual
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="glass-card border-none rounded-[2rem] max-w-[90%] mx-auto">
+                    <DialogContent className="glass-card border-none rounded-[2.5rem] max-w-[90%] mx-auto">
                       <DialogHeader><DialogTitle className="text-center font-black uppercase text-xs">Pilih Warna Kustom</DialogTitle></DialogHeader>
                       <div className="space-y-4 py-4">
                         <div className="grid grid-cols-2 gap-4">

@@ -2,30 +2,11 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Profil pengguna dan semua sub-koleksinya (links, linkGroups) dapat dibaca siapa saja
-    match /userProfiles/{userId} {
-      allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == userId;
-      
-      match /{allPaths=**} {
-        allow read: if true;
-        allow write: if request.auth != null && request.auth.uid == userId;
-      }
-    }
-    
-    // Pemetaan username unik
-    match /usernames/{username} {
-      allow read: if true;
-      allow create: if request.auth != null;
-      allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow update: if false;
-    }
-
-    // Default deny untuk koleksi lain yang tidak didefinisikan
+    // Aturan yang sangat sederhana: Semua data bisa dibaca publik
+    // Tulis hanya untuk user yang login
     match /{document=**} {
       allow read: if true;
-      allow write: if request.auth != null && 
-        get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == 'Admin';
+      allow write: if request.auth != null;
     }
   }
 }
