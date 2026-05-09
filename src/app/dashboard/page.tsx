@@ -43,7 +43,7 @@ export default function DashboardPage() {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 1024 * 1024 * 5) {
-        toast({ variant: "destructive", title: "File Terlalu Besar", description: "Maksimal ukuran foto adalah 5MB." });
+        toast({ variant: "destructive", title: "File terlalu besar", description: "Maksimal ukuran foto adalah 5MB." });
         return;
       }
       const reader = new FileReader();
@@ -65,7 +65,7 @@ export default function DashboardPage() {
       });
       setNewGroupTitle('');
       setNewGroupImage('');
-      toast({ title: "Kelompok Dibuat", description: "Berhasil menambahkan kelompok baru." });
+      toast({ title: "Kelompok dibuat", description: "Berhasil menambahkan kelompok baru." });
     } catch (e) {
       toast({ variant: "destructive", title: "Gagal", description: "Terjadi kesalahan." });
     }
@@ -92,7 +92,7 @@ export default function DashboardPage() {
       setNewLinkUrl('');
       setNewLinkImage('');
       setSelectedGroupId(null);
-      toast({ title: "Link Ditambahkan", description: "Tautan baru berhasil disimpan." });
+      toast({ title: "Tautan ditambahkan", description: "Tautan baru berhasil disimpan." });
     } catch (e) {
       toast({ variant: "destructive", title: "Gagal", description: "Gagal menyimpan link." });
     }
@@ -101,7 +101,7 @@ export default function DashboardPage() {
   const handleDeleteGroup = async (groupId: string) => {
     if (!user) return;
     await deleteDoc(doc(db, 'userProfiles', user.uid, 'linkGroups', groupId));
-    toast({ title: "Kelompok Dihapus", description: "Kelompok telah dihapus." });
+    toast({ title: "Kelompok dihapus", description: "Kelompok telah dihapus." });
   };
 
   const publicUrl = profile?.username ? `${window.location.origin}/${profile.username}` : `${window.location.origin}/u/${user?.uid}`;
@@ -112,7 +112,7 @@ export default function DashboardPage() {
         <h1 className="text-4xl font-black tracking-tighter text-white">Linku Manager</h1>
         <div className="flex items-center gap-2 p-3 bg-white/5 rounded-xl border border-white/5 w-fit">
            <AtSign size={14} className="text-primary" />
-           <span className="text-[10px] font-black text-white uppercase tracking-widest">{profile?.username || 'Belum ada username'}</span>
+           <span className="text-[10px] font-black text-white uppercase tracking-widest">{profile?.username || 'user'}</span>
            <Link href={publicUrl} target="_blank" className="ml-2 text-[10px] text-primary hover:underline font-bold flex items-center gap-1">
              Lihat Profil <ExternalLink size={10} />
            </Link>
@@ -144,7 +144,7 @@ export default function DashboardPage() {
             <CardContent className="p-0 space-y-4 relative z-10">
               <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase tracking-widest">
                 <FolderPlus size={16} />
-                <span>Buat Kelompok Baru</span>
+                <span>Buat kelompok baru</span>
               </div>
               <div className="space-y-3">
                 <Input 
@@ -171,7 +171,7 @@ export default function DashboardPage() {
                   )}
                 </div>
                 <Button onClick={handleAddGroup} disabled={!newGroupTitle} className="w-full h-12 neon-gradient text-white font-black rounded-xl glow-primary uppercase text-[10px] shadow-xl">
-                  Simpan Kelompok
+                  Simpan kelompok
                 </Button>
               </div>
             </CardContent>
@@ -181,7 +181,7 @@ export default function DashboardPage() {
             <CardContent className="p-0 space-y-4">
               <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase tracking-widest">
                 <LinkIcon size={16} />
-                <span>Tambah Link Mandiri</span>
+                <span>Tambah link mandiri</span>
               </div>
               <div className="space-y-3">
                 <Input placeholder="Judul Tautan" value={newLinkTitle} onChange={(e) => setNewLinkTitle(e.target.value)} className="bg-white/5 h-12 rounded-xl px-4 font-bold" />
@@ -204,7 +204,7 @@ export default function DashboardPage() {
                   )}
                 </div>
                 <Button onClick={handleAddLink} disabled={!newLinkTitle || !newLinkUrl} className="w-full h-12 neon-gradient text-white font-black rounded-xl glow-primary uppercase text-[10px] shadow-xl">
-                  Simpan Tautan Mandiri
+                  Simpan tautan mandiri
                 </Button>
               </div>
             </CardContent>
@@ -217,7 +217,7 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase tracking-widest">
                   <Plus size={16} />
-                  <span>Tambah Tautan ke Kelompok</span>
+                  <span>Tambah tautan ke kelompok</span>
                 </div>
                 <Button variant="ghost" size="sm" onClick={() => setSelectedGroupId(null)} className="text-[10px] font-black uppercase">Batal</Button>
               </div>
@@ -242,7 +242,7 @@ export default function DashboardPage() {
                   )}
                 </div>
                 <Button onClick={handleAddLink} disabled={!newLinkTitle || !newLinkUrl} className="w-full h-12 neon-gradient text-white font-black rounded-xl glow-primary uppercase text-[10px] shadow-xl">
-                  Simpan Tautan
+                  Simpan tautan
                 </Button>
               </div>
             </CardContent>
@@ -252,7 +252,7 @@ export default function DashboardPage() {
 
       <div className="space-y-5">
         <h3 className="font-black text-[11px] uppercase tracking-[0.3em] text-white/50 flex items-center gap-2 px-1">
-          <LayoutGrid size={16} className="text-primary" /> Daftar Kelompok & Tautan
+          <LayoutGrid size={16} className="text-primary" /> Daftar kelompok & tautan
         </h3>
         
         {isGroupsLoading || isStandaloneLoading ? (
@@ -273,7 +273,7 @@ export default function DashboardPage() {
             {(!groups?.length && !standaloneLinks?.length) && (
               <div className="py-24 text-center glass-card rounded-[3rem] opacity-20 border-none">
                 <LinkIcon size={64} className="mx-auto mb-6" />
-                <p className="text-xl font-black uppercase tracking-widest">Belum Ada Tautan</p>
+                <p className="text-xl font-black uppercase tracking-widest">Belum ada tautan</p>
               </div>
             )}
           </div>
@@ -291,7 +291,7 @@ function StandaloneLinkItem({ link }: { link: any }) {
   const handleDelete = async () => {
     if (!user) return;
     await deleteDoc(doc(db, 'userProfiles', user.uid, 'links', link.id));
-    toast({ title: "Tautan Dihapus", description: "Link mandiri telah dihapus." });
+    toast({ title: "Tautan dihapus", description: "Link mandiri telah dihapus." });
   };
 
   return (
@@ -330,7 +330,7 @@ function GroupItem({ group, onAddLink, onDelete }: { group: any; onAddLink: () =
           </div>
           <div className="flex-1 min-w-0 text-left">
             <h4 className="font-bold text-white text-base truncate">{group.title}</h4>
-            <p className="text-[10px] text-white/30 uppercase font-black tracking-widest">{links?.length || 0} Tautan</p>
+            <p className="text-[10px] text-white/30 uppercase font-black tracking-widest">{links?.length || 0} tautan</p>
           </div>
           <div className="flex gap-2">
             <Button size="icon" variant="ghost" onClick={onAddLink} className="h-10 w-10 rounded-xl text-primary hover:bg-primary/10"><Plus size={18} /></Button>

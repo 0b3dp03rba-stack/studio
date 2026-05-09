@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { User, LogOut, Mail, Edit3, CheckCircle2, Upload, X } from 'lucide-react';
+import { User, LogOut, Mail, Edit3, CheckCircle2, Upload, X, AtSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -38,7 +38,7 @@ export default function ProfilPage() {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 1024 * 1024 * 5) {
-        toast({ variant: "destructive", title: "File Terlalu Besar", description: "Maksimal ukuran foto profil adalah 5MB." });
+        toast({ variant: "destructive", title: "File terlalu besar", description: "Maksimal ukuran foto adalah 5MB." });
         return;
       }
       const reader = new FileReader();
@@ -63,7 +63,7 @@ export default function ProfilPage() {
         updatedAt: serverTimestamp()
       });
       toast({ title: "Berhasil", description: "Profil Anda telah diperbarui." });
-      setIsEditing(false);
+      setIsEditing(false); // Keluar dari mode edit setelah simpan
     } catch (e) {
       toast({ variant: "destructive", title: "Gagal", description: "Terjadi kesalahan saat menyimpan." });
     }
@@ -81,8 +81,11 @@ export default function ProfilPage() {
            <div className="absolute inset-0 bg-black/20" />
         </div>
         <div className="px-4">
-          <h1 className="text-2xl font-black text-white tracking-tight">{displayName || user?.email?.split('@')[0]}</h1>
-          <p className="text-primary text-[10px] font-black uppercase tracking-[0.4em] neon-text-pulse">Penyedia Tautan</p>
+          <h1 className="text-2xl font-black text-white tracking-tight">{displayName || profile?.username || user?.email?.split('@')[0]}</h1>
+          <div className="flex items-center justify-center gap-1.5 mt-1">
+            <AtSign size={12} className="text-primary" />
+            <p className="text-primary text-[10px] font-black uppercase tracking-[0.2em]">{profile?.username || 'user'}</p>
+          </div>
         </div>
       </div>
 

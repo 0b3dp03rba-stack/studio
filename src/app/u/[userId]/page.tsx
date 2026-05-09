@@ -1,4 +1,3 @@
-
 "use client";
 
 import { use, useMemo, useEffect, useState } from 'react';
@@ -41,7 +40,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userId
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
         <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-[10px] font-black uppercase tracking-widest text-primary/50">Membangun Profil...</p>
+        <p className="text-[10px] font-black uppercase tracking-widest text-primary/50">Membangun profil...</p>
       </div>
     );
   }
@@ -80,14 +79,14 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userId
               )}
             </div>
           </div>
-          <div className="space-y-3">
-            <h1 className="text-4xl font-black text-white tracking-tighter uppercase animate-text-fast-pulse">{profile.displayName || profile.username || 'User Linku'}</h1>
+          <div className="space-y-3 px-4">
+            <h1 className="text-3xl font-black text-white tracking-tighter animate-text-fast-pulse">{profile.displayName || profile.username || 'User Linku'}</h1>
             {profile.bio ? (
-              <p className="text-xs font-bold text-primary uppercase tracking-[0.2em] max-w-xs mx-auto leading-relaxed">
+              <p className="text-sm font-medium text-white/70 max-w-xs mx-auto leading-relaxed">
                 {profile.bio}
               </p>
             ) : (
-              <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.4em] mt-1">Personal Link Hub</p>
+              <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.4em] mt-1">Personal Link Hub</p>
             )}
           </div>
         </div>
@@ -105,7 +104,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userId
                     {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <Link2 size={20} className="text-primary" />}
                   </div>
                   <div className="flex-1 text-left">
-                    <span className="text-sm font-black text-white uppercase tracking-wider">{link.title}</span>
+                    <span className="text-sm font-bold text-white tracking-tight">{link.title}</span>
                   </div>
                   <MousePointer2 size={16} className="text-white/20 group-hover/link:text-primary transition-colors" />
                 </div>
@@ -124,8 +123,8 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userId
                         {group.imageUrl ? <img src={group.imageUrl} className="w-full h-full object-cover" /> : <LayoutGrid size={24} className="text-primary" />}
                       </div>
                       <div className="flex-1 text-left">
-                        <span className="text-sm font-black text-white uppercase tracking-wider">{group.title}</span>
-                        <p className="text-[8px] font-black text-white/30 uppercase tracking-[0.2em] mt-1">Buka Koleksi</p>
+                        <span className="text-sm font-bold text-white tracking-tight">{group.title}</span>
+                        <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mt-1">Buka Koleksi</p>
                       </div>
                       <ChevronRight size={20} className="text-white/40 transition-transform group-data-[state=open]:rotate-90" />
                     </div>
@@ -173,7 +172,7 @@ function LinksInGroup({ userId, groupId, onLinkClick }: { userId: string, groupI
             {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <Link2 size={16} className="text-white/20" />}
           </div>
           <div className="flex-1 text-left">
-            <p className="text-xs font-black text-white uppercase tracking-tight">{link.title}</p>
+            <p className="text-xs font-bold text-white tracking-tight">{link.title}</p>
           </div>
           <MousePointer2 size={14} className="text-white/20 group-hover/link:text-primary transition-colors" />
         </button>
