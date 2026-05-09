@@ -7,6 +7,7 @@ import { doc, collection, updateDoc, increment, getDoc, query, orderBy } from 'f
 import { User, Share2, MousePointer2, Link2, ChevronRight, LayoutGrid, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import Link from 'next/link';
 
 export default function PublicProfileByUsername({ params }: { params: Promise<{ username: string }> }) {
   const { username } = use(params);
@@ -84,6 +85,8 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
 
   const primaryColor = profile.themeColor || '#ff0000';
   const secondaryColor = profile.themeColorSecondary || '#ffea00';
+  // 50:50 Gradient Stop for dynamic feeling
+  const dynamicGradient = `linear-gradient(-45deg, ${primaryColor} 0%, ${secondaryColor} 50%, ${primaryColor} 100%)`;
 
   return (
     <div 
@@ -121,9 +124,10 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
           <div 
             className="mx-auto w-32 h-32 rounded-[2.5rem] p-1 shadow-2xl transition-all duration-700 animate-flowing-gradient"
             style={{ 
-              background: `linear-gradient(-45deg, ${primaryColor}, ${secondaryColor}, ${primaryColor})`,
+              background: dynamicGradient,
               backgroundSize: '200% 200%',
-              boxShadow: `0 0 50px -10px ${primaryColor}99`
+              boxShadow: `0 0 50px -10px ${primaryColor}99`,
+              animationDuration: '7s'
             }}
           >
             <div className="w-full h-full rounded-[2.3rem] bg-background flex items-center justify-center overflow-hidden border-4 border-background relative">
@@ -166,8 +170,9 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
                   onClick={() => handleLinkClick(link.id, link.url, true)}
                   className="w-full p-0.5 rounded-2xl hover:scale-[1.02] transition-transform shadow-xl group/link animate-flowing-gradient"
                   style={{ 
-                    background: `linear-gradient(-45deg, ${primaryColor}, ${secondaryColor}, ${primaryColor})`,
-                    backgroundSize: '200% 200%'
+                    background: dynamicGradient,
+                    backgroundSize: '200% 200%',
+                    animationDuration: '7s'
                   }}
                 >
                   <div className="w-full h-20 bg-black/80 backdrop-blur-xl rounded-[0.95rem] flex items-center px-6 gap-4 border border-white/10">
@@ -189,8 +194,9 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
                   onClick={() => setActiveGroupId(group.id)}
                   className="w-full p-0.5 rounded-2xl hover:scale-[1.02] transition-transform shadow-xl group/folder animate-flowing-gradient"
                   style={{ 
-                    background: `linear-gradient(-45deg, ${primaryColor}, ${secondaryColor}, ${primaryColor})`,
-                    backgroundSize: '200% 200%'
+                    background: dynamicGradient,
+                    backgroundSize: '200% 200%',
+                    animationDuration: '7s'
                   }}
                 >
                   <div className="w-full h-24 bg-black/70 backdrop-blur-2xl rounded-[0.95rem] flex items-center px-6 gap-4 border border-white/10 relative overflow-hidden">
@@ -232,11 +238,14 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
           </div>
         )}
 
-        <div className="pt-12 text-center opacity-40">
-          <div className="flex items-center justify-center gap-2 mb-2">
+        <div className="pt-12 text-center">
+          <div className="flex items-center justify-center gap-2 mb-2 opacity-40">
             <Link2 size={12} style={{ color: primaryColor }} />
             <p className="text-[9px] font-black uppercase tracking-[0.4em] text-white">Powering with Linku Engine</p>
           </div>
+          <Link href="/" className="text-[8px] font-bold text-white/30 hover:text-white transition-colors uppercase tracking-widest">
+            Bergabung dengan {profile.displayName || profile.username} di Linku
+          </Link>
         </div>
       </div>
     </div>
@@ -245,6 +254,8 @@ export default function PublicProfileByUsername({ params }: { params: Promise<{ 
 
 function LinksInGroup({ userId, groupId, onLinkClick, primaryColor, secondaryColor }: { userId: string, groupId: string, onLinkClick: any, primaryColor: string, secondaryColor: string }) {
   const db = useFirestore();
+  const dynamicGradient = `linear-gradient(-45deg, ${primaryColor} 0%, ${secondaryColor} 50%, ${primaryColor} 100%)`;
+  
   const linksQuery = useMemoFirebase(() => query(collection(db, 'userProfiles', userId, 'linkGroups', groupId, 'links'), orderBy('order', 'asc')), [db, userId, groupId]);
   const { data: links } = useCollection(linksQuery);
 
@@ -256,8 +267,9 @@ function LinksInGroup({ userId, groupId, onLinkClick, primaryColor, secondaryCol
           onClick={() => onLinkClick(link.id, link.url, false, groupId)}
           className="w-full p-0.5 rounded-2xl hover:scale-[1.02] transition-transform shadow-xl group/link animate-flowing-gradient"
           style={{ 
-            background: `linear-gradient(-45deg, ${primaryColor}, ${secondaryColor}, ${primaryColor})`,
-            backgroundSize: '200% 200%'
+            background: dynamicGradient,
+            backgroundSize: '200% 200%',
+            animationDuration: '7s'
           }}
         >
           <div className="w-full h-20 bg-black/80 backdrop-blur-xl rounded-[0.95rem] flex items-center px-6 gap-4 border border-white/10">
