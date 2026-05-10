@@ -350,7 +350,7 @@ export default function ProfileClient({ username }: { username: string }) {
               className="w-full h-14 neon-gradient text-background font-black rounded-2xl glow-primary text-[10px] uppercase tracking-widest shadow-2xl active:scale-95 transition-all animate-flowing-gradient"
               style={{ background: dynamicGradient, backgroundSize: '200% 200%' }}
             >
-              <Link href="/register">
+              <Link href="/">
                 <UserPlus size={16} className="mr-2" /> Bergabung dengan {profile.displayName || profile.username} di Linku
               </Link>
             </Button>
