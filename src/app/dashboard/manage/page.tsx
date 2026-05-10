@@ -34,7 +34,7 @@ export default function ManagePage() {
 
   const currentParentId = currentPath.length > 0 ? currentPath[currentPath.length - 1].id : null;
 
-  // Query groups in current folder
+  // Query groups: Ordered by manual 'order'
   const groupsQuery = useMemoFirebase(() => {
     if (!user) return null;
     return query(
@@ -45,7 +45,7 @@ export default function ManagePage() {
   }, [db, user?.uid, currentParentId]);
   const { data: groups, isLoading: isGroupsLoading } = useCollection(groupsQuery);
 
-  // Query links in current folder
+  // Query links: Ordered by latest (createdAt desc)
   const linksQuery = useMemoFirebase(() => {
     if (!user) return null;
     return query(
@@ -159,7 +159,11 @@ export default function ManagePage() {
 
   const handleDelete = async (id: string, type: 'group' | 'link') => {
     if (!user) return;
-    if (!confirm(`Hapus ${type === 'group' ? 'kelompok' : 'tautan'} ini? Semua isinya juga akan terhapus.`)) return;
+    const confirmText = type === 'group' 
+      ? "Hapus kelompok ini? Semua isinya juga akan terhapus." 
+      : "Hapus tautan ini?";
+    
+    if (!window.confirm(confirmText)) return;
     
     try {
       const col = type === 'group' ? 'linkGroups' : 'links';
@@ -177,7 +181,7 @@ export default function ManagePage() {
         <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/70">Atur Struktur Konten Anda</p>
       </div>
 
-      {/* Breadcrumb Navigation */}
+      {/* Breadcrumb Navigation for Nested Groups */}
       <div className="flex items-center gap-2 overflow-x-auto py-2 scrollbar-hide">
         <Button 
           variant="ghost" 
@@ -211,7 +215,10 @@ export default function ManagePage() {
         {activeTab === 'group' && (
           <Card className="glass-card border-none rounded-[2rem] p-6 shadow-2xl relative overflow-hidden">
             <CardContent className="p-0 space-y-4 text-left">
-              <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase tracking-widest"><FolderPlus size={16} /><span>Buat kelompok baru {currentPath.length > 0 ? `di ${currentPath[currentPath.length-1].title}` : ''}</span></div>
+              <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase tracking-widest">
+                <FolderPlus size={16} />
+                <span>Buat kelompok baru {currentPath.length > 0 ? `di ${currentPath[currentPath.length-1].title}` : ''}</span>
+              </div>
               <Input placeholder="Nama Kelompok" value={newGroupTitle} onChange={(e) => setNewGroupTitle(e.target.value)} className="bg-white/5 border-none h-12 rounded-xl px-4 font-bold" />
               <label className="flex items-center justify-center gap-2 w-full h-12 bg-white/5 border border-dashed border-white/20 rounded-xl cursor-pointer hover:bg-white/10 transition-all">
                 <Upload size={16} className="text-primary" /><span className="text-[10px] font-black uppercase text-white/60">{newGroupImage ? 'Ganti Foto' : 'Unggah Foto'}</span>
@@ -225,7 +232,10 @@ export default function ManagePage() {
         {activeTab === 'link' && (
           <Card className="glass-card border-none rounded-[2.5rem] p-6 shadow-2xl text-left">
             <CardContent className="p-0 space-y-4">
-              <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase tracking-widest"><LinkIcon size={16} /><span>Tambah link {currentPath.length > 0 ? `ke ${currentPath[currentPath.length-1].title}` : 'mandiri'}</span></div>
+              <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase tracking-widest">
+                <LinkIcon size={16} />
+                <span>Tambah link {currentPath.length > 0 ? `ke ${currentPath[currentPath.length-1].title}` : 'mandiri'}</span>
+              </div>
               <Input placeholder="Judul Tautan" value={newLinkTitle} onChange={(e) => setNewLinkTitle(e.target.value)} className="bg-white/5 h-12 rounded-xl px-4 font-bold border-none" />
               <Input placeholder="URL (instagram.com/user)" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} className="bg-white/5 h-12 rounded-xl px-4 font-bold border-none" />
               <label className="flex items-center justify-center gap-2 w-full h-12 bg-white/5 border border-dashed border-white/20 rounded-xl cursor-pointer hover:bg-white/10 transition-all">
@@ -247,12 +257,12 @@ export default function ManagePage() {
           <div className="py-20 text-center animate-pulse text-primary font-black uppercase text-[10px]">Sinkronisasi...</div>
         ) : (
           <div className="space-y-4">
-            {/* List Groups First */}
+            {/* 1. List Groups First (Manual Ordering) */}
             {groups?.map((group, idx) => (
               <Card key={group.id} className="glass-card border-none rounded-2xl overflow-hidden shadow-xl p-4 flex items-center gap-4">
                 <div className="flex flex-col gap-1 mr-1">
                   <Button variant="ghost" size="icon" onClick={() => handleMoveGroup(group.id, 'up')} disabled={idx === 0} className="h-6 w-6 opacity-20 hover:opacity-100 disabled:opacity-0"><ChevronUp size={14}/></Button>
-                  <Button variant="ghost" size="icon" onClick={() => handleMoveGroup(group.id, 'down')} disabled={idx === groups.length - 1} className="h-6 w-6 opacity-20 hover:opacity-100 disabled:opacity-0"><ChevronDown size={14}/></Button>
+                  <Button variant="ghost" size="icon" onClick={() => handleMoveGroup(group.id, 'down')} disabled={idx === (groups?.length || 0) - 1} className="h-6 w-6 opacity-20 hover:opacity-100 disabled:opacity-0"><ChevronDown size={14}/></Button>
                 </div>
                 <div 
                   className="flex-1 flex items-center gap-4 cursor-pointer"
@@ -273,7 +283,7 @@ export default function ManagePage() {
               </Card>
             ))}
 
-            {/* List Links Second */}
+            {/* 2. List Links Second (Latest First) */}
             {links?.map((link) => (
               <Card key={link.id} className="glass-card border-none rounded-2xl overflow-hidden shadow-xl p-4 flex items-center gap-4">
                 <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/5 shrink-0 ml-7">
