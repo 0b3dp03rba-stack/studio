@@ -1,13 +1,13 @@
 
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Trash2, Link as LinkIcon, FolderPlus, Upload, LayoutGrid, ChevronUp, ChevronDown, Edit3, Loader2, ArrowLeft, ChevronRight, Home } from 'lucide-react';
+import { Plus, Trash2, Link as LinkIcon, FolderPlus, Upload, LayoutGrid, ChevronUp, ChevronDown, Edit3, Loader2 } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, addDoc, serverTimestamp, doc, deleteDoc, query, orderBy, updateDoc, where } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, deleteDoc, query, orderBy, updateDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import ImageCropperModal from '@/components/ImageCropperModal';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -18,8 +18,6 @@ export default function ManagePage() {
   const { toast } = useToast();
   
   const [activeTab, setActiveTab] = useState<'group' | 'link'>('group');
-  const [currentPath, setCurrentPath] = useState<{id: string, title: string}[]>([]); // Breadcrumb
-  
   const [newGroupTitle, setNewGroupTitle] = useState('');
   const [newGroupImage, setNewGroupImage] = useState('');
   const [newLinkTitle, setNewLinkTitle] = useState('');
@@ -32,28 +30,18 @@ export default function ManagePage() {
   const [tempImage, setTempImage] = useState<string | null>(null);
   const [activeCropTarget, setActiveCropTarget] = useState<'group' | 'link' | 'edit' | null>(null);
 
-  const currentParentId = currentPath.length > 0 ? currentPath[currentPath.length - 1].id : null;
-
   // Query groups: Ordered by manual 'order'
   const groupsQuery = useMemoFirebase(() => {
     if (!user) return null;
-    return query(
-      collection(db, 'userProfiles', user.uid, 'linkGroups'), 
-      where('parentId', '==', currentParentId),
-      orderBy('order', 'asc')
-    );
-  }, [db, user?.uid, currentParentId]);
+    return query(collection(db, 'userProfiles', user.uid, 'linkGroups'), orderBy('order', 'asc'));
+  }, [db, user?.uid]);
   const { data: groups, isLoading: isGroupsLoading } = useCollection(groupsQuery);
 
   // Query links: Ordered by latest (createdAt desc)
   const linksQuery = useMemoFirebase(() => {
     if (!user) return null;
-    return query(
-      collection(db, 'userProfiles', user.uid, 'links'), 
-      where('parentId', '==', currentParentId),
-      orderBy('createdAt', 'desc')
-    );
-  }, [db, user?.uid, currentParentId]);
+    return query(collection(db, 'userProfiles', user.uid, 'links'), orderBy('createdAt', 'desc'));
+  }, [db, user?.uid]);
   const { data: links, isLoading: isLinksLoading } = useCollection(linksQuery);
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>, target: 'group' | 'link' | 'edit') => {
@@ -80,7 +68,6 @@ export default function ManagePage() {
     try {
       await addDoc(collection(db, 'userProfiles', user.uid, 'linkGroups'), {
         userId: user.uid,
-        parentId: currentParentId,
         title: newGroupTitle,
         imageUrl: newGroupImage || '',
         isEnabled: true,
@@ -89,9 +76,9 @@ export default function ManagePage() {
       });
       setNewGroupTitle('');
       setNewGroupImage('');
-      toast({ title: "Kelompok Dibuat" });
+      toast({ title: "Kelompok Berhasil Dibuat" });
     } catch (e) {
-      toast({ variant: "destructive", title: "Gagal" });
+      toast({ variant: "destructive", title: "Gagal membuat kelompok" });
     }
   };
 
@@ -100,7 +87,6 @@ export default function ManagePage() {
     try {
       await addDoc(collection(db, 'userProfiles', user.uid, 'links'), {
         userId: user.uid,
-        parentId: currentParentId,
         title: newLinkTitle,
         url: newLinkUrl.startsWith('http') ? newLinkUrl : `https://${newLinkUrl}`,
         imageUrl: newLinkImage || '',
@@ -111,9 +97,9 @@ export default function ManagePage() {
       setNewLinkTitle('');
       setNewLinkUrl('');
       setNewLinkImage('');
-      toast({ title: "Tautan Ditambahkan" });
+      toast({ title: "Tautan Berhasil Ditambahkan" });
     } catch (e) {
-      toast({ variant: "destructive", title: "Gagal" });
+      toast({ variant: "destructive", title: "Gagal menambah tautan" });
     }
   };
 
@@ -148,10 +134,10 @@ export default function ManagePage() {
       }
 
       await updateDoc(docRef, updateData);
-      toast({ title: "Berhasil Diperbarui" });
+      toast({ title: "Pembaruan Berhasil" });
       setEditingItem(null);
     } catch (e) {
-      toast({ variant: "destructive", title: "Gagal memperbarui" });
+      toast({ variant: "destructive", title: "Gagal memperbarui data" });
     } finally {
       setIsSavingEdit(false);
     }
@@ -159,18 +145,14 @@ export default function ManagePage() {
 
   const handleDelete = async (id: string, type: 'group' | 'link') => {
     if (!user) return;
-    const confirmText = type === 'group' 
-      ? "Hapus kelompok ini? Semua isinya juga akan terhapus." 
-      : "Hapus tautan ini?";
-    
-    if (!window.confirm(confirmText)) return;
+    if (!window.confirm(`Yakin ingin menghapus ${type === 'group' ? 'kelompok' : 'tautan'} ini?`)) return;
     
     try {
       const col = type === 'group' ? 'linkGroups' : 'links';
       await deleteDoc(doc(db, 'userProfiles', user.uid, col, id));
-      toast({ title: "Terhapus" });
+      toast({ title: "Item Telah Dihapus" });
     } catch (e) {
-      toast({ variant: "destructive", title: "Gagal menghapus" });
+      toast({ variant: "destructive", title: "Gagal menghapus item" });
     }
   };
 
@@ -178,32 +160,7 @@ export default function ManagePage() {
     <div className="space-y-8 animate-in pb-32">
       <div className="space-y-1">
         <h1 className="text-4xl font-black tracking-tighter text-white uppercase">Manage Hub</h1>
-        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/70">Atur Struktur Konten Anda</p>
-      </div>
-
-      {/* Breadcrumb Navigation for Nested Groups */}
-      <div className="flex items-center gap-2 overflow-x-auto py-2 scrollbar-hide">
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={() => setCurrentPath([])}
-          className={`h-10 rounded-xl px-4 flex items-center gap-2 ${currentPath.length === 0 ? 'bg-primary/20 text-primary' : 'text-white/40'}`}
-        >
-          <Home size={16} /> Home
-        </Button>
-        {currentPath.map((folder, idx) => (
-          <div key={folder.id} className="flex items-center gap-2">
-            <ChevronRight size={14} className="text-white/20" />
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => setCurrentPath(currentPath.slice(0, idx + 1))}
-              className={`h-10 rounded-xl px-4 ${idx === currentPath.length - 1 ? 'bg-primary/20 text-primary' : 'text-white/40'}`}
-            >
-              {folder.title}
-            </Button>
-          </div>
-        ))}
+        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/70">Atur Struktur Katalog Anda</p>
       </div>
 
       <div className="grid gap-6">
@@ -217,7 +174,7 @@ export default function ManagePage() {
             <CardContent className="p-0 space-y-4 text-left">
               <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase tracking-widest">
                 <FolderPlus size={16} />
-                <span>Buat kelompok baru {currentPath.length > 0 ? `di ${currentPath[currentPath.length-1].title}` : ''}</span>
+                <span>Buat kelompok baru</span>
               </div>
               <Input placeholder="Nama Kelompok" value={newGroupTitle} onChange={(e) => setNewGroupTitle(e.target.value)} className="bg-white/5 border-none h-12 rounded-xl px-4 font-bold" />
               <label className="flex items-center justify-center gap-2 w-full h-12 bg-white/5 border border-dashed border-white/20 rounded-xl cursor-pointer hover:bg-white/10 transition-all">
@@ -234,10 +191,10 @@ export default function ManagePage() {
             <CardContent className="p-0 space-y-4">
               <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase tracking-widest">
                 <LinkIcon size={16} />
-                <span>Tambah link {currentPath.length > 0 ? `ke ${currentPath[currentPath.length-1].title}` : 'mandiri'}</span>
+                <span>Tambah link mandiri</span>
               </div>
               <Input placeholder="Judul Tautan" value={newLinkTitle} onChange={(e) => setNewLinkTitle(e.target.value)} className="bg-white/5 h-12 rounded-xl px-4 font-bold border-none" />
-              <Input placeholder="URL (instagram.com/user)" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} className="bg-white/5 h-12 rounded-xl px-4 font-bold border-none" />
+              <Input placeholder="URL (misal: instagram.com/user)" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} className="bg-white/5 h-12 rounded-xl px-4 font-bold border-none" />
               <label className="flex items-center justify-center gap-2 w-full h-12 bg-white/5 border border-dashed border-white/20 rounded-xl cursor-pointer hover:bg-white/10 transition-all">
                 <Upload size={16} className="text-primary" /><span className="text-[10px] font-black uppercase text-white/60">{newLinkImage ? 'Ganti Foto' : 'Unggah Foto'}</span>
                 <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageSelect(e, 'link')} />
@@ -250,11 +207,11 @@ export default function ManagePage() {
 
       <div className="space-y-5">
         <h3 className="font-black text-[11px] uppercase tracking-[0.3em] text-white/50 flex items-center gap-2 px-1">
-          <LayoutGrid size={16} className="text-primary" /> Isi: {currentPath.length > 0 ? currentPath[currentPath.length-1].title : 'Hub Utama'}
+          <LayoutGrid size={16} className="text-primary" /> Daftar Isi Hub
         </h3>
         
         {isGroupsLoading || isLinksLoading ? (
-          <div className="py-20 text-center animate-pulse text-primary font-black uppercase text-[10px]">Sinkronisasi...</div>
+          <div className="py-20 text-center animate-pulse text-primary font-black uppercase text-[10px]">Sinkronisasi Database...</div>
         ) : (
           <div className="space-y-4">
             {/* 1. List Groups First (Manual Ordering) */}
@@ -264,17 +221,12 @@ export default function ManagePage() {
                   <Button variant="ghost" size="icon" onClick={() => handleMoveGroup(group.id, 'up')} disabled={idx === 0} className="h-6 w-6 opacity-20 hover:opacity-100 disabled:opacity-0"><ChevronUp size={14}/></Button>
                   <Button variant="ghost" size="icon" onClick={() => handleMoveGroup(group.id, 'down')} disabled={idx === (groups?.length || 0) - 1} className="h-6 w-6 opacity-20 hover:opacity-100 disabled:opacity-0"><ChevronDown size={14}/></Button>
                 </div>
-                <div 
-                  className="flex-1 flex items-center gap-4 cursor-pointer"
-                  onClick={() => setCurrentPath([...currentPath, {id: group.id, title: group.title}])}
-                >
-                  <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/5 shrink-0">
-                    {group.imageUrl ? <img src={group.imageUrl} className="w-full h-full object-cover" /> : <LayoutGrid size={18} className="text-primary" />}
-                  </div>
-                  <div className="min-w-0 text-left">
-                    <h4 className="font-bold text-white text-sm truncate">{group.title}</h4>
-                    <p className="text-[10px] text-white/40 uppercase tracking-widest font-black">KELOMPOK (Klik Buka)</p>
-                  </div>
+                <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/5 shrink-0">
+                  {group.imageUrl ? <img src={group.imageUrl} className="w-full h-full object-cover" /> : <LayoutGrid size={18} className="text-primary" />}
+                </div>
+                <div className="flex-1 min-w-0 text-left">
+                  <h4 className="font-bold text-white text-sm truncate">{group.title}</h4>
+                  <p className="text-[10px] text-white/40 uppercase tracking-widest font-black">KELOMPOK</p>
                 </div>
                 <div className="flex items-center gap-1">
                   <Button size="icon" variant="ghost" onClick={() => setEditingItem({ ...group, type: 'group' })} className="h-10 w-10 text-white/40 hover:text-primary transition-colors"><Edit3 size={16} /></Button>
@@ -299,10 +251,6 @@ export default function ManagePage() {
                 </div>
               </Card>
             ))}
-            
-            {(groups?.length === 0 && links?.length === 0) && (
-              <div className="text-center py-20 opacity-20 font-black uppercase text-[10px] tracking-widest">Folder ini masih kosong.</div>
-            )}
           </div>
         )}
       </div>

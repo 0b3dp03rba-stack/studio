@@ -1,15 +1,13 @@
 
 "use client";
 
-import { useMemo, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc, collection, updateDoc, increment, getDoc, query, orderBy, onSnapshot, serverTimestamp, where } from 'firebase/firestore';
-import { User, Share2, MousePointer2, Link2, ChevronRight, LayoutGrid, ArrowLeft, Instagram, Youtube, Facebook, Mail, MessageCircle, ExternalLink, Globe, Search, X, Sparkles, UserPlus } from 'lucide-react';
+import { doc, collection, updateDoc, increment, getDoc, query, orderBy, serverTimestamp } from 'firebase/firestore';
+import { User, Share2, MousePointer2, Link2, ChevronRight, LayoutGrid, Instagram, Youtube, Facebook, Mail, MessageCircle, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const TikTokIcon = ({ className, size = 20 }: { className?: string, size?: number }) => (
   <svg 
@@ -17,19 +15,12 @@ const TikTokIcon = ({ className, size = 20 }: { className?: string, size?: numbe
   ><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" /></svg>
 );
 
-const platformIcons: Record<string, any> = {
-  Instagram: Instagram, YouTube: Youtube, TikTok: TikTokIcon, Facebook: Facebook, WhatsApp: MessageCircle, Email: Mail, Website: Globe
-};
-
 export default function ProfileClient({ username }: { username: string }) {
   const db = useFirestore();
   const { toast } = useToast();
   
   const [resolvedUserId, setResolvedUserId] = useState<string | null>(null);
   const [isResolving, setIsResolving] = useState(true);
-  const [currentPath, setCurrentPath] = useState<{id: string, title: string}[]>([]);
-  const [selectedSocial, setSelectedSocial] = useState<any>(null);
-  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     const resolveUserAndTrackView = async () => {
@@ -59,29 +50,19 @@ export default function ProfileClient({ username }: { username: string }) {
     resolveUserAndTrackView();
   }, [db, username]);
 
-  const currentParentId = currentPath.length > 0 ? currentPath[currentPath.length - 1].id : null;
-
   const profileRef = useMemoFirebase(() => resolvedUserId ? doc(db, 'userProfiles', resolvedUserId) : null, [db, resolvedUserId]);
   const { data: profile } = useDoc(profileRef);
 
   const groupsQuery = useMemoFirebase(() => {
     if (!resolvedUserId) return null;
-    return query(
-      collection(db, 'userProfiles', resolvedUserId, 'linkGroups'), 
-      where('parentId', '==', currentParentId),
-      orderBy('order', 'asc')
-    );
-  }, [db, resolvedUserId, currentParentId]);
+    return query(collection(db, 'userProfiles', resolvedUserId, 'linkGroups'), orderBy('order', 'asc'));
+  }, [db, resolvedUserId]);
   const { data: groups } = useCollection(groupsQuery);
 
   const linksQuery = useMemoFirebase(() => {
     if (!resolvedUserId) return null;
-    return query(
-      collection(db, 'userProfiles', resolvedUserId, 'links'), 
-      where('parentId', '==', currentParentId),
-      orderBy('createdAt', 'desc')
-    );
-  }, [db, resolvedUserId, currentParentId]);
+    return query(collection(db, 'userProfiles', resolvedUserId, 'links'), orderBy('createdAt', 'desc'));
+  }, [db, resolvedUserId]);
   const { data: links } = useCollection(linksQuery);
 
   const handleLinkClick = (linkId: string, url: string) => {
@@ -115,16 +96,7 @@ export default function ProfileClient({ username }: { username: string }) {
     >
       <div className="max-w-md mx-auto space-y-8 animate-in relative z-10 p-6 pb-24">
         
-        <div className="flex justify-between items-center">
-          {currentPath.length > 0 ? (
-            <Button 
-              variant="ghost" 
-              onClick={() => setCurrentPath(currentPath.slice(0, -1))}
-              className="glass-card text-white hover:bg-white/10 border-none px-4 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2"
-            >
-              <ArrowLeft size={16} /> Kembali
-            </Button>
-          ) : <div className="w-10 h-10" />}
+        <div className="flex justify-end">
           <Button variant="ghost" size="icon" onClick={() => { navigator.clipboard.writeText(window.location.href); toast({title: "Tersalin"}); }} className="w-12 h-12 rounded-2xl glass-card text-white">
             <Share2 size={20} />
           </Button>
@@ -146,12 +118,11 @@ export default function ProfileClient({ username }: { username: string }) {
         </div>
 
         <div className="space-y-6">
-          {/* Folders First */}
+          {/* Groups First */}
           {groups?.map(group => (
-            <button
+            <div
               key={group.id}
-              onClick={() => setCurrentPath([...currentPath, {id: group.id, title: group.title}])}
-              className="w-full p-0.5 rounded-2xl hover:scale-[1.02] transition-transform animate-flowing-gradient"
+              className="w-full p-0.5 rounded-2xl animate-flowing-gradient"
               style={{ backgroundImage: dynamicGradient, backgroundSize: '200% 200%' }}
             >
               <div className="w-full h-24 bg-black/70 backdrop-blur-2xl rounded-[0.95rem] flex items-center px-6 gap-4 border border-white/10 relative overflow-hidden">
@@ -160,10 +131,10 @@ export default function ProfileClient({ username }: { username: string }) {
                 </div>
                 <div className="flex-1 text-left">
                   <span className="text-lg font-black text-white tracking-tight">{group.title}</span>
-                  <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] mt-1 flex items-center gap-2">Buka <ChevronRight size={12} style={{ color: primaryColor }} /></p>
+                  <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] mt-1">Koleksi</p>
                 </div>
               </div>
-            </button>
+            </div>
           ))}
 
           {/* Links Second */}
@@ -189,7 +160,7 @@ export default function ProfileClient({ username }: { username: string }) {
 
         <div className="pt-12 text-center">
           <Button asChild className="w-full h-14 neon-gradient text-background font-black rounded-2xl glow-primary text-[10px] uppercase tracking-widest shadow-2xl transition-all animate-flowing-gradient" style={{ backgroundImage: dynamicGradient, backgroundSize: '200% 200%' }}>
-            <Link href="/"><UserPlus size={16} className="mr-2" /> Buat Linku Kamu Sekarang</Link>
+            <Link href="/"><User size={16} className="mr-2" /> Buat Linku Kamu Sekarang</Link>
           </Button>
         </div>
       </div>
