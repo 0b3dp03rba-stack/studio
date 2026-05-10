@@ -49,22 +49,28 @@ export default function ProfileClient({ username }: { username: string }) {
   const [allGroupLinks, setAllGroupLinks] = useState<any[]>([]);
 
   useEffect(() => {
-    const resolveUser = async () => {
+    const resolveUserAndTrackView = async () => {
       try {
         const userRef = doc(db, 'usernames', username.toLowerCase());
         const userSnap = await getDoc(userRef);
+        
+        let uid = null;
         if (userSnap.exists()) {
-          const uid = userSnap.data().userId;
-          setResolvedUserId(uid);
-          // Increment daily views
-          updateDoc(doc(db, 'userProfiles', uid), { views: increment(1) }).catch(() => {});
+          uid = userSnap.data().userId;
         } else {
+          // Fallback if accessed by UID directly
           const profileRef = doc(db, 'userProfiles', username);
           const profileSnap = await getDoc(profileRef);
-          if (profileSnap.exists()) {
-            setResolvedUserId(username);
-            updateDoc(doc(db, 'userProfiles', username), { views: increment(1) }).catch(() => {});
-          }
+          if (profileSnap.exists()) uid = username;
+        }
+
+        if (uid) {
+          setResolvedUserId(uid);
+          // Increment total views on load
+          updateDoc(doc(db, 'userProfiles', uid), { 
+            views: increment(1),
+            lastViewedAt: serverTimestamp() 
+          }).catch(() => {});
         }
       } catch (e) {
         console.error("Resolution failed:", e);
@@ -72,7 +78,7 @@ export default function ProfileClient({ username }: { username: string }) {
         setIsResolving(false);
       }
     };
-    resolveUser();
+    resolveUserAndTrackView();
   }, [db, username]);
 
   const profileRef = useMemoFirebase(() => resolvedUserId ? doc(db, 'userProfiles', resolvedUserId) : null, [db, resolvedUserId]);

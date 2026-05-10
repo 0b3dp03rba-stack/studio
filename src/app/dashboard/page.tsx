@@ -1,17 +1,16 @@
 
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { MousePointer2, Eye, Star, MessageSquareQuote, ChevronRight, TrendingUp, Sparkles } from 'lucide-react';
+import { MousePointer2, Eye, Star, TrendingUp, Sparkles, LayoutGrid } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, orderBy, setDoc, doc, serverTimestamp, limit } from 'firebase/firestore';
+import { collection, query, orderBy, setDoc, doc, serverTimestamp, limit, onSnapshot } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '@/lib/utils-app';
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { Bar, BarChart, XAxis, YAxis, ResponsiveContainer } from 'recharts';
+import { Bar, BarChart, XAxis, ResponsiveContainer, Cell, Tooltip } from 'recharts';
 
 export default function DashboardPage() {
   const { user } = useUser();
@@ -21,6 +20,7 @@ export default function DashboardPage() {
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [isRatingSaving, setIsRatingSaving] = useState(false);
+  const [allLinks, setAllLinks] = useState<any[]>([]);
 
   const profileRef = useMemoFirebase(() => user ? doc(db, 'userProfiles', user.uid) : null, [db, user?.uid]);
   const { data: profile } = useDoc(profileRef);
@@ -29,33 +29,59 @@ export default function DashboardPage() {
   const { data: userReview } = useDoc(userReviewRef);
 
   // Initialize rating from existing review
-  useState(() => {
+  useEffect(() => {
     if (userReview) {
       setRating(userReview.rating);
       setComment(userReview.comment);
     }
-  });
+  }, [userReview]);
 
-  // Stats Logic: Ambil semua link dari root links dan linkGroups sub-links
-  // Note: Untuk MVP, kita tampilkan stats dari root links (Standalone)
-  const standaloneLinksQuery = useMemoFirebase(() => {
-    if (!user) return null;
-    return query(collection(db, 'userProfiles', user.uid, 'links'), orderBy('clicks', 'desc'), limit(10));
-  }, [db, user?.uid]);
-  const { data: topLinks, isLoading: isLinksLoading } = useCollection(standaloneLinksQuery);
+  // Aggregate ALL links (standalone + inside groups) for accurate stats
+  useEffect(() => {
+    if (!user) return;
 
-  const chartData = useMemo(() => {
-    if (!topLinks) return [];
-    return topLinks.slice(0, 4).map(l => ({
-      name: l.title.length > 10 ? l.title.slice(0, 10) + '...' : l.title,
-      clicks: l.clicks || 0,
-      fullTitle: l.title
-    }));
-  }, [topLinks]);
+    // Listen to standalone links
+    const unsubStandalone = onSnapshot(collection(db, 'userProfiles', user.uid, 'links'), (snap) => {
+      const standalone = snap.docs.map(d => ({ ...d.data(), id: d.id, isStandalone: true }));
+      setAllLinks(prev => {
+        const others = prev.filter(l => !l.isStandalone);
+        return [...others, ...standalone];
+      });
+    });
+
+    // Listen to groups and their links
+    const unsubGroups = onSnapshot(collection(db, 'userProfiles', user.uid, 'linkGroups'), (snap) => {
+      snap.docs.forEach(groupDoc => {
+        onSnapshot(collection(db, 'userProfiles', user!.uid, 'linkGroups', groupDoc.id, 'links'), (linkSnap) => {
+          const grouped = linkSnap.docs.map(d => ({ ...d.data(), id: d.id, isStandalone: false, groupId: groupDoc.id }));
+          setAllLinks(prev => {
+            const others = prev.filter(l => l.groupId !== groupDoc.id);
+            return [...others, ...grouped];
+          });
+        });
+      });
+    });
+
+    return () => {
+      unsubStandalone();
+      unsubGroups();
+    };
+  }, [user, db]);
+
+  const topPerformers = useMemo(() => {
+    return [...allLinks]
+      .sort((a, b) => (b.clicks || 0) - (a.clicks || 0))
+      .slice(0, 4)
+      .map(l => ({
+        name: l.title.length > 8 ? l.title.slice(0, 8) + '..' : l.title,
+        clicks: l.clicks || 0,
+        fullTitle: l.title
+      }));
+  }, [allLinks]);
 
   const totalClicks = useMemo(() => {
-    return topLinks?.reduce((acc, curr) => acc + (curr.clicks || 0), 0) || 0;
-  }, [topLinks]);
+    return allLinks.reduce((acc, curr) => acc + (curr.clicks || 0), 0);
+  }, [allLinks]);
 
   const handleSaveRating = async () => {
     if (!user || !profile || rating === 0 || !comment.trim()) {
@@ -85,7 +111,7 @@ export default function DashboardPage() {
     <div className="space-y-8 animate-in pb-12">
       <div className="space-y-1">
         <h1 className="text-4xl font-black tracking-tighter text-white uppercase">Overview</h1>
-        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/70">Ringkasan Performa Anda</p>
+        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/70">Ringkasan Performa Real-time</p>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -121,24 +147,47 @@ export default function DashboardPage() {
              <div className="w-8 h-8 rounded-lg neon-gradient flex items-center justify-center text-background">
                <TrendingUp size={16} />
              </div>
-             <h3 className="font-black text-xs uppercase tracking-widest">Top Performers</h3>
+             <h3 className="font-black text-xs uppercase tracking-widest">Top Performers (Clicks)</h3>
           </div>
-          <Button variant="ghost" size="sm" className="text-[9px] font-black text-primary uppercase tracking-widest">Details</Button>
         </div>
 
-        {isLinksLoading ? (
-          <div className="h-40 flex items-center justify-center animate-pulse opacity-20 font-black uppercase text-[10px]">Menganalisa Data...</div>
-        ) : chartData.length > 0 ? (
+        {allLinks.length > 0 ? (
           <div className="h-48 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData}>
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#666', fontSize: 9, fontWeight: 900}} />
-                <Bar dataKey="clicks" fill="currentColor" className="text-primary" radius={[4, 4, 0, 0]} />
+              <BarChart data={topPerformers}>
+                <XAxis 
+                  dataKey="name" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{fill: '#888', fontSize: 10, fontWeight: 900}} 
+                />
+                <Tooltip 
+                  cursor={{fill: 'rgba(255,255,255,0.05)'}}
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      return (
+                        <div className="bg-black/90 border border-white/10 p-2 rounded-lg backdrop-blur-xl">
+                          <p className="text-[10px] font-black text-white uppercase">{payload[0].payload.fullTitle}</p>
+                          <p className="text-xs font-bold text-primary">{payload[0].value} Klik</p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Bar dataKey="clicks" radius={[6, 6, 0, 0]}>
+                  {topPerformers.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={index === 0 ? 'hsl(var(--primary))' : 'rgba(255,255,255,0.1)'} />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
         ) : (
-          <div className="py-12 text-center opacity-20 font-black uppercase text-[10px] tracking-widest">Belum ada data klik.</div>
+          <div className="py-12 text-center opacity-20 font-black uppercase text-[10px] tracking-widest flex flex-col items-center gap-4">
+            <LayoutGrid size={40} />
+            <span>Belum ada data interaksi.</span>
+          </div>
         )}
       </Card>
 
@@ -164,10 +213,10 @@ export default function DashboardPage() {
               placeholder="Berikan ulasan jujur Anda..." 
               value={comment} 
               onChange={(e) => setComment(e.target.value)}
-              className="bg-white/5 border-white/5 h-28 rounded-2xl p-4 text-xs font-medium leading-relaxed"
+              className="bg-white/5 border-white/5 h-28 rounded-2xl p-4 text-xs font-medium leading-relaxed border-none focus-visible:ring-primary/20"
             />
             <Button onClick={handleSaveRating} disabled={isRatingSaving || rating === 0 || !comment} className="w-full h-14 neon-gradient text-background font-black rounded-2xl glow-primary uppercase text-[10px] tracking-widest">
-              {isRatingSaving ? "MEMPROSES..." : (userReview ? "PERBARUI RATING" : "KIRIM Ulasan")}
+              {isRatingSaving ? "MEMPROSES..." : (userReview ? "PERBARUI ULASAN" : "KIRIM TESTIMONI")}
             </Button>
           </CardContent>
         </Card>
