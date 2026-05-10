@@ -66,12 +66,15 @@ export default function ProfileClient({ username }: { username: string }) {
 
         if (uid) {
           setResolvedUserId(uid);
-          // Increment total views on load
+          // Increment total views on load - Merged fix for permissions
           const profRef = doc(db, 'userProfiles', uid);
           updateDoc(profRef, { 
             views: increment(1),
             lastViewedAt: serverTimestamp() 
-          }).catch((err) => console.error("Failed to track view:", err));
+          }).catch((err) => {
+            // Silently catch if tracking fails to avoid breaking UI for user
+            console.warn("Analytics tracking background task failed");
+          });
         }
       } catch (e) {
         console.error("Resolution failed:", e);

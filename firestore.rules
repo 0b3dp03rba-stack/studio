@@ -11,7 +11,9 @@ service cloud.firestore {
     // Spesifik untuk userProfiles demi keamanan tambahan saat menulis
     match /userProfiles/{userId} {
       allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == userId;
+      // Izinkan update publik untuk increment views/statistik
+      allow update: if true;
+      allow create, delete: if request.auth != null && request.auth.uid == userId;
       
       match /{allSubcollections=**} {
         allow read: if true;
@@ -27,6 +29,9 @@ service cloud.firestore {
 
     // Membolehkan publik melakukan increment clicks pada link
     match /userProfiles/{userId}/links/{linkId} {
+      allow update: if true;
+    }
+    match /userProfiles/{userId}/linkGroups/{groupId} {
       allow update: if true;
     }
     match /userProfiles/{userId}/linkGroups/{groupId}/links/{linkId} {
