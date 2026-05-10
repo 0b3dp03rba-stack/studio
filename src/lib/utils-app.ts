@@ -15,6 +15,34 @@ export function formatDate(dateString: string) {
 }
 
 /**
+ * SMART REDIRECT: Membangun link sosial media otomatis berdasarkan platform dan handle.
+ */
+export function getSmartSocialUrl(platform: string, handle: string): string {
+  const cleanHandle = handle.trim();
+  if (!cleanHandle) return '#';
+
+  switch (platform) {
+    case 'Instagram':
+      return `https://instagram.com/${cleanHandle.replace('@', '')}`;
+    case 'YouTube':
+      return `https://youtube.com/${cleanHandle.startsWith('@') ? cleanHandle : '@' + cleanHandle}`;
+    case 'TikTok':
+      return `https://tiktok.com/@${cleanHandle.replace('@', '')}`;
+    case 'Facebook':
+      return `https://facebook.com/${cleanHandle}`;
+    case 'WhatsApp':
+      // Menghapus karakter non-digit untuk wa.me
+      return `https://wa.me/${cleanHandle.replace(/[^0-9]/g, '')}`;
+    case 'Email':
+      return `mailto:${cleanHandle}`;
+    case 'Website':
+      return cleanHandle.startsWith('http') ? cleanHandle : `https://${cleanHandle}`;
+    default:
+      return cleanHandle.startsWith('http') ? cleanHandle : `https://${cleanHandle}`;
+  }
+}
+
+/**
  * 20 Warna Sekunder "Prestige" Terkurasi (Elegan & Vibrant)
  */
 export const PRESTIGE_SECONDARIES = [

@@ -8,8 +8,9 @@ import { User, Share2, MousePointer2, Link2, LayoutGrid, ChevronRight, Search, X
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import Link from 'next/link';
+import { getSmartSocialUrl } from '@/lib/utils-app';
 
 const TikTokIcon = ({ className, size = 16 }: { className?: string, size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" /></svg>
@@ -346,7 +347,7 @@ export default function ProfileClient({ username }: { username: string }) {
             </div>
             
             <div className="space-y-1">
-              <h2 className="text-2xl font-black text-white tracking-tighter uppercase">{selectedSocial?.platform}</h2>
+              <DialogTitle className="text-2xl font-black text-white tracking-tighter uppercase">{selectedSocial?.platform}</DialogTitle>
               <p className="text-sm font-bold text-primary uppercase tracking-widest">@{selectedSocial?.label}</p>
             </div>
 
@@ -356,7 +357,7 @@ export default function ProfileClient({ username }: { username: string }) {
               style={{ backgroundImage: dynamicGradient, backgroundSize: '200% 200%' }}
             >
               <a 
-                href={selectedSocial?.platform === 'Email' ? `mailto:${selectedSocial.label}` : (selectedSocial?.url || '#')} 
+                href={selectedSocial ? getSmartSocialUrl(selectedSocial.platform, selectedSocial.label) : '#'} 
                 target="_blank" 
                 rel="noopener noreferrer"
               >

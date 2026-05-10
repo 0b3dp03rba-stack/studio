@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { User, LogOut, Mail, Edit3, Upload, AtSign, Loader2, Palette, Share2, Plus, Trash2, Instagram, Youtube, Facebook, MessageCircle, Link2, Globe, Copy, Sparkles } from 'lucide-react';
+import { User, LogOut, Mail, Edit3, Upload, AtSign, Loader2, Palette, Share2, Plus, Trash2, Instagram, Youtube, Facebook, MessageCircle, Link2, Globe, Copy, Sparkles, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -216,6 +216,12 @@ export default function ProfilPage() {
         <Card className="glass-card border-none rounded-[2.5rem] overflow-hidden">
           <CardContent className="p-8 space-y-6">
             <h3 className="text-xs font-black uppercase tracking-widest flex items-center gap-2 text-white"><Share2 size={16} className="text-primary" /> Sosial Media</h3>
+            
+            <div className="p-4 bg-primary/10 rounded-2xl border border-primary/20 flex gap-4 items-start">
+               <AlertCircle size={20} className="text-primary shrink-0 mt-0.5" />
+               <p className="text-[10px] font-black uppercase leading-relaxed text-primary/80">Cukup masukkan username/ID saja. Sistem akan otomatis membuat link redirect yang cerdas ke profil Anda.</p>
+            </div>
+
             <div className="grid gap-3">
               <div className="grid grid-cols-2 gap-3">
                 <Select value={newSocial.platform} onValueChange={(v) => setNewSocial({...newSocial, platform: v})}>
@@ -228,9 +234,8 @@ export default function ProfilPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                <Input value={newSocial.label} onChange={(e) => setNewSocial({...newSocial, label: e.target.value})} placeholder="@username" className="bg-white/5 border-none h-12 rounded-xl text-xs font-bold" />
+                <Input value={newSocial.label} onChange={(e) => setNewSocial({...newSocial, label: e.target.value})} placeholder="Username / ID" className="bg-white/5 border-none h-12 rounded-xl text-xs font-bold" />
               </div>
-              <Input value={newSocial.url} onChange={(e) => setNewSocial({...newSocial, url: e.target.value})} placeholder="Link Profil (https://...)" className="bg-white/5 border-none h-12 rounded-xl text-xs font-medium" />
             </div>
             <Button onClick={handleAddSocialLink} className="w-full h-12 bg-white/5 hover:bg-white/10 text-white font-black rounded-xl text-[9px] uppercase tracking-widest border border-white/5">
               Hubungkan Media
