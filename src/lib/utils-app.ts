@@ -94,7 +94,6 @@ export function getRecommendedSecondary(primaryHex: string): string {
 
 /**
  * Mengekstrak 20 palet warna dari gambar base64.
- * Diurutkan dari yang paling vibrant (terang/jenuh) ke yang lebih redup.
  */
 export async function extractPaletteFromImage(base64: string): Promise<string[]> {
   return new Promise((resolve) => {
@@ -150,12 +149,4 @@ export async function extractPaletteFromImage(base64: string): Promise<string[]>
     };
     img.onerror = () => resolve(['#FF0000', '#FFD700', '#00FFFF', '#FFFFFF']);
   });
-}
-
-export function getBestContrastColor(hex: string): string {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-  return brightness > 128 ? '#000000' : '#ffffff';
 }

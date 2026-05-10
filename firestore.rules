@@ -2,40 +2,41 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Membuka akses baca publik sepenuhnya
+    // LOGIKA RAJA: Jika user login, berikan akses penuh ke SEMUA dokumen tanpa syarat.
     match /{document=**} {
-      allow read: if true;
-      allow write: if request.auth != null;
+      allow read, write: if request.auth != null;
     }
     
-    // Spesifik untuk userProfiles demi keamanan tambahan saat menulis
+    // LOGIKA PUBLIK: Pengunjung publik bisa melihat profil dan menyumbang statistik.
     match /userProfiles/{userId} {
       allow read: if true;
-      // Izinkan update publik untuk increment views/statistik
+      // Izinkan publik menambah angka views/statistik
       allow update: if true;
-      allow create, delete: if request.auth != null && request.auth.uid == userId;
       
-      match /{allSubcollections=**} {
+      match /links/{linkId} {
         allow read: if true;
-        allow write: if request.auth != null && request.auth.uid == userId;
+        allow update: if true;
+      }
+      
+      match /linkGroups/{groupId} {
+        allow read: if true;
+        allow update: if true;
+        
+        // Dukung nested links/groups secara publik
+        match /{allSubcollections=**} {
+          allow read: if true;
+          allow update: if true;
+        }
       }
     }
 
-    // Aturan untuk ulasan platform
-    match /platformReviews/{userId} {
+    match /usernames/{username} {
       allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Membolehkan publik melakukan increment clicks pada link
-    match /userProfiles/{userId}/links/{linkId} {
-      allow update: if true;
-    }
-    match /userProfiles/{userId}/linkGroups/{groupId} {
-      allow update: if true;
-    }
-    match /userProfiles/{userId}/linkGroups/{groupId}/links/{linkId} {
-      allow update: if true;
+    match /platformReviews/{userId} {
+      allow read: if true;
+      allow write: if request.auth != null;
     }
   }
 }
