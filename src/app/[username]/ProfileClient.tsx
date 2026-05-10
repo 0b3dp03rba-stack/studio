@@ -78,7 +78,7 @@ export default function ProfileClient({ username }: { username: string }) {
   const standaloneLinksQuery = useMemoFirebase(() => resolvedUserId ? query(collection(db, 'userProfiles', resolvedUserId, 'links'), orderBy('order', 'asc')) : null, [db, resolvedUserId]);
   const { data: standaloneLinks, isLoading: isStandaloneLoading } = useCollection(standaloneLinksQuery);
 
-  // Deep Fetch: Fetch all links from all groups for global search & latest link logic
+  // Fetch all links from all groups for global search & latest link logic
   useEffect(() => {
     if (!resolvedUserId || !groups) return;
 
@@ -95,7 +95,6 @@ export default function ProfileClient({ username }: { username: string }) {
     return () => unsubscribes.forEach(unsub => unsub());
   }, [resolvedUserId, groups, db]);
 
-  // Combined links for search and latest link feature
   const combinedLinks = useMemo(() => {
     const standalone = (standaloneLinks || []).map(l => ({ ...l, isStandalone: true }));
     const grouped = allGroupLinks.map(l => ({ ...l, isStandalone: false }));
@@ -123,7 +122,7 @@ export default function ProfileClient({ username }: { username: string }) {
     return standaloneLinks.filter(l => 
       l.isEnabled && 
       l.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
-      (!latestLink || l.id !== latestLink.id) // Avoid duplicate with latest link
+      (!latestLink || l.id !== latestLink.id)
     );
   }, [standaloneLinks, searchQuery, latestLink]);
 
@@ -219,17 +218,17 @@ export default function ProfileClient({ username }: { username: string }) {
             </div>
           </div>
           <div className="space-y-4 px-4">
-            <div className="space-y-1">
-              <h1 className="text-3xl font-black text-white tracking-tight leading-none">{profile.displayName || 'User'}</h1>
+            <div className="space-y-2">
+              <h1 className="text-4xl font-black text-white tracking-tighter leading-none">{profile.displayName || 'User'}</h1>
               {profile.bio && <p className="text-sm font-medium text-white/70 max-w-xs mx-auto leading-relaxed pt-1">{profile.bio}</p>}
             </div>
             {profile.socialLinks && profile.socialLinks.length > 0 && (
-              <div className="flex flex-wrap justify-center gap-3 pt-2">
+              <div className="flex flex-wrap justify-center gap-3 pt-4">
                 {profile.socialLinks.map((social: any, idx: number) => {
                   const Icon = platformIcons[social.platform] || Link2;
                   return (
-                    <button key={idx} onClick={() => setSelectedSocial(social)} className="w-11 h-11 rounded-xl glass-card flex items-center justify-center text-white/60 hover:text-white transition-all hover:scale-110 active:scale-95 border border-white/5 shadow-lg">
-                      <Icon size={20} />
+                    <button key={idx} onClick={() => setSelectedSocial(social)} className="w-12 h-12 rounded-2xl glass-card flex items-center justify-center text-white/60 hover:text-white transition-all hover:scale-110 active:scale-95 border border-white/5 shadow-xl">
+                      <Icon size={22} />
                     </button>
                   );
                 })}
@@ -243,7 +242,7 @@ export default function ProfileClient({ username }: { username: string }) {
             <div className="relative group">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 group-focus-within:text-primary transition-colors" size={16} />
               <Input 
-                placeholder="Cari tautan global..."
+                placeholder="Cari tautan..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="glass-card bg-white/5 border-none h-12 pl-12 pr-10 rounded-2xl text-xs font-bold text-white placeholder:text-white/20 focus-visible:ring-1 focus-visible:ring-white/20"
@@ -277,7 +276,6 @@ export default function ProfileClient({ username }: { username: string }) {
               </>
             ) : !activeGroupId ? (
               <>
-                {/* 1 Link Terakhir di Upload Paling Atas */}
                 {latestLink && (
                   <div className="space-y-3">
                     <p className="text-[8px] font-black uppercase tracking-[0.4em] text-primary flex items-center gap-2 px-2">
@@ -334,6 +332,8 @@ export default function ProfileClient({ username }: { username: string }) {
                 onLinkClick={handleLinkClick} 
                 primaryColor={primaryColor}
                 secondaryColor={secondaryColor}
+                username={profile.username}
+                onJoinHub={() => setActiveGroupId(null)}
               />
             )}
           </div>
@@ -358,7 +358,7 @@ export default function ProfileClient({ username }: { username: string }) {
                      return <Icon size={20} />;
                    })() : <Link2 size={20} />)}
                  </div>
-                 <DialogTitle className="font-black text-lg tracking-tight text-white uppercase">{selectedSocial?.platform} Hub</DialogTitle>
+                 <DialogTitle className="font-black text-lg tracking-tight text-white uppercase">{profile.displayName || 'User'} Hub</DialogTitle>
               </div>
             </div>
             <div className="w-full aspect-[4/3] bg-black/40 relative overflow-hidden flex flex-col items-center justify-center gap-6 text-center p-8 animate-in">
@@ -383,7 +383,7 @@ export default function ProfileClient({ username }: { username: string }) {
                   setSelectedSocial(null);
                 }}
               >
-                Kunjungi {selectedSocial?.platform} <ExternalLink size={16} className="ml-2" />
+                Bergabung Sekarang <ExternalLink size={16} className="ml-2" />
               </Button>
             </div>
           </div>
@@ -414,7 +414,7 @@ function LinkItem({ link, onClick, primaryColor, dynamicGradient, subTitle, feat
   );
 }
 
-function LinksInGroup({ userId, groupId, onLinkClick, primaryColor, secondaryColor }: { userId: string, groupId: string, onLinkClick: any, primaryColor: string, secondaryColor: string }) {
+function LinksInGroup({ userId, groupId, onLinkClick, primaryColor, secondaryColor, username, onJoinHub }: { userId: string, groupId: string, onLinkClick: any, primaryColor: string, secondaryColor: string, username: string, onJoinHub: () => void }) {
   const db = useFirestore();
   const dynamicGradient = `linear-gradient(-45deg, ${primaryColor} 0%, ${secondaryColor} 50%, ${primaryColor} 100%)`;
   
@@ -434,6 +434,15 @@ function LinksInGroup({ userId, groupId, onLinkClick, primaryColor, secondaryCol
         />
       ))}
       {!links?.length && <div className="text-center py-20 opacity-20 font-black uppercase text-[10px] tracking-widest">Tidak ada tautan.</div>}
+      
+      <button 
+        onClick={onJoinHub}
+        className="mt-4 text-center group/join"
+      >
+        <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.3em] group-hover/join:text-primary transition-colors">
+          Klik untuk bergabung dengan <span className="underline decoration-primary/40 underline-offset-4">@{username}</span>
+        </p>
+      </button>
     </div>
   );
 }
