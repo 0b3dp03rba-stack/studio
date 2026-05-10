@@ -1,11 +1,12 @@
 
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc, collection, updateDoc, increment, getDoc, query, orderBy, onSnapshot } from 'firebase/firestore';
-import { User, Share2, MousePointer2, Link2, LayoutGrid, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react';
+import { User, Share2, MousePointer2, Link2, LayoutGrid, ChevronRight, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 
@@ -15,8 +16,8 @@ export default function ProfileClient({ username }: { username: string }) {
   
   const [resolvedUserId, setResolvedUserId] = useState<string | null>(null);
   const [isResolving, setIsResolving] = useState(true);
-  const [expandedGroupId, setExpandedGroupId] = useState<string | null>(null);
-  const [groupLinks, setGroupLinks] = useState<Record<string, any[]>>({});
+  const [searchQuery, setSearchQuery] = useState('');
+  const [allLinks, setAllLinks] = useState<any[]>([]);
 
   useEffect(() => {
     const resolveUserAndTrackView = async () => {
@@ -52,11 +53,26 @@ export default function ProfileClient({ username }: { username: string }) {
   }, [db, resolvedUserId]);
   const { data: groups } = useCollection(groupsQuery);
 
-  const linksQuery = useMemoFirebase(() => {
+  const standaloneLinksQuery = useMemoFirebase(() => {
     if (!resolvedUserId) return null;
     return query(collection(db, 'userProfiles', resolvedUserId, 'links'), orderBy('createdAt', 'desc'));
   }, [db, resolvedUserId]);
-  const { data: links } = useCollection(linksQuery);
+  const { data: standaloneLinks } = useCollection(standaloneLinksQuery);
+
+  // Listen to all links inside groups for search
+  useEffect(() => {
+    if (!resolvedUserId || !groups) return;
+    const unsubscribers = groups.map(group => {
+      return onSnapshot(collection(db, 'userProfiles', resolvedUserId, 'linkGroups', group.id, 'links'), (snap) => {
+        const links = snap.docs.map(d => ({ ...d.data(), id: d.id, groupId: group.id }));
+        setAllLinks(prev => {
+          const filtered = prev.filter(l => l.groupId !== group.id);
+          return [...filtered, ...links];
+        });
+      });
+    });
+    return () => unsubscribers.forEach(u => u());
+  }, [resolvedUserId, groups, db]);
 
   const handleLinkClick = (linkId: string, url: string, groupId?: string) => {
     if (!resolvedUserId) return;
@@ -68,19 +84,20 @@ export default function ProfileClient({ username }: { username: string }) {
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
-  const toggleGroup = (groupId: string) => {
-    if (expandedGroupId === groupId) {
-      setExpandedGroupId(null);
-      return;
-    }
-    setExpandedGroupId(groupId);
-    if (!groupLinks[groupId]) {
-      const q = query(collection(db, 'userProfiles', resolvedUserId!, 'linkGroups', groupId, 'links'), orderBy('createdAt', 'desc'));
-      onSnapshot(q, (snap) => {
-        setGroupLinks(prev => ({ ...prev, [groupId]: snap.docs.map(d => ({ ...d.data(), id: d.id })) }));
-      });
-    }
-  };
+  const filteredGroups = useMemo(() => {
+    if (!groups) return [];
+    return groups.filter(g => g.title.toLowerCase().includes(searchQuery.toLowerCase()));
+  }, [groups, searchQuery]);
+
+  const filteredStandaloneLinks = useMemo(() => {
+    if (!standaloneLinks) return [];
+    return standaloneLinks.filter(l => l.title.toLowerCase().includes(searchQuery.toLowerCase()));
+  }, [standaloneLinks, searchQuery]);
+
+  const filteredGroupedLinks = useMemo(() => {
+    if (!searchQuery) return [];
+    return allLinks.filter(l => l.title.toLowerCase().includes(searchQuery.toLowerCase()));
+  }, [allLinks, searchQuery]);
 
   if (isResolving) {
     return (
@@ -127,58 +144,70 @@ export default function ProfileClient({ username }: { username: string }) {
           </div>
         </div>
 
+        {/* Global Search Bar */}
+        <div className="relative group">
+          <div className="absolute inset-0 bg-primary/20 blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity rounded-2xl" />
+          <div className="relative glass-card rounded-2xl flex items-center px-4 gap-3 border border-white/10 h-14">
+            <Search size={18} className="text-white/40" />
+            <Input 
+              placeholder="Cari koleksi atau tautan..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="bg-transparent border-none focus-visible:ring-0 text-sm font-bold text-white placeholder:text-white/20 h-full"
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery('')} className="text-white/40 hover:text-white transition-colors">
+                <X size={18} />
+              </button>
+            )}
+          </div>
+        </div>
+
         <div className="space-y-6">
           {/* Groups First */}
-          {groups?.map(group => (
-            <div key={group.id} className="space-y-2">
-              <button
-                onClick={() => toggleGroup(group.id)}
-                className="w-full p-0.5 rounded-2xl animate-flowing-gradient transition-transform active:scale-95"
+          {filteredGroups.map(group => (
+            <Link key={group.id} href={`/${username}/g/${group.id}`} className="block">
+              <div 
+                className="p-0.5 rounded-2xl animate-flowing-gradient transition-transform active:scale-95 shadow-xl"
                 style={{ backgroundImage: dynamicGradient, backgroundSize: '200% 200%' }}
               >
                 <div className="w-full h-24 bg-black/70 backdrop-blur-2xl rounded-[0.95rem] flex items-center px-6 gap-4 border border-white/10 relative overflow-hidden">
                   <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10 shadow-xl shrink-0">
                     {group.imageUrl ? <img src={group.imageUrl} className="w-full h-full object-cover" /> : <LayoutGrid size={32} style={{ color: primaryColor }} />}
                   </div>
-                  <div className="flex-1 text-left">
-                    <span className="text-lg font-black text-white tracking-tight">{group.title}</span>
+                  <div className="flex-1 text-left min-w-0">
+                    <span className="text-lg font-black text-white tracking-tight block truncate">{group.title}</span>
                     <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] mt-1">Koleksi</p>
                   </div>
-                  {expandedGroupId === group.id ? <ChevronUp size={24} className="text-white/50" /> : <ChevronDown size={24} className="text-white/50" />}
+                  <ChevronRight size={24} className="text-white/50" />
                 </div>
-              </button>
-
-              {expandedGroupId === group.id && (
-                <div className="space-y-3 px-2 py-2 animate-in slide-in-from-top-4 duration-300">
-                  {groupLinks[group.id]?.length === 0 ? (
-                    <p className="text-center py-4 text-[10px] font-black uppercase text-white/20">Belum ada tautan di kelompok ini</p>
-                  ) : (
-                    groupLinks[group.id]?.map(link => (
-                      <button
-                        key={link.id}
-                        onClick={() => handleLinkClick(link.id, link.url, group.id)}
-                        className="w-full p-0.5 rounded-2xl hover:scale-[1.02] transition-transform shadow-lg"
-                        style={{ background: 'rgba(255,255,255,0.05)' }}
-                      >
-                        <div className="w-full h-16 bg-black/80 backdrop-blur-xl rounded-[0.95rem] flex items-center px-5 gap-4 border border-white/5">
-                          <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/5">
-                            {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <Link2 size={20} style={{ color: primaryColor }} />}
-                          </div>
-                          <div className="flex-1 text-left min-w-0">
-                            <span className="text-sm font-black text-white tracking-tight truncate block">{link.title}</span>
-                          </div>
-                          <ChevronRight size={18} className="text-white/20" />
-                        </div>
-                      </button>
-                    ))
-                  )}
-                </div>
-              )}
-            </div>
+              </div>
+            </Link>
           ))}
 
-          {/* Standalone Links Second */}
-          {links?.map(link => (
+          {/* Search Result: Links from Groups */}
+          {searchQuery && filteredGroupedLinks.map(link => (
+             <button
+              key={`search-${link.id}`}
+              onClick={() => handleLinkClick(link.id, link.url, link.groupId)}
+              className="w-full p-0.5 rounded-2xl hover:scale-[1.02] transition-transform shadow-xl"
+              style={{ background: 'rgba(255,255,255,0.05)' }}
+            >
+              <div className="w-full h-20 bg-black/80 backdrop-blur-xl rounded-[0.95rem] flex items-center px-6 gap-4 border border-white/10">
+                <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/5">
+                  {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <Link2 size={24} style={{ color: primaryColor }} />}
+                </div>
+                <div className="flex-1 text-left min-w-0">
+                  <span className="text-base font-black text-white tracking-tight truncate block">{link.title}</span>
+                  <p className="text-[8px] font-black text-primary uppercase tracking-widest mt-1">Ditemukan di Koleksi</p>
+                </div>
+                <MousePointer2 size={20} style={{ color: primaryColor }} />
+              </div>
+            </button>
+          ))}
+
+          {/* Standalone Links */}
+          {filteredStandaloneLinks.map(link => (
             <button
               key={link.id}
               onClick={() => handleLinkClick(link.id, link.url)}
@@ -196,6 +225,12 @@ export default function ProfileClient({ username }: { username: string }) {
               </div>
             </button>
           ))}
+
+          {searchQuery && filteredGroups.length === 0 && filteredStandaloneLinks.length === 0 && filteredGroupedLinks.length === 0 && (
+             <div className="text-center py-20 opacity-20 font-black uppercase text-xs tracking-widest">
+                <p>Tidak ada hasil untuk "{searchQuery}"</p>
+             </div>
+          )}
         </div>
 
         <div className="pt-12 text-center">
