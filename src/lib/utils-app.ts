@@ -41,25 +41,44 @@ function hexToHsl(hex: string) {
 }
 
 /**
- * Memberikan saran warna sekunder yang mewah berdasarkan warna utama
+ * Memberikan saran warna sekunder yang mewah (Prestige Pairs) berdasarkan warna utama.
+ * Fokus pada kontras tinggi dan estetika premium (Gold, White, Cyan).
  */
 export function getRecommendedSecondary(primaryHex: string): string {
   const hsl = hexToHsl(primaryHex);
   
-  // Logika pasangan warna mewah (Prestige Pairs)
-  if (hsl.h >= 340 || hsl.h <= 20) return '#FFD700'; // Merah -> Gold
-  if (hsl.h > 20 && hsl.h <= 50) return '#FFFFFF';  // Orange -> Putih
-  if (hsl.h > 50 && hsl.h <= 70) return '#000000';  // Kuning -> Hitam (Contrast)
-  if (hsl.h > 180 && hsl.h <= 260) return '#00FFFF'; // Biru -> Cyan
-  if (hsl.h > 260 && hsl.h <= 300) return '#FF00FF'; // Ungu -> Magenta/Pink
-  if (hsl.h > 100 && hsl.h <= 160) return '#F0FFF0'; // Hijau -> Honeydew/Putih
+  // MERAH / COKLAT / ORANGE -> Pasangkan dengan GOLD (Mewah)
+  if (hsl.h <= 45 || hsl.h >= 340) {
+    return '#FFD700'; 
+  }
   
-  // Default fallback: Versi lebih terang atau putih
-  return hsl.l < 50 ? '#FFFFFF' : '#F0F0F0';
+  // KUNING -> Pasangkan dengan PUTIH atau HITAM
+  if (hsl.h > 45 && hsl.h <= 70) {
+    return '#FFFFFF';
+  }
+
+  // HIJAU -> Pasangkan dengan PUTIH KRISTAL
+  if (hsl.h > 70 && hsl.h <= 160) {
+    return '#F0FFF0';
+  }
+
+  // BIRU -> Pasangkan dengan CYAN atau PUTIH
+  if (hsl.h > 180 && hsl.h <= 260) {
+    return '#00FFFF';
+  }
+
+  // UNGU / MAGENTA -> Pasangkan dengan GOLD atau PUTIH
+  if (hsl.h > 260 && hsl.h < 340) {
+    return '#FFD700';
+  }
+  
+  // Default fallback: Putih bersih
+  return '#FFFFFF';
 }
 
 /**
- * Mengekstrak palet warna dari gambar base64 dengan prioritas pada warna cerah/vibrant
+ * Mengekstrak palet warna dari gambar base64 dengan prioritas pada warna cerah/vibrant.
+ * Warna gelap dan kusam akan difilter secara agresif.
  */
 export async function extractPaletteFromImage(base64: string): Promise<string[]> {
   return new Promise((resolve) => {
@@ -68,7 +87,7 @@ export async function extractPaletteFromImage(base64: string): Promise<string[]>
     img.onload = () => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      if (!ctx) return resolve(['#ff0000', '#00ffff', '#0000ff', '#00ff00', '#ff00ff', '#ffff00']);
+      if (!ctx) return resolve(['#ff0000', '#FFD700', '#00FFFF', '#FFFFFF']);
 
       canvas.width = 50;
       canvas.height = 50;
@@ -92,11 +111,12 @@ export async function extractPaletteFromImage(base64: string): Promise<string[]>
 
         const hsl = hexToHsl(hex);
         
-        // FILTER: Abaikan warna yang terlalu gelap (L < 25) atau terlalu kusam (S < 15)
-        if (hsl.l < 25 || hsl.s < 15) continue;
+        // FILTER AGRESIF: Abaikan warna yang terlalu gelap (L < 35) atau kusam (S < 20)
+        // Ini memastikan warna "coklat gelap" atau "hitam" tidak mendominasi palet pilihan.
+        if (hsl.l < 35 || hsl.s < 20) continue;
 
-        // SCORING: Berikan skor lebih tinggi untuk warna yang cerah dan jenuh
-        const score = (hsl.s * 2) + hsl.l; 
+        // SCORING: Berikan bobot tinggi pada Saturation (Kepekatan Warna)
+        const score = (hsl.s * 2.5) + hsl.l; 
 
         if (!colors[hex]) {
           colors[hex] = { count: 1, score: score };
@@ -111,18 +131,19 @@ export async function extractPaletteFromImage(base64: string): Promise<string[]>
         .slice(0, 8)
         .map(([color]) => color);
 
-      // Fallback jika tidak ditemukan warna vibrant
+      // Fallback jika tidak ditemukan warna vibrant yang cukup
       if (sortedColors.length === 0) {
-        return resolve(['#ff0000', '#FFD700', '#00ffff', '#0000ff', '#ff00ff', '#ffffff']);
+        return resolve(['#FF0000', '#FFD700', '#00FFFF', '#FFFFFF', '#FF00FF', '#00FF00']);
       }
 
-      while (sortedColors.length < 8) {
+      // Pastikan palet berisi minimal 6 pilihan warna
+      while (sortedColors.length < 6) {
         sortedColors.push('#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0'));
       }
 
       resolve(sortedColors);
     };
-    img.onerror = () => resolve(['#ff0000', '#FFD700', '#00ffff', '#0000ff', '#ff00ff', '#ffffff']);
+    img.onerror = () => resolve(['#FF0000', '#FFD700', '#00FFFF', '#FFFFFF']);
   });
 }
 

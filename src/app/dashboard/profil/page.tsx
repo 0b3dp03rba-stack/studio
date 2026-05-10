@@ -96,6 +96,11 @@ export default function ProfilPage() {
         const domain = window.location.origin;
         setFullUrl(`${domain}/${profile.username || profile.id}`);
       }
+
+      // Jika ada avatar, coba ekstrak palet jika belum ada
+      if (profile.avatarUrl && extractedPalette.length === 0) {
+        extractPaletteFromImage(profile.avatarUrl).then(setExtractedPalette);
+      }
     }
   }, [profile]);
 
@@ -123,7 +128,7 @@ export default function ProfilPage() {
     const palette = await extractPaletteFromImage(cropped);
     setExtractedPalette(palette);
     
-    // Set default warna cerdas
+    // Set default warna cerdas otomatis
     const primary = palette[0];
     const secondary = getRecommendedSecondary(primary);
     
@@ -189,14 +194,17 @@ export default function ProfilPage() {
     setIsEditing(true);
   };
 
+  const prestigeSecondaryColors = ['#FFFFFF', '#FFD700']; // White & Gold
+
   return (
     <div className="space-y-6 animate-in pb-12">
       <div className="text-center space-y-4 py-8">
         <div 
-          className="mx-auto w-28 h-28 rounded-[2rem] flex items-center justify-center border-4 border-background shadow-2xl overflow-hidden relative group aspect-square"
+          className="mx-auto w-28 h-28 rounded-[2rem] flex items-center justify-center border-4 border-background shadow-2xl overflow-hidden relative group aspect-square animate-flowing-gradient"
           style={{ 
             background: `linear-gradient(-45deg, ${themeColor}, ${themeColorSecondary})`,
-            boxShadow: `0 0 30px -5px ${themeColor}66`
+            backgroundSize: '200% 200%',
+            boxShadow: `0 0 40px -5px ${themeColor}99`
           }}
         >
            {avatarUrl ? (
@@ -204,7 +212,7 @@ export default function ProfilPage() {
            ) : (
              <User size={56} className="text-white relative z-10" />
            )}
-           <div className="absolute inset-0 bg-black/20" />
+           <div className="absolute inset-0 bg-black/10" />
         </div>
         <div className="px-4 text-center">
           <h1 className="text-2xl font-black text-white tracking-tight leading-none">{displayName || profile?.username || 'User Linku'}</h1>
@@ -233,72 +241,76 @@ export default function ProfilPage() {
         <Card className="glass-card border-white/5 rounded-[2rem] overflow-hidden">
           <CardContent className="p-6 space-y-5">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2 text-white"><Edit3 size={16} className="text-primary" /> Edit Profil</h3>
+              <h3 className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2 text-white"><Edit3 size={16} className="text-primary" /> Konfigurasi Visual</h3>
               {!isEditing && (
-                <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)} className="h-8 px-4 text-[10px] font-black text-primary rounded-xl hover:bg-primary/10">Buka Mode Edit</Button>
+                <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)} className="h-8 px-4 text-[10px] font-black text-primary rounded-xl hover:bg-primary/10">Edit Profil</Button>
               )}
             </div>
+            
             {isEditing ? (
               <div className="space-y-6">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-muted-foreground uppercase ml-1">Nama Tampilan</label>
                   <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Nama Anda..." className="bg-white/5 h-14 text-sm rounded-2xl border-white/10 text-white font-bold" />
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-muted-foreground uppercase ml-1">Username</label>
-                  <div className="relative">
-                    <AtSign className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
-                    <Input value={username} onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))} placeholder="username" className="bg-white/5 h-14 text-sm pl-10 rounded-2xl border-white/10 text-white font-bold" />
+                
+                {/* PILIHAN WARNA */}
+                <div className="space-y-6 p-5 bg-white/[0.03] rounded-[2rem] border border-white/5 shadow-inner">
+                  {/* WARNA UTAMA */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between px-1">
+                      <label className="text-[10px] font-black text-muted-foreground uppercase flex items-center gap-2 tracking-widest"><Palette size={14} className="text-primary" /> Warna Utama (Primary)</label>
+                      <div className="w-4 h-4 rounded-full shadow-lg" style={{ backgroundColor: themeColor }} />
+                    </div>
+                    <div className="grid grid-cols-4 gap-3">
+                      {extractedPalette.map((color, i) => (
+                        <button 
+                          key={`p-${i}`} 
+                          onClick={() => {
+                            setThemeColor(color);
+                            // Otomatis sarankan pasangan mewah saat warna utama dipilih
+                            setThemeColorSecondary(getRecommendedSecondary(color));
+                          }} 
+                          className={`aspect-square rounded-2xl border-2 transition-all flex items-center justify-center ${themeColor === color ? 'border-primary scale-110 shadow-[0_0_20px_rgba(255,0,0,0.5)]' : 'border-transparent opacity-60 hover:opacity-100'}`} 
+                          style={{ backgroundColor: color }}
+                        >
+                          {themeColor === color && <div className="w-2 h-2 bg-white rounded-full animate-pulse" />}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* WARNA SEKUNDER */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between px-1">
+                      <label className="text-[10px] font-black text-muted-foreground uppercase flex items-center gap-2 tracking-widest"><Sparkles size={14} className="text-secondary" /> Warna Gradasi (Secondary)</label>
+                      <div className="w-4 h-4 rounded-full shadow-lg" style={{ backgroundColor: themeColorSecondary }} />
+                    </div>
+                    <div className="grid grid-cols-4 gap-3">
+                      {/* Pilihan dari Gambar */}
+                      {extractedPalette.map((color, i) => (
+                        <button 
+                          key={`s-${i}`} 
+                          onClick={() => setThemeColorSecondary(color)} 
+                          className={`aspect-square rounded-2xl border-2 transition-all flex items-center justify-center ${themeColorSecondary === color ? 'border-secondary scale-110 shadow-[0_0_20px_rgba(255,234,0,0.5)]' : 'border-transparent opacity-60 hover:opacity-100'}`} 
+                          style={{ backgroundColor: color }}
+                        >
+                          {themeColorSecondary === color && <div className="w-2 h-2 bg-white rounded-full animate-pulse" />}
+                        </button>
+                      ))}
+                      {/* Pilihan Mewah Manual (Gold & White) */}
+                      <button 
+                        onClick={() => setThemeColorSecondary('#FFFFFF')} 
+                        className={`aspect-square rounded-2xl border-2 bg-white ${themeColorSecondary === '#FFFFFF' ? 'border-secondary scale-110 shadow-xl' : 'border-white/10 opacity-80'}`} 
+                      />
+                      <button 
+                        onClick={() => setThemeColorSecondary('#FFD700')} 
+                        className={`aspect-square rounded-2xl border-2 bg-[#FFD700] ${themeColorSecondary === '#FFD700' ? 'border-secondary scale-110 shadow-xl' : 'border-white/10 opacity-80'}`} 
+                      />
+                    </div>
+                    <p className="text-[8px] text-muted-foreground italic ml-1">*Pilihan manual Putih & Emas tersedia untuk hasil lebih mewah.</p>
                   </div>
                 </div>
-
-                {extractedPalette.length > 0 && (
-                  <div className="space-y-6 p-4 bg-white/[0.03] rounded-3xl border border-white/5">
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between px-1">
-                        <label className="text-[10px] font-black text-muted-foreground uppercase flex items-center gap-2 tracking-widest"><Palette size={14} className="text-primary" /> Warna Utama (Primary)</label>
-                        <div className="w-4 h-4 rounded-full" style={{ backgroundColor: themeColor }} />
-                      </div>
-                      <div className="grid grid-cols-4 gap-3">
-                        {extractedPalette.map((color, i) => (
-                          <button 
-                            key={`p-${i}`} 
-                            onClick={() => {
-                              setThemeColor(color);
-                              setThemeColorSecondary(getRecommendedSecondary(color));
-                            }} 
-                            className={`aspect-square rounded-2xl border-2 transition-all flex items-center justify-center ${themeColor === color ? 'border-primary scale-110 shadow-[0_0_15px_rgba(255,0,0,0.4)]' : 'border-transparent opacity-60 hover:opacity-100'}`} 
-                            style={{ backgroundColor: color }}
-                          >
-                            {themeColor === color && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between px-1">
-                        <label className="text-[10px] font-black text-muted-foreground uppercase flex items-center gap-2 tracking-widest"><Sparkles size={14} className="text-secondary" /> Warna Gradasi (Secondary)</label>
-                        <div className="w-4 h-4 rounded-full" style={{ backgroundColor: themeColorSecondary }} />
-                      </div>
-                      <div className="grid grid-cols-4 gap-3">
-                        {extractedPalette.map((color, i) => (
-                          <button 
-                            key={`s-${i}`} 
-                            onClick={() => setThemeColorSecondary(color)} 
-                            className={`aspect-square rounded-2xl border-2 transition-all flex items-center justify-center ${themeColorSecondary === color ? 'border-secondary scale-110 shadow-[0_0_15px_rgba(255,234,0,0.4)]' : 'border-transparent opacity-60 hover:opacity-100'}`} 
-                            style={{ backgroundColor: color }}
-                          >
-                            {themeColorSecondary === color && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
-                          </button>
-                        ))}
-                        {/* Pilihan Putih/Gold Manual jika tidak ada di palet */}
-                        <button onClick={() => setThemeColorSecondary('#FFFFFF')} className={`aspect-square rounded-2xl border-2 bg-white ${themeColorSecondary === '#FFFFFF' ? 'border-secondary scale-110' : 'border-transparent opacity-60'}`} />
-                        <button onClick={() => setThemeColorSecondary('#FFD700')} className={`aspect-square rounded-2xl border-2 bg-[#FFD700] ${themeColorSecondary === '#FFD700' ? 'border-secondary scale-110' : 'border-transparent opacity-60'}`} />
-                      </div>
-                    </div>
-                  </div>
-                )}
 
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-muted-foreground uppercase ml-1">Ganti Foto Profil</label>
@@ -307,8 +319,8 @@ export default function ProfilPage() {
                     <span className="text-xs font-bold text-white/40 uppercase">Pilih Gambar Baru</span>
                     <input type="file" className="hidden" accept="image/*" onChange={handleImageSelect} />
                   </label>
-                  <p className="text-[8px] text-muted-foreground italic ml-1">*Setelah ganti foto, sistem akan otomatis mengekstrak warna cerah baru.</p>
                 </div>
+
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-muted-foreground uppercase ml-1">Bio Singkat</label>
                   <Textarea value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Tulis bio Anda..." className="bg-white/5 h-24 text-sm rounded-2xl border-white/10 text-white font-medium" />
@@ -320,11 +332,22 @@ export default function ProfilPage() {
                   <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">Bio Anda</p>
                   <p className="text-sm font-medium text-white/80 leading-relaxed">{bio || 'Belum ada bio.'}</p>
                 </div>
+                <div className="flex gap-4">
+                  <div className="flex-1 p-3 rounded-xl border border-white/5 flex items-center justify-between">
+                    <span className="text-[8px] font-black uppercase text-muted-foreground">Primary</span>
+                    <div className="w-4 h-4 rounded-full" style={{ backgroundColor: themeColor }} />
+                  </div>
+                  <div className="flex-1 p-3 rounded-xl border border-white/5 flex items-center justify-between">
+                    <span className="text-[8px] font-black uppercase text-muted-foreground">Secondary</span>
+                    <div className="w-4 h-4 rounded-full" style={{ backgroundColor: themeColorSecondary }} />
+                  </div>
+                </div>
               </div>
             )}
           </CardContent>
         </Card>
 
+        {/* SOSIAL MEDIA */}
         <Card className="glass-card border-white/5 rounded-[2rem] overflow-hidden">
           <CardContent className="p-6 space-y-6">
             <h3 className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2 text-white"><Share2 size={16} className="text-primary" /> Hubungkan Sosial Media</h3>
