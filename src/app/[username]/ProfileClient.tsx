@@ -3,7 +3,7 @@
 
 import { useMemo, useEffect, useState } from 'react';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc, collection, updateDoc, increment, getDoc, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { doc, collection, updateDoc, increment, getDoc, query, orderBy, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { User, Share2, MousePointer2, Link2, ChevronRight, LayoutGrid, ArrowLeft, Instagram, Youtube, Facebook, Mail, MessageCircle, ExternalLink, Globe, Search, X, Sparkles, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -67,10 +67,11 @@ export default function ProfileClient({ username }: { username: string }) {
         if (uid) {
           setResolvedUserId(uid);
           // Increment total views on load
-          updateDoc(doc(db, 'userProfiles', uid), { 
+          const profRef = doc(db, 'userProfiles', uid);
+          updateDoc(profRef, { 
             views: increment(1),
             lastViewedAt: serverTimestamp() 
-          }).catch(() => {});
+          }).catch((err) => console.error("Failed to track view:", err));
         }
       } catch (e) {
         console.error("Resolution failed:", e);

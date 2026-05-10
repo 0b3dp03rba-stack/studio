@@ -175,9 +175,12 @@ export default function DashboardPage() {
                     return null;
                   }}
                 />
-                <Bar dataKey="clicks" radius={[6, 6, 0, 0]}>
+                <Bar dataKey="clicks" radius={[6, 6, 0, 0]} strokeWidth={1} stroke="rgba(255,255,255,0.1)">
                   {topPerformers.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={index === 0 ? 'hsl(var(--primary))' : 'rgba(255,255,255,0.1)'} />
+                    <Cell 
+                      key={`cell-${index}`} 
+                      fill={index === 0 ? 'hsl(var(--primary))' : 'rgba(255,255,255,0.15)'} 
+                    />
                   ))}
                 </Bar>
               </BarChart>

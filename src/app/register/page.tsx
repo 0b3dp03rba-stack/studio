@@ -61,6 +61,7 @@ export default function RegisterPage() {
         username: cleanUsername,
         displayName: cleanUsername,
         role: 'User',
+        views: 0,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
