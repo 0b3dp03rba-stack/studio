@@ -3,8 +3,8 @@
 
 import { useEffect, useState } from 'react';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc, collection, updateDoc, increment, getDoc, query, orderBy, serverTimestamp, onSnapshot } from 'firebase/firestore';
-import { User, Share2, MousePointer2, Link2, ChevronRight, LayoutGrid, ChevronDown, ChevronUp } from 'lucide-react';
+import { doc, collection, updateDoc, increment, getDoc, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { User, Share2, MousePointer2, Link2, LayoutGrid, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';

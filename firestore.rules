@@ -2,33 +2,27 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Hak akses penuh untuk pemilik profil (userId)
+    // Akses penuh untuk pemilik data (Login = Raja atas data sendiri)
     match /userProfiles/{userId} {
       allow read: if true;
       allow write: if request.auth != null && request.auth.uid == userId;
       
-      // Hak akses penuh untuk semua sub-koleksi (links, linkGroups, dll)
       match /{allSubcollections=**} {
         allow read: if true;
         allow write: if request.auth != null && request.auth.uid == userId;
       }
     }
     
-    // Akses global untuk usernames mapping
+    // Username mapping (Global Read)
     match /usernames/{username} {
       allow read: if true;
       allow write: if request.auth != null;
     }
 
-    // Akses global untuk ulasan dan dokumen lainnya
+    // Platform Reviews (Global Read, Owner Write)
     match /platformReviews/{userId} {
       allow read: if true;
       allow write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // Tracker email setoran (jika ada fitur tersebut)
-    match /submittedEmails/{email} {
-      allow read, write: if request.auth != null;
     }
   }
 }
