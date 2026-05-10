@@ -188,7 +188,7 @@ export default function ProfileClient({ username }: { username: string }) {
           radial-gradient(circle at 100% 100%, ${secondaryColor}22 0%, transparent 60%),
           linear-gradient(to bottom, transparent, #000 90%)
         `
-      } as React.CSSProperties}
+      }}
     >
       <div className="max-w-md mx-auto space-y-8 animate-in relative z-10 p-6 pb-24">
         
@@ -210,7 +210,7 @@ export default function ProfileClient({ username }: { username: string }) {
         <div className="text-center space-y-6">
           <div 
             className="mx-auto w-32 h-32 rounded-[2.5rem] p-1 shadow-2xl transition-all duration-700 animate-flowing-gradient"
-            style={{ backgroundImage: dynamicGradient, backgroundSize: '200% 200%', boxShadow: `0 0 50px -10px ${primaryColor}99`, animationDuration: '7s' }}
+            style={{ backgroundImage: dynamicGradient, backgroundSize: '200% 200%', boxShadow: `0 0 50px -10px ${primaryColor}99` }}
           >
             <div className="w-full h-full rounded-[2.3rem] bg-background flex items-center justify-center overflow-hidden border-4 border-background relative">
               {profile.avatarUrl ? <img src={profile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" /> : <User size={64} className="text-white/20" />}
@@ -307,7 +307,7 @@ export default function ProfileClient({ username }: { username: string }) {
                     key={group.id}
                     onClick={() => setActiveGroupId(group.id)}
                     className="w-full p-0.5 rounded-2xl hover:scale-[1.02] transition-transform shadow-xl group/folder animate-flowing-gradient"
-                    style={{ backgroundImage: dynamicGradient, backgroundSize: '200% 200%', animationDuration: '7s' }}
+                    style={{ backgroundImage: dynamicGradient, backgroundSize: '200% 200%' }}
                   >
                     <div className="w-full h-24 bg-black/70 backdrop-blur-2xl rounded-[0.95rem] flex items-center px-6 gap-4 border border-white/10 relative overflow-hidden">
                       <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10 shadow-xl shrink-0">
@@ -409,7 +409,7 @@ function LinkItem({ link, onClick, primaryColor, dynamicGradient, subTitle, feat
     <button
       onClick={onClick}
       className={`w-full p-0.5 rounded-2xl hover:scale-[1.02] transition-transform shadow-xl group/link animate-flowing-gradient ${featured ? 'glow-primary scale-[1.03]' : ''}`}
-      style={{ backgroundImage: dynamicGradient, backgroundSize: '200% 200%', animationDuration: '7s' }}
+      style={{ backgroundImage: dynamicGradient, backgroundSize: '200% 200%' }}
     >
       <div className={`w-full h-20 bg-black/80 backdrop-blur-xl rounded-[0.95rem] flex items-center px-6 gap-4 border border-white/10 ${featured ? 'border-primary/40' : ''}`}>
         <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/5">

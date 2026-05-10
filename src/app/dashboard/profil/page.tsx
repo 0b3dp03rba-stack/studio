@@ -52,6 +52,15 @@ const platformIcons: Record<string, any> = {
   Website: Globe
 };
 
+// Pilihan warna sekunder mewah mandiri
+const prestigeSecondaries = [
+  { name: 'White', hex: '#FFFFFF' },
+  { name: 'Gold', hex: '#FFD700' },
+  { name: 'Cyan', hex: '#00FFFF' },
+  { name: 'Yellow', hex: '#FFFF00' },
+  { name: 'Cloud', hex: '#E0FFFF' },
+];
+
 export default function ProfilPage() {
   const { user } = useUser();
   const db = useFirestore();
@@ -127,7 +136,7 @@ export default function ProfilPage() {
     const palette = await extractPaletteFromImage(cropped);
     setExtractedPalette(palette);
     
-    // Auto suggest prestige colors
+    // OTOMATIS: Pilih warna primer tercerah dan pasangkan dengan sekunder mewah
     const primary = palette[0];
     const secondary = getRecommendedSecondary(primary);
     
@@ -252,9 +261,10 @@ export default function ProfilPage() {
                 </div>
                 
                 <div className="space-y-6 p-5 bg-white/[0.03] rounded-[2rem] border border-white/5 shadow-inner">
+                  {/* BARIS WARNA UTAMA (EXTRACTED) */}
                   <div className="space-y-3">
                     <div className="flex items-center justify-between px-1">
-                      <label className="text-[10px] font-black text-muted-foreground uppercase flex items-center gap-2 tracking-widest"><Palette size={14} className="text-primary" /> Warna Utama (Primary)</label>
+                      <label className="text-[10px] font-black text-muted-foreground uppercase flex items-center gap-2 tracking-widest"><Palette size={14} className="text-primary" /> Warna Utama (Vibrant)</label>
                       <div className="w-4 h-4 rounded-full shadow-lg" style={{ backgroundColor: themeColor }} />
                     </div>
                     <div className="grid grid-cols-4 gap-3">
@@ -263,6 +273,7 @@ export default function ProfilPage() {
                           key={`p-${i}`} 
                           onClick={() => {
                             setThemeColor(color);
+                            // Otomatis sarankan sekunder terbaik saat klik primer
                             setThemeColorSecondary(getRecommendedSecondary(color));
                           }} 
                           className={`aspect-square rounded-2xl border-2 transition-all flex items-center justify-center ${themeColor === color ? 'border-primary scale-110 shadow-[0_0_20px_rgba(255,0,0,0.5)]' : 'border-transparent opacity-60 hover:opacity-100'}`} 
@@ -274,32 +285,37 @@ export default function ProfilPage() {
                     </div>
                   </div>
 
+                  {/* BARIS WARNA SEKUNDER (PRESTIGE + EXTRACTED) */}
                   <div className="space-y-3">
                     <div className="flex items-center justify-between px-1">
-                      <label className="text-[10px] font-black text-muted-foreground uppercase flex items-center gap-2 tracking-widest"><Sparkles size={14} className="text-secondary" /> Warna Gradasi (Secondary)</label>
+                      <label className="text-[10px] font-black text-muted-foreground uppercase flex items-center gap-2 tracking-widest"><Sparkles size={14} className="text-secondary" /> Warna Gradasi (Prestige)</label>
                       <div className="w-4 h-4 rounded-full shadow-lg" style={{ backgroundColor: themeColorSecondary }} />
                     </div>
-                    <div className="grid grid-cols-4 gap-3">
-                      {extractedPalette.map((color, i) => (
+                    <div className="grid grid-cols-5 gap-2">
+                      {/* Pilihan Prestige Mandiri */}
+                      {prestigeSecondaries.map((s) => (
                         <button 
-                          key={`s-${i}`} 
+                          key={s.hex}
+                          onClick={() => setThemeColorSecondary(s.hex)}
+                          className={`aspect-square rounded-xl border-2 transition-all ${themeColorSecondary === s.hex ? 'border-secondary scale-110 shadow-xl' : 'border-white/10 opacity-80'}`}
+                          style={{ backgroundColor: s.hex }}
+                        />
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-4 gap-3 pt-2">
+                      {/* Pilihan Dari Gambar */}
+                      {extractedPalette.slice(0, 4).map((color, i) => (
+                        <button 
+                          key={`s-img-${i}`} 
                           onClick={() => setThemeColorSecondary(color)} 
-                          className={`aspect-square rounded-2xl border-2 transition-all flex items-center justify-center ${themeColorSecondary === color ? 'border-secondary scale-110 shadow-[0_0_20px_rgba(255,234,0,0.5)]' : 'border-transparent opacity-60 hover:opacity-100'}`} 
+                          className={`aspect-square rounded-2xl border-2 transition-all flex items-center justify-center ${themeColorSecondary === color ? 'border-secondary scale-110 shadow-xl' : 'border-transparent opacity-60 hover:opacity-100'}`} 
                           style={{ backgroundColor: color }}
                         >
                           {themeColorSecondary === color && <div className="w-2 h-2 bg-white rounded-full animate-pulse" />}
                         </button>
                       ))}
-                      <button 
-                        onClick={() => setThemeColorSecondary('#FFFFFF')} 
-                        className={`aspect-square rounded-2xl border-2 bg-white ${themeColorSecondary === '#FFFFFF' ? 'border-secondary scale-110 shadow-xl' : 'border-white/10 opacity-80'}`} 
-                      />
-                      <button 
-                        onClick={() => setThemeColorSecondary('#FFD700')} 
-                        className={`aspect-square rounded-2xl border-2 bg-[#FFD700] ${themeColorSecondary === '#FFD700' ? 'border-secondary scale-110 shadow-xl' : 'border-white/10 opacity-80'}`} 
-                      />
                     </div>
-                    <p className="text-[8px] text-muted-foreground italic ml-1">*Putih & Emas adalah pilihan standar kemewahan.</p>
+                    <p className="text-[8px] text-muted-foreground italic ml-1">*Warna Prestige (Emas, Sian, Putih) memberikan kesan mewah maksimal.</p>
                   </div>
                 </div>
 
