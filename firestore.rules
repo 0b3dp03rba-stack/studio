@@ -5,14 +5,12 @@ service cloud.firestore {
     // Hak akses penuh untuk pemilik profil (userId)
     match /userProfiles/{userId} {
       allow read: if true;
-      allow update: if true; // Untuk update views/clicks publik
-      allow write, delete: if request.auth != null && request.auth.uid == userId;
+      allow write: if request.auth != null && request.auth.uid == userId;
       
       // Hak akses penuh untuk semua sub-koleksi (links, linkGroups, dll)
       match /{allSubcollections=**} {
         allow read: if true;
-        allow update: if true;
-        allow write, delete: if request.auth != null && request.auth.uid == userId;
+        allow write: if request.auth != null && request.auth.uid == userId;
       }
     }
     
@@ -23,9 +21,14 @@ service cloud.firestore {
     }
 
     // Akses global untuk ulasan dan dokumen lainnya
-    match /{document=**} {
+    match /platformReviews/{userId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Tracker email setoran (jika ada fitur tersebut)
+    match /submittedEmails/{email} {
+      allow read, write: if request.auth != null;
     }
   }
 }

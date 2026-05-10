@@ -5,13 +5,14 @@ import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Trash2, Link as LinkIcon, FolderPlus, Upload, LayoutGrid, ChevronUp, ChevronDown, Edit3, Loader2, Globe } from 'lucide-react';
+import { Plus, Trash2, Link as LinkIcon, FolderPlus, Upload, LayoutGrid, ChevronUp, ChevronDown, Edit3, Loader2, Globe, AlertCircle } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, addDoc, serverTimestamp, doc, deleteDoc, query, orderBy, updateDoc, getDocs, writeBatch } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, deleteDoc, query, orderBy, updateDoc, writeBatch } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import ImageCropperModal from '@/components/ImageCropperModal';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 export default function ManagePage() {
   const { user } = useUser();
@@ -25,15 +26,16 @@ export default function ManagePage() {
   const [newLinkTitle, setNewLinkTitle] = useState('');
   const [newLinkUrl, setNewLinkUrl] = useState('');
   const [newLinkImage, setNewLinkImage] = useState('');
-  const [targetGroupId, setTargetGroupId] = useState('main'); // 'main' or groupId
+  const [targetGroupId, setTargetGroupId] = useState('main');
 
   const [editingItem, setEditingItem] = useState<any>(null);
+  const [itemToDelete, setItemToDelete] = useState<any>(null);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [cropperOpen, setCropperOpen] = useState(false);
   const [tempImage, setTempImage] = useState<string | null>(null);
   const [activeCropTarget, setActiveCropTarget] = useState<'group' | 'link' | 'edit' | null>(null);
 
-  // Query groups
+  // Query groups sorted by order
   const groupsQuery = useMemoFirebase(() => {
     if (!user) return null;
     return query(collection(db, 'userProfiles', user.uid, 'linkGroups'), orderBy('order', 'asc'));
@@ -121,10 +123,18 @@ export default function ManagePage() {
     const current = groups[index];
     const swap = groups[swapIndex];
 
-    const batch = writeBatch(db);
-    batch.update(doc(db, 'userProfiles', user.uid, 'linkGroups', current.id), { order: swap.order });
-    batch.update(doc(db, 'userProfiles', user.uid, 'linkGroups', swap.id), { order: current.order });
-    await batch.commit();
+    try {
+      const batch = writeBatch(db);
+      const currentRef = doc(db, 'userProfiles', user.uid, 'linkGroups', current.id);
+      const swapRef = doc(db, 'userProfiles', user.uid, 'linkGroups', swap.id);
+      
+      batch.update(currentRef, { order: swap.order });
+      batch.update(swapRef, { order: current.order });
+      
+      await batch.commit();
+    } catch (e) {
+      toast({ variant: "destructive", title: "Gagal mengurutkan" });
+    }
   };
 
   const handleSaveEdit = async () => {
@@ -135,7 +145,6 @@ export default function ManagePage() {
       if (editingItem.type === 'group') {
         docRef = doc(db, 'userProfiles', user.uid, 'linkGroups', editingItem.id);
       } else {
-        // Find correct path for link
         docRef = editingItem.groupId 
           ? doc(db, 'userProfiles', user.uid, 'linkGroups', editingItem.groupId, 'links', editingItem.id)
           : doc(db, 'userProfiles', user.uid, 'links', editingItem.id);
@@ -160,23 +169,22 @@ export default function ManagePage() {
     }
   };
 
-  const handleDelete = async (item: any) => {
-    if (!user) return;
-    const label = item.type === 'group' ? 'kelompok' : 'tautan';
-    if (!window.confirm(`Yakin ingin menghapus ${label} "${item.title}"?`)) return;
-    
+  const confirmDelete = async () => {
+    if (!user || !itemToDelete) return;
     try {
-      if (item.type === 'group') {
-        await deleteDoc(doc(db, 'userProfiles', user.uid, 'linkGroups', item.id));
+      if (itemToDelete.type === 'group') {
+        await deleteDoc(doc(db, 'userProfiles', user.uid, 'linkGroups', itemToDelete.id));
       } else {
-        const docRef = item.groupId 
-          ? doc(db, 'userProfiles', user.uid, 'linkGroups', item.groupId, 'links', item.id)
-          : doc(db, 'userProfiles', user.uid, 'links', item.id);
+        const docRef = itemToDelete.groupId 
+          ? doc(db, 'userProfiles', user.uid, 'linkGroups', itemToDelete.groupId, 'links', itemToDelete.id)
+          : doc(db, 'userProfiles', user.uid, 'links', itemToDelete.id);
         await deleteDoc(docRef);
       }
       toast({ title: "Item Dihapus" });
     } catch (e) {
       toast({ variant: "destructive", title: "Gagal menghapus" });
+    } finally {
+      setItemToDelete(null);
     }
   };
 
@@ -260,8 +268,8 @@ export default function ManagePage() {
             {groups?.map((group, idx) => (
               <Card key={group.id} className="glass-card border-none rounded-2xl p-4 flex items-center gap-4">
                 <div className="flex flex-col gap-1">
-                  <Button variant="ghost" size="icon" onClick={() => handleMoveGroup(group.id, 'up')} disabled={idx === 0} className="h-6 w-6 opacity-20 hover:opacity-100"><ChevronUp size={14}/></Button>
-                  <Button variant="ghost" size="icon" onClick={() => handleMoveGroup(group.id, 'down')} disabled={idx === (groups?.length || 0) - 1} className="h-6 w-6 opacity-20 hover:opacity-100"><ChevronDown size={14}/></Button>
+                  <Button variant="ghost" size="icon" onClick={() => handleMoveGroup(group.id, 'up')} disabled={idx === 0} className="h-6 w-6 opacity-20 hover:opacity-100 disabled:opacity-5"><ChevronUp size={14}/></Button>
+                  <Button variant="ghost" size="icon" onClick={() => handleMoveGroup(group.id, 'down')} disabled={idx === (groups?.length || 0) - 1} className="h-6 w-6 opacity-20 hover:opacity-100 disabled:opacity-5"><ChevronDown size={14}/></Button>
                 </div>
                 <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/5 shrink-0">
                   {group.imageUrl ? <img src={group.imageUrl} className="w-full h-full object-cover" /> : <LayoutGrid size={18} className="text-primary" />}
@@ -272,7 +280,7 @@ export default function ManagePage() {
                 </div>
                 <div className="flex items-center gap-1">
                   <Button size="icon" variant="ghost" onClick={() => setEditingItem({ ...group, type: 'group' })} className="h-10 w-10 text-white/40 hover:text-primary"><Edit3 size={16} /></Button>
-                  <Button size="icon" variant="ghost" onClick={() => handleDelete({ ...group, type: 'group' })} className="h-10 w-10 text-white/20 hover:text-destructive"><Trash2 size={16} /></Button>
+                  <Button size="icon" variant="ghost" onClick={() => setItemToDelete({ ...group, type: 'group' })} className="h-10 w-10 text-white/20 hover:text-destructive"><Trash2 size={16} /></Button>
                 </div>
               </Card>
             ))}
@@ -289,7 +297,7 @@ export default function ManagePage() {
                 </div>
                 <div className="flex items-center gap-1">
                   <Button size="icon" variant="ghost" onClick={() => setEditingItem({ ...link, type: 'link' })} className="h-10 w-10 text-white/40 hover:text-primary"><Edit3 size={16} /></Button>
-                  <Button size="icon" variant="ghost" onClick={() => handleDelete({ ...link, type: 'link' })} className="h-10 w-10 text-white/20 hover:text-destructive"><Trash2 size={16} /></Button>
+                  <Button size="icon" variant="ghost" onClick={() => setItemToDelete({ ...link, type: 'link' })} className="h-10 w-10 text-white/20 hover:text-destructive"><Trash2 size={16} /></Button>
                 </div>
               </Card>
             ))}
@@ -303,7 +311,7 @@ export default function ManagePage() {
       <Dialog open={!!editingItem} onOpenChange={() => setEditingItem(null)}>
         <DialogContent className="glass-card border-none rounded-[2.5rem] bg-background/95 backdrop-blur-3xl p-8 shadow-2xl max-w-[95%] sm:max-w-md mx-auto">
           <DialogHeader><DialogTitle className="text-xl font-black uppercase tracking-tighter text-white">Edit {editingItem?.type === 'group' ? 'Kelompok' : 'Tautan'}</DialogTitle></DialogHeader>
-          <div className="space-y-5 py-4">
+          <div className="space-y-5 py-4 text-left">
             <div className="flex flex-col items-center gap-4">
                <div className="w-24 h-24 rounded-2xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10 relative group">
                   {editingItem?.imageUrl ? <img src={editingItem.imageUrl} className="w-full h-full object-cover" /> : <Upload size={32} className="text-white/20" />}
@@ -335,6 +343,24 @@ export default function ManagePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete AlertDialog */}
+      <AlertDialog open={!!itemToDelete} onOpenChange={() => setItemToDelete(null)}>
+        <AlertDialogContent className="glass-card border-none rounded-[2rem] bg-background/95 backdrop-blur-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter flex items-center gap-3 text-white">
+              <AlertCircle className="text-destructive" /> Konfirmasi Hapus
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-white/60 font-medium leading-relaxed">
+              Apakah Anda yakin ingin menghapus <strong>{itemToDelete?.title}</strong>? Tindakan ini permanen dan tidak bisa dibatalkan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2">
+            <AlertDialogCancel className="bg-white/5 border-white/5 rounded-xl text-[10px] font-black uppercase h-12 hover:bg-white/10">Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-white hover:bg-destructive/80 rounded-xl text-[10px] font-black uppercase h-12">Hapus Sekarang</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
