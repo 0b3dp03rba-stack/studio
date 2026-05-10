@@ -3,17 +3,11 @@
 
 import { useEffect, useState } from 'react';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc, collection, updateDoc, increment, getDoc, query, orderBy, serverTimestamp } from 'firebase/firestore';
-import { User, Share2, MousePointer2, Link2, ChevronRight, LayoutGrid, Instagram, Youtube, Facebook, Mail, MessageCircle, Globe } from 'lucide-react';
+import { doc, collection, updateDoc, increment, getDoc, query, orderBy, serverTimestamp, onSnapshot } from 'firebase/firestore';
+import { User, Share2, MousePointer2, Link2, ChevronRight, LayoutGrid, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
-
-const TikTokIcon = ({ className, size = 20 }: { className?: string, size?: number }) => (
-  <svg 
-    width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}
-  ><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" /></svg>
-);
 
 export default function ProfileClient({ username }: { username: string }) {
   const db = useFirestore();
@@ -21,6 +15,8 @@ export default function ProfileClient({ username }: { username: string }) {
   
   const [resolvedUserId, setResolvedUserId] = useState<string | null>(null);
   const [isResolving, setIsResolving] = useState(true);
+  const [expandedGroupId, setExpandedGroupId] = useState<string | null>(null);
+  const [groupLinks, setGroupLinks] = useState<Record<string, any[]>>({});
 
   useEffect(() => {
     const resolveUserAndTrackView = async () => {
@@ -36,10 +32,7 @@ export default function ProfileClient({ username }: { username: string }) {
 
         if (uid) {
           setResolvedUserId(uid);
-          updateDoc(doc(db, 'userProfiles', uid), { 
-            views: increment(1),
-            lastViewedAt: serverTimestamp() 
-          }).catch(() => {});
+          updateDoc(doc(db, 'userProfiles', uid), { views: increment(1) }).catch(() => {});
         }
       } catch (e) {
         console.error(e);
@@ -65,10 +58,28 @@ export default function ProfileClient({ username }: { username: string }) {
   }, [db, resolvedUserId]);
   const { data: links } = useCollection(linksQuery);
 
-  const handleLinkClick = (linkId: string, url: string) => {
+  const handleLinkClick = (linkId: string, url: string, groupId?: string) => {
     if (!resolvedUserId) return;
-    updateDoc(doc(db, 'userProfiles', resolvedUserId, 'links', linkId), { clicks: increment(1) }).catch(() => {});
+    const linkRef = groupId 
+      ? doc(db, 'userProfiles', resolvedUserId, 'linkGroups', groupId, 'links', linkId)
+      : doc(db, 'userProfiles', resolvedUserId, 'links', linkId);
+    
+    updateDoc(linkRef, { clicks: increment(1) }).catch(() => {});
     window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  const toggleGroup = (groupId: string) => {
+    if (expandedGroupId === groupId) {
+      setExpandedGroupId(null);
+      return;
+    }
+    setExpandedGroupId(groupId);
+    if (!groupLinks[groupId]) {
+      const q = query(collection(db, 'userProfiles', resolvedUserId!, 'linkGroups', groupId, 'links'), orderBy('createdAt', 'desc'));
+      onSnapshot(q, (snap) => {
+        setGroupLinks(prev => ({ ...prev, [groupId]: snap.docs.map(d => ({ ...d.data(), id: d.id })) }));
+      });
+    }
   };
 
   if (isResolving) {
@@ -95,7 +106,6 @@ export default function ProfileClient({ username }: { username: string }) {
       }}
     >
       <div className="max-w-md mx-auto space-y-8 animate-in relative z-10 p-6 pb-24">
-        
         <div className="flex justify-end">
           <Button variant="ghost" size="icon" onClick={() => { navigator.clipboard.writeText(window.location.href); toast({title: "Tersalin"}); }} className="w-12 h-12 rounded-2xl glass-card text-white">
             <Share2 size={20} />
@@ -120,24 +130,54 @@ export default function ProfileClient({ username }: { username: string }) {
         <div className="space-y-6">
           {/* Groups First */}
           {groups?.map(group => (
-            <div
-              key={group.id}
-              className="w-full p-0.5 rounded-2xl animate-flowing-gradient"
-              style={{ backgroundImage: dynamicGradient, backgroundSize: '200% 200%' }}
-            >
-              <div className="w-full h-24 bg-black/70 backdrop-blur-2xl rounded-[0.95rem] flex items-center px-6 gap-4 border border-white/10 relative overflow-hidden">
-                <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10 shadow-xl shrink-0">
-                  {group.imageUrl ? <img src={group.imageUrl} className="w-full h-full object-cover" /> : <LayoutGrid size={32} style={{ color: primaryColor }} />}
+            <div key={group.id} className="space-y-2">
+              <button
+                onClick={() => toggleGroup(group.id)}
+                className="w-full p-0.5 rounded-2xl animate-flowing-gradient transition-transform active:scale-95"
+                style={{ backgroundImage: dynamicGradient, backgroundSize: '200% 200%' }}
+              >
+                <div className="w-full h-24 bg-black/70 backdrop-blur-2xl rounded-[0.95rem] flex items-center px-6 gap-4 border border-white/10 relative overflow-hidden">
+                  <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10 shadow-xl shrink-0">
+                    {group.imageUrl ? <img src={group.imageUrl} className="w-full h-full object-cover" /> : <LayoutGrid size={32} style={{ color: primaryColor }} />}
+                  </div>
+                  <div className="flex-1 text-left">
+                    <span className="text-lg font-black text-white tracking-tight">{group.title}</span>
+                    <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] mt-1">Koleksi</p>
+                  </div>
+                  {expandedGroupId === group.id ? <ChevronUp size={24} className="text-white/50" /> : <ChevronDown size={24} className="text-white/50" />}
                 </div>
-                <div className="flex-1 text-left">
-                  <span className="text-lg font-black text-white tracking-tight">{group.title}</span>
-                  <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] mt-1">Koleksi</p>
+              </button>
+
+              {expandedGroupId === group.id && (
+                <div className="space-y-3 px-2 py-2 animate-in slide-in-from-top-4 duration-300">
+                  {groupLinks[group.id]?.length === 0 ? (
+                    <p className="text-center py-4 text-[10px] font-black uppercase text-white/20">Belum ada tautan di kelompok ini</p>
+                  ) : (
+                    groupLinks[group.id]?.map(link => (
+                      <button
+                        key={link.id}
+                        onClick={() => handleLinkClick(link.id, link.url, group.id)}
+                        className="w-full p-0.5 rounded-2xl hover:scale-[1.02] transition-transform shadow-lg"
+                        style={{ background: 'rgba(255,255,255,0.05)' }}
+                      >
+                        <div className="w-full h-16 bg-black/80 backdrop-blur-xl rounded-[0.95rem] flex items-center px-5 gap-4 border border-white/5">
+                          <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/5">
+                            {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <Link2 size={20} style={{ color: primaryColor }} />}
+                          </div>
+                          <div className="flex-1 text-left min-w-0">
+                            <span className="text-sm font-black text-white tracking-tight truncate block">{link.title}</span>
+                          </div>
+                          <ChevronRight size={18} className="text-white/20" />
+                        </div>
+                      </button>
+                    ))
+                  )}
                 </div>
-              </div>
+              )}
             </div>
           ))}
 
-          {/* Links Second */}
+          {/* Standalone Links Second */}
           {links?.map(link => (
             <button
               key={link.id}

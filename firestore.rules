@@ -4,12 +4,14 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // Hak akses penuh untuk pemilik profil (userId)
     match /userProfiles/{userId} {
-      allow read, update: if true;
+      allow read: if true;
+      allow update: if true; // Untuk update views/clicks publik
       allow write, delete: if request.auth != null && request.auth.uid == userId;
       
-      // Hak akses penuh untuk sub-koleksi (links, linkGroups, dll)
+      // Hak akses penuh untuk semua sub-koleksi (links, linkGroups, dll)
       match /{allSubcollections=**} {
-        allow read, update: if true;
+        allow read: if true;
+        allow update: if true;
         allow write, delete: if request.auth != null && request.auth.uid == userId;
       }
     }

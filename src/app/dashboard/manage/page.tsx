@@ -5,12 +5,13 @@ import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Trash2, Link as LinkIcon, FolderPlus, Upload, LayoutGrid, ChevronUp, ChevronDown, Edit3, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Link as LinkIcon, FolderPlus, Upload, LayoutGrid, ChevronUp, ChevronDown, Edit3, Loader2, Globe } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, addDoc, serverTimestamp, doc, deleteDoc, query, orderBy, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, deleteDoc, query, orderBy, updateDoc, getDocs, writeBatch } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import ImageCropperModal from '@/components/ImageCropperModal';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function ManagePage() {
   const { user } = useUser();
@@ -20,9 +21,11 @@ export default function ManagePage() {
   const [activeTab, setActiveTab] = useState<'group' | 'link'>('group');
   const [newGroupTitle, setNewGroupTitle] = useState('');
   const [newGroupImage, setNewGroupImage] = useState('');
+  
   const [newLinkTitle, setNewLinkTitle] = useState('');
   const [newLinkUrl, setNewLinkUrl] = useState('');
   const [newLinkImage, setNewLinkImage] = useState('');
+  const [targetGroupId, setTargetGroupId] = useState('main'); // 'main' or groupId
 
   const [editingItem, setEditingItem] = useState<any>(null);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
@@ -30,19 +33,19 @@ export default function ManagePage() {
   const [tempImage, setTempImage] = useState<string | null>(null);
   const [activeCropTarget, setActiveCropTarget] = useState<'group' | 'link' | 'edit' | null>(null);
 
-  // Query groups: Ordered by manual 'order'
+  // Query groups
   const groupsQuery = useMemoFirebase(() => {
     if (!user) return null;
     return query(collection(db, 'userProfiles', user.uid, 'linkGroups'), orderBy('order', 'asc'));
   }, [db, user?.uid]);
   const { data: groups, isLoading: isGroupsLoading } = useCollection(groupsQuery);
 
-  // Query links: Ordered by latest (createdAt desc)
+  // Query standalone links
   const linksQuery = useMemoFirebase(() => {
     if (!user) return null;
     return query(collection(db, 'userProfiles', user.uid, 'links'), orderBy('createdAt', 'desc'));
   }, [db, user?.uid]);
-  const { data: links, isLoading: isLinksLoading } = useCollection(linksQuery);
+  const { data: standaloneLinks, isLoading: isLinksLoading } = useCollection(linksQuery);
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>, target: 'group' | 'link' | 'edit') => {
     const file = e.target.files?.[0];
@@ -76,7 +79,7 @@ export default function ManagePage() {
       });
       setNewGroupTitle('');
       setNewGroupImage('');
-      toast({ title: "Kelompok Berhasil Dibuat" });
+      toast({ title: "Kelompok Dibuat" });
     } catch (e) {
       toast({ variant: "destructive", title: "Gagal membuat kelompok" });
     }
@@ -85,19 +88,24 @@ export default function ManagePage() {
   const handleAddLink = async () => {
     if (!user || !newLinkTitle || !newLinkUrl) return;
     try {
-      await addDoc(collection(db, 'userProfiles', user.uid, 'links'), {
+      const colPath = targetGroupId === 'main' 
+        ? collection(db, 'userProfiles', user.uid, 'links')
+        : collection(db, 'userProfiles', user.uid, 'linkGroups', targetGroupId, 'links');
+
+      await addDoc(colPath, {
         userId: user.uid,
         title: newLinkTitle,
         url: newLinkUrl.startsWith('http') ? newLinkUrl : `https://${newLinkUrl}`,
         imageUrl: newLinkImage || '',
         isEnabled: true,
         clicks: 0,
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
+        groupId: targetGroupId === 'main' ? null : targetGroupId
       });
       setNewLinkTitle('');
       setNewLinkUrl('');
       setNewLinkImage('');
-      toast({ title: "Tautan Berhasil Ditambahkan" });
+      toast({ title: "Tautan Ditambahkan" });
     } catch (e) {
       toast({ variant: "destructive", title: "Gagal menambah tautan" });
     }
@@ -113,16 +121,25 @@ export default function ManagePage() {
     const current = groups[index];
     const swap = groups[swapIndex];
 
-    await updateDoc(doc(db, 'userProfiles', user.uid, 'linkGroups', current.id), { order: swap.order });
-    await updateDoc(doc(db, 'userProfiles', user.uid, 'linkGroups', swap.id), { order: current.order });
+    const batch = writeBatch(db);
+    batch.update(doc(db, 'userProfiles', user.uid, 'linkGroups', current.id), { order: swap.order });
+    batch.update(doc(db, 'userProfiles', user.uid, 'linkGroups', swap.id), { order: current.order });
+    await batch.commit();
   };
 
   const handleSaveEdit = async () => {
     if (!user || !editingItem) return;
     setIsSavingEdit(true);
     try {
-      const col = editingItem.type === 'group' ? 'linkGroups' : 'links';
-      const docRef = doc(db, 'userProfiles', user.uid, col, editingItem.id);
+      let docRef;
+      if (editingItem.type === 'group') {
+        docRef = doc(db, 'userProfiles', user.uid, 'linkGroups', editingItem.id);
+      } else {
+        // Find correct path for link
+        docRef = editingItem.groupId 
+          ? doc(db, 'userProfiles', user.uid, 'linkGroups', editingItem.groupId, 'links', editingItem.id)
+          : doc(db, 'userProfiles', user.uid, 'links', editingItem.id);
+      }
       
       const updateData: any = {
         title: editingItem.title,
@@ -137,22 +154,29 @@ export default function ManagePage() {
       toast({ title: "Pembaruan Berhasil" });
       setEditingItem(null);
     } catch (e) {
-      toast({ variant: "destructive", title: "Gagal memperbarui data" });
+      toast({ variant: "destructive", title: "Gagal memperbarui" });
     } finally {
       setIsSavingEdit(false);
     }
   };
 
-  const handleDelete = async (id: string, type: 'group' | 'link') => {
+  const handleDelete = async (item: any) => {
     if (!user) return;
-    if (!window.confirm(`Yakin ingin menghapus ${type === 'group' ? 'kelompok' : 'tautan'} ini?`)) return;
+    const label = item.type === 'group' ? 'kelompok' : 'tautan';
+    if (!window.confirm(`Yakin ingin menghapus ${label} "${item.title}"?`)) return;
     
     try {
-      const col = type === 'group' ? 'linkGroups' : 'links';
-      await deleteDoc(doc(db, 'userProfiles', user.uid, col, id));
-      toast({ title: "Item Telah Dihapus" });
+      if (item.type === 'group') {
+        await deleteDoc(doc(db, 'userProfiles', user.uid, 'linkGroups', item.id));
+      } else {
+        const docRef = item.groupId 
+          ? doc(db, 'userProfiles', user.uid, 'linkGroups', item.groupId, 'links', item.id)
+          : doc(db, 'userProfiles', user.uid, 'links', item.id);
+        await deleteDoc(docRef);
+      }
+      toast({ title: "Item Dihapus" });
     } catch (e) {
-      toast({ variant: "destructive", title: "Gagal menghapus item" });
+      toast({ variant: "destructive", title: "Gagal menghapus" });
     }
   };
 
@@ -170,7 +194,7 @@ export default function ManagePage() {
         </div>
 
         {activeTab === 'group' && (
-          <Card className="glass-card border-none rounded-[2rem] p-6 shadow-2xl relative overflow-hidden">
+          <Card className="glass-card border-none rounded-[2rem] p-6 shadow-2xl">
             <CardContent className="p-0 space-y-4 text-left">
               <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase tracking-widest">
                 <FolderPlus size={16} />
@@ -187,18 +211,36 @@ export default function ManagePage() {
         )}
 
         {activeTab === 'link' && (
-          <Card className="glass-card border-none rounded-[2.5rem] p-6 shadow-2xl text-left">
+          <Card className="glass-card border-none rounded-[2rem] p-6 shadow-2xl text-left">
             <CardContent className="p-0 space-y-4">
               <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase tracking-widest">
                 <LinkIcon size={16} />
-                <span>Tambah link mandiri</span>
+                <span>Tambah link baru</span>
               </div>
+              
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-black uppercase text-muted-foreground ml-1">Simpan di dalam:</label>
+                <Select value={targetGroupId} onValueChange={setTargetGroupId}>
+                  <SelectTrigger className="bg-white/5 border-none h-12 rounded-xl text-[10px] font-black uppercase">
+                    <SelectValue placeholder="Pilih Tujuan" />
+                  </SelectTrigger>
+                  <SelectContent className="glass-card border-none rounded-xl">
+                    <SelectItem value="main" className="text-xs font-bold uppercase">Hub Utama</SelectItem>
+                    {groups?.map(g => (
+                      <SelectItem key={g.id} value={g.id} className="text-xs font-bold uppercase">{g.title}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <Input placeholder="Judul Tautan" value={newLinkTitle} onChange={(e) => setNewLinkTitle(e.target.value)} className="bg-white/5 h-12 rounded-xl px-4 font-bold border-none" />
-              <Input placeholder="URL (misal: instagram.com/user)" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} className="bg-white/5 h-12 rounded-xl px-4 font-bold border-none" />
+              <Input placeholder="URL (instagram.com/user)" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} className="bg-white/5 h-12 rounded-xl px-4 font-bold border-none" />
+              
               <label className="flex items-center justify-center gap-2 w-full h-12 bg-white/5 border border-dashed border-white/20 rounded-xl cursor-pointer hover:bg-white/10 transition-all">
                 <Upload size={16} className="text-primary" /><span className="text-[10px] font-black uppercase text-white/60">{newLinkImage ? 'Ganti Foto' : 'Unggah Foto'}</span>
                 <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageSelect(e, 'link')} />
               </label>
+              
               <Button onClick={handleAddLink} disabled={!newLinkTitle || !newLinkUrl} className="w-full h-12 neon-gradient text-background font-black rounded-xl glow-primary uppercase text-[10px] tracking-widest">Simpan Tautan</Button>
             </CardContent>
           </Card>
@@ -210,16 +252,16 @@ export default function ManagePage() {
           <LayoutGrid size={16} className="text-primary" /> Daftar Isi Hub
         </h3>
         
-        {isGroupsLoading || isLinksLoading ? (
-          <div className="py-20 text-center animate-pulse text-primary font-black uppercase text-[10px]">Sinkronisasi Database...</div>
+        {(isGroupsLoading || isLinksLoading) ? (
+          <div className="py-20 text-center animate-pulse text-primary font-black uppercase text-[10px]">Sinkronisasi...</div>
         ) : (
           <div className="space-y-4">
-            {/* 1. List Groups First (Manual Ordering) */}
+            {/* Groups First */}
             {groups?.map((group, idx) => (
-              <Card key={group.id} className="glass-card border-none rounded-2xl overflow-hidden shadow-xl p-4 flex items-center gap-4">
-                <div className="flex flex-col gap-1 mr-1">
-                  <Button variant="ghost" size="icon" onClick={() => handleMoveGroup(group.id, 'up')} disabled={idx === 0} className="h-6 w-6 opacity-20 hover:opacity-100 disabled:opacity-0"><ChevronUp size={14}/></Button>
-                  <Button variant="ghost" size="icon" onClick={() => handleMoveGroup(group.id, 'down')} disabled={idx === (groups?.length || 0) - 1} className="h-6 w-6 opacity-20 hover:opacity-100 disabled:opacity-0"><ChevronDown size={14}/></Button>
+              <Card key={group.id} className="glass-card border-none rounded-2xl p-4 flex items-center gap-4">
+                <div className="flex flex-col gap-1">
+                  <Button variant="ghost" size="icon" onClick={() => handleMoveGroup(group.id, 'up')} disabled={idx === 0} className="h-6 w-6 opacity-20 hover:opacity-100"><ChevronUp size={14}/></Button>
+                  <Button variant="ghost" size="icon" onClick={() => handleMoveGroup(group.id, 'down')} disabled={idx === (groups?.length || 0) - 1} className="h-6 w-6 opacity-20 hover:opacity-100"><ChevronDown size={14}/></Button>
                 </div>
                 <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/5 shrink-0">
                   {group.imageUrl ? <img src={group.imageUrl} className="w-full h-full object-cover" /> : <LayoutGrid size={18} className="text-primary" />}
@@ -229,25 +271,25 @@ export default function ManagePage() {
                   <p className="text-[10px] text-white/40 uppercase tracking-widest font-black">KELOMPOK</p>
                 </div>
                 <div className="flex items-center gap-1">
-                  <Button size="icon" variant="ghost" onClick={() => setEditingItem({ ...group, type: 'group' })} className="h-10 w-10 text-white/40 hover:text-primary transition-colors"><Edit3 size={16} /></Button>
-                  <Button size="icon" variant="ghost" onClick={() => handleDelete(group.id, 'group')} className="h-10 w-10 text-white/20 hover:text-destructive transition-colors"><Trash2 size={16} /></Button>
+                  <Button size="icon" variant="ghost" onClick={() => setEditingItem({ ...group, type: 'group' })} className="h-10 w-10 text-white/40 hover:text-primary"><Edit3 size={16} /></Button>
+                  <Button size="icon" variant="ghost" onClick={() => handleDelete({ ...group, type: 'group' })} className="h-10 w-10 text-white/20 hover:text-destructive"><Trash2 size={16} /></Button>
                 </div>
               </Card>
             ))}
 
-            {/* 2. List Links Second (Latest First) */}
-            {links?.map((link) => (
-              <Card key={link.id} className="glass-card border-none rounded-2xl overflow-hidden shadow-xl p-4 flex items-center gap-4">
+            {/* Standalone Links */}
+            {standaloneLinks?.map((link) => (
+              <Card key={link.id} className="glass-card border-none rounded-2xl p-4 flex items-center gap-4">
                 <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/5 shrink-0 ml-7">
                   {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <LinkIcon size={18} className="text-primary" />}
                 </div>
                 <div className="flex-1 min-w-0 text-left">
                   <h4 className="font-bold text-white text-sm truncate">{link.title}</h4>
-                  <p className="text-[10px] text-white/40 uppercase tracking-tighter font-mono">{link.clicks || 0} KLIK • TAUTAN</p>
+                  <p className="text-[10px] text-white/40 uppercase tracking-tighter font-mono">HUB UTAMA</p>
                 </div>
                 <div className="flex items-center gap-1">
-                  <Button size="icon" variant="ghost" onClick={() => setEditingItem({ ...link, type: 'link' })} className="h-10 w-10 text-white/40 hover:text-primary transition-colors"><Edit3 size={16} /></Button>
-                  <Button size="icon" variant="ghost" onClick={() => handleDelete(link.id, 'link')} className="h-10 w-10 text-white/20 hover:text-destructive transition-colors"><Trash2 size={16} /></Button>
+                  <Button size="icon" variant="ghost" onClick={() => setEditingItem({ ...link, type: 'link' })} className="h-10 w-10 text-white/40 hover:text-primary"><Edit3 size={16} /></Button>
+                  <Button size="icon" variant="ghost" onClick={() => handleDelete({ ...link, type: 'link' })} className="h-10 w-10 text-white/20 hover:text-destructive"><Trash2 size={16} /></Button>
                 </div>
               </Card>
             ))}
