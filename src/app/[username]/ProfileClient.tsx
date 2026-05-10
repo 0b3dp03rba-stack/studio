@@ -210,7 +210,7 @@ export default function ProfileClient({ username }: { username: string }) {
         <div className="text-center space-y-6">
           <div 
             className="mx-auto w-32 h-32 rounded-[2.5rem] p-1 shadow-2xl transition-all duration-700 animate-flowing-gradient"
-            style={{ background: dynamicGradient, backgroundSize: '200% 200%', boxShadow: `0 0 50px -10px ${primaryColor}99`, animationDuration: '7s' }}
+            style={{ backgroundImage: dynamicGradient, backgroundSize: '200% 200%', boxShadow: `0 0 50px -10px ${primaryColor}99`, animationDuration: '7s' }}
           >
             <div className="w-full h-full rounded-[2.3rem] bg-background flex items-center justify-center overflow-hidden border-4 border-background relative">
               {profile.avatarUrl ? <img src={profile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" /> : <User size={64} className="text-white/20" />}
@@ -307,7 +307,7 @@ export default function ProfileClient({ username }: { username: string }) {
                     key={group.id}
                     onClick={() => setActiveGroupId(group.id)}
                     className="w-full p-0.5 rounded-2xl hover:scale-[1.02] transition-transform shadow-xl group/folder animate-flowing-gradient"
-                    style={{ background: dynamicGradient, backgroundSize: '200% 200%', animationDuration: '7s' }}
+                    style={{ backgroundImage: dynamicGradient, backgroundSize: '200% 200%', animationDuration: '7s' }}
                   >
                     <div className="w-full h-24 bg-black/70 backdrop-blur-2xl rounded-[0.95rem] flex items-center px-6 gap-4 border border-white/10 relative overflow-hidden">
                       <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10 shadow-xl shrink-0">
@@ -348,7 +348,7 @@ export default function ProfileClient({ username }: { username: string }) {
             <Button 
               asChild
               className="w-full h-14 neon-gradient text-background font-black rounded-2xl glow-primary text-[10px] uppercase tracking-widest shadow-2xl active:scale-95 transition-all animate-flowing-gradient"
-              style={{ background: dynamicGradient, backgroundSize: '200% 200%' }}
+              style={{ backgroundImage: dynamicGradient, backgroundSize: '200% 200%' }}
             >
               <Link href="/">
                 <UserPlus size={16} className="mr-2" /> Bergabung dengan {profile.displayName || profile.username} di Linku
@@ -363,7 +363,7 @@ export default function ProfileClient({ username }: { username: string }) {
           <div className="p-0 space-y-0">
             <div className="p-6 pb-2 border-b border-white/5 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                 <div className="w-10 h-10 rounded-xl flex items-center justify-center text-background" style={{ background: dynamicGradient }}>
+                 <div className="w-10 h-10 rounded-xl flex items-center justify-center text-background" style={{ backgroundImage: dynamicGradient }}>
                    {selectedSocial && (platformIcons[selectedSocial.platform] ? (() => {
                      const Icon = platformIcons[selectedSocial.platform];
                      return <Icon size={20} />;
@@ -373,7 +373,7 @@ export default function ProfileClient({ username }: { username: string }) {
               </div>
             </div>
             <div className="w-full aspect-[4/3] bg-black/40 relative overflow-hidden flex flex-col items-center justify-center gap-6 text-center p-8 animate-in">
-               <div className="w-20 h-20 rounded-3xl flex items-center justify-center text-background glow-primary transition-all duration-700 animate-flowing-gradient" style={{ background: dynamicGradient, backgroundSize: '200% 200%' }}>
+               <div className="w-20 h-20 rounded-3xl flex items-center justify-center text-background glow-primary transition-all duration-700 animate-flowing-gradient" style={{ backgroundImage: dynamicGradient, backgroundSize: '200% 200%' }}>
                   {selectedSocial && (platformIcons[selectedSocial.platform] ? (() => {
                     const Icon = platformIcons[selectedSocial.platform];
                     return <Icon size={40} />;
@@ -387,7 +387,7 @@ export default function ProfileClient({ username }: { username: string }) {
             <div className="p-6 space-y-3">
               <Button 
                 className="w-full h-14 neon-gradient text-background font-black rounded-2xl glow-primary text-[10px] uppercase tracking-widest active:scale-95 transition-transform"
-                style={{ background: dynamicGradient }}
+                style={{ backgroundImage: dynamicGradient }}
                 onClick={() => {
                   const url = generateSocialUrl(selectedSocial.platform, selectedSocial.label);
                   window.open(url, '_blank', 'noopener,noreferrer');
@@ -409,10 +409,10 @@ function LinkItem({ link, onClick, primaryColor, dynamicGradient, subTitle, feat
     <button
       onClick={onClick}
       className={`w-full p-0.5 rounded-2xl hover:scale-[1.02] transition-transform shadow-xl group/link animate-flowing-gradient ${featured ? 'glow-primary scale-[1.03]' : ''}`}
-      style={{ background: dynamicGradient, backgroundSize: '200% 200%', animationDuration: '7s' }}
+      style={{ backgroundImage: dynamicGradient, backgroundSize: '200% 200%', animationDuration: '7s' }}
     >
       <div className={`w-full h-20 bg-black/80 backdrop-blur-xl rounded-[0.95rem] flex items-center px-6 gap-4 border border-white/10 ${featured ? 'border-primary/40' : ''}`}>
-        <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10">
+        <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/5">
           {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <Link2 size={24} style={{ color: primaryColor }} />}
         </div>
         <div className="flex-1 text-left min-w-0">

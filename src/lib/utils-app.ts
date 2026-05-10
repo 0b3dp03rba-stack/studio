@@ -42,43 +42,40 @@ function hexToHsl(hex: string) {
 
 /**
  * Memberikan saran warna sekunder yang mewah (Prestige Pairs) berdasarkan warna utama.
- * Fokus pada kontras tinggi dan estetika premium (Gold, White, Cyan).
  */
 export function getRecommendedSecondary(primaryHex: string): string {
   const hsl = hexToHsl(primaryHex);
   
-  // MERAH / COKLAT / ORANGE -> Pasangkan dengan GOLD (Mewah)
+  // MERAH / COKLAT / ORANGE / MARUN -> Pasangkan dengan GOLD (Mewah)
   if (hsl.h <= 45 || hsl.h >= 340) {
     return '#FFD700'; 
   }
   
-  // KUNING -> Pasangkan dengan PUTIH atau HITAM
-  if (hsl.h > 45 && hsl.h <= 70) {
+  // KUNING / LIME -> Pasangkan dengan PUTIH atau HITAM (Gunakan Putih untuk tema Linku)
+  if (hsl.h > 45 && hsl.h <= 85) {
     return '#FFFFFF';
   }
 
-  // HIJAU -> Pasangkan dengan PUTIH KRISTAL
-  if (hsl.h > 70 && hsl.h <= 160) {
-    return '#F0FFF0';
+  // HIJAU / TOSKA -> Pasangkan dengan CYAN atau PUTIH
+  if (hsl.h > 85 && hsl.h <= 170) {
+    return '#00FFFF';
   }
 
-  // BIRU -> Pasangkan dengan CYAN atau PUTIH
-  if (hsl.h > 180 && hsl.h <= 260) {
+  // BIRU -> Pasangkan dengan CYAN atau PUTIH KRISTAL
+  if (hsl.h > 170 && hsl.h <= 255) {
     return '#00FFFF';
   }
 
   // UNGU / MAGENTA -> Pasangkan dengan GOLD atau PUTIH
-  if (hsl.h > 260 && hsl.h < 340) {
+  if (hsl.h > 255 && hsl.h < 340) {
     return '#FFD700';
   }
   
-  // Default fallback: Putih bersih
   return '#FFFFFF';
 }
 
 /**
  * Mengekstrak palet warna dari gambar base64 dengan prioritas pada warna cerah/vibrant.
- * Warna gelap dan kusam akan difilter secara agresif.
  */
 export async function extractPaletteFromImage(base64: string): Promise<string[]> {
   return new Promise((resolve) => {
@@ -87,12 +84,14 @@ export async function extractPaletteFromImage(base64: string): Promise<string[]>
     img.onload = () => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      if (!ctx) return resolve(['#ff0000', '#FFD700', '#00FFFF', '#FFFFFF']);
+      const luxuryBackup = ['#FF0000', '#FFD700', '#00FFFF', '#FFFFFF', '#FF00FF', '#00FF00', '#FFA500', '#0000FF'];
+      
+      if (!ctx) return resolve(luxuryBackup);
 
-      canvas.width = 50;
-      canvas.height = 50;
-      ctx.drawImage(img, 0, 0, 50, 50);
-      const data = ctx.getImageData(0, 0, 50, 50).data;
+      canvas.width = 100;
+      canvas.height = 100;
+      ctx.drawImage(img, 0, 0, 100, 100);
+      const data = ctx.getImageData(0, 0, 100, 100).data;
 
       const colors: Record<string, { count: number, score: number }> = {};
       
@@ -101,9 +100,9 @@ export async function extractPaletteFromImage(base64: string): Promise<string[]>
         const g = data[i + 1];
         const b = data[i + 2];
         const a = data[i + 3];
-        if (a < 128) continue;
+        if (a < 200) continue; // Abaikan pixel transparan
 
-        const factor = 16;
+        const factor = 10; // Grup warna yang mirip
         const qr = Math.round(r / factor) * factor;
         const qg = Math.round(g / factor) * factor;
         const qb = Math.round(b / factor) * factor;
@@ -111,12 +110,11 @@ export async function extractPaletteFromImage(base64: string): Promise<string[]>
 
         const hsl = hexToHsl(hex);
         
-        // FILTER AGRESIF: Abaikan warna yang terlalu gelap (L < 35) atau kusam (S < 20)
-        // Ini memastikan warna "coklat gelap" atau "hitam" tidak mendominasi palet pilihan.
-        if (hsl.l < 35 || hsl.s < 20) continue;
+        // FILTER SANGAT AGRESIF: Buang warna gelap (L < 40) atau kusam (S < 30)
+        if (hsl.l < 40 || hsl.s < 30) continue;
 
-        // SCORING: Berikan bobot tinggi pada Saturation (Kepekatan Warna)
-        const score = (hsl.s * 2.5) + hsl.l; 
+        // SCORING: Utamakan Saturation dan Lightness yang tinggi
+        const score = (hsl.s * 3) + (hsl.l * 2); 
 
         if (!colors[hex]) {
           colors[hex] = { count: 1, score: score };
@@ -125,20 +123,14 @@ export async function extractPaletteFromImage(base64: string): Promise<string[]>
         }
       }
 
-      // Urutkan berdasarkan Skor Vibrancy + Frekuensi
       const sortedColors = Object.entries(colors)
         .sort(([, a], [, b]) => (b.score * b.count) - (a.score * a.count))
         .slice(0, 8)
         .map(([color]) => color);
 
-      // Fallback jika tidak ditemukan warna vibrant yang cukup
-      if (sortedColors.length === 0) {
-        return resolve(['#FF0000', '#FFD700', '#00FFFF', '#FFFFFF', '#FF00FF', '#00FF00']);
-      }
-
-      // Pastikan palet berisi minimal 6 pilihan warna
-      while (sortedColors.length < 6) {
-        sortedColors.push('#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0'));
+      // Jika tidak ditemukan warna cerah dari gambar, gunakan backup warna mewah
+      if (sortedColors.length < 4) {
+        return resolve(luxuryBackup);
       }
 
       resolve(sortedColors);

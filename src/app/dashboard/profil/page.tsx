@@ -97,7 +97,6 @@ export default function ProfilPage() {
         setFullUrl(`${domain}/${profile.username || profile.id}`);
       }
 
-      // Jika ada avatar, coba ekstrak palet jika belum ada
       if (profile.avatarUrl && extractedPalette.length === 0) {
         extractPaletteFromImage(profile.avatarUrl).then(setExtractedPalette);
       }
@@ -128,7 +127,7 @@ export default function ProfilPage() {
     const palette = await extractPaletteFromImage(cropped);
     setExtractedPalette(palette);
     
-    // Set default warna cerdas otomatis
+    // Auto suggest prestige colors
     const primary = palette[0];
     const secondary = getRecommendedSecondary(primary);
     
@@ -194,15 +193,13 @@ export default function ProfilPage() {
     setIsEditing(true);
   };
 
-  const prestigeSecondaryColors = ['#FFFFFF', '#FFD700']; // White & Gold
-
   return (
     <div className="space-y-6 animate-in pb-12">
       <div className="text-center space-y-4 py-8">
         <div 
           className="mx-auto w-28 h-28 rounded-[2rem] flex items-center justify-center border-4 border-background shadow-2xl overflow-hidden relative group aspect-square animate-flowing-gradient"
           style={{ 
-            background: `linear-gradient(-45deg, ${themeColor}, ${themeColorSecondary})`,
+            backgroundImage: `linear-gradient(-45deg, ${themeColor}, ${themeColorSecondary})`,
             backgroundSize: '200% 200%',
             boxShadow: `0 0 40px -5px ${themeColor}99`
           }}
@@ -254,9 +251,7 @@ export default function ProfilPage() {
                   <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Nama Anda..." className="bg-white/5 h-14 text-sm rounded-2xl border-white/10 text-white font-bold" />
                 </div>
                 
-                {/* PILIHAN WARNA */}
                 <div className="space-y-6 p-5 bg-white/[0.03] rounded-[2rem] border border-white/5 shadow-inner">
-                  {/* WARNA UTAMA */}
                   <div className="space-y-3">
                     <div className="flex items-center justify-between px-1">
                       <label className="text-[10px] font-black text-muted-foreground uppercase flex items-center gap-2 tracking-widest"><Palette size={14} className="text-primary" /> Warna Utama (Primary)</label>
@@ -268,7 +263,6 @@ export default function ProfilPage() {
                           key={`p-${i}`} 
                           onClick={() => {
                             setThemeColor(color);
-                            // Otomatis sarankan pasangan mewah saat warna utama dipilih
                             setThemeColorSecondary(getRecommendedSecondary(color));
                           }} 
                           className={`aspect-square rounded-2xl border-2 transition-all flex items-center justify-center ${themeColor === color ? 'border-primary scale-110 shadow-[0_0_20px_rgba(255,0,0,0.5)]' : 'border-transparent opacity-60 hover:opacity-100'}`} 
@@ -280,14 +274,12 @@ export default function ProfilPage() {
                     </div>
                   </div>
 
-                  {/* WARNA SEKUNDER */}
                   <div className="space-y-3">
                     <div className="flex items-center justify-between px-1">
                       <label className="text-[10px] font-black text-muted-foreground uppercase flex items-center gap-2 tracking-widest"><Sparkles size={14} className="text-secondary" /> Warna Gradasi (Secondary)</label>
                       <div className="w-4 h-4 rounded-full shadow-lg" style={{ backgroundColor: themeColorSecondary }} />
                     </div>
                     <div className="grid grid-cols-4 gap-3">
-                      {/* Pilihan dari Gambar */}
                       {extractedPalette.map((color, i) => (
                         <button 
                           key={`s-${i}`} 
@@ -298,7 +290,6 @@ export default function ProfilPage() {
                           {themeColorSecondary === color && <div className="w-2 h-2 bg-white rounded-full animate-pulse" />}
                         </button>
                       ))}
-                      {/* Pilihan Mewah Manual (Gold & White) */}
                       <button 
                         onClick={() => setThemeColorSecondary('#FFFFFF')} 
                         className={`aspect-square rounded-2xl border-2 bg-white ${themeColorSecondary === '#FFFFFF' ? 'border-secondary scale-110 shadow-xl' : 'border-white/10 opacity-80'}`} 
@@ -308,7 +299,7 @@ export default function ProfilPage() {
                         className={`aspect-square rounded-2xl border-2 bg-[#FFD700] ${themeColorSecondary === '#FFD700' ? 'border-secondary scale-110 shadow-xl' : 'border-white/10 opacity-80'}`} 
                       />
                     </div>
-                    <p className="text-[8px] text-muted-foreground italic ml-1">*Pilihan manual Putih & Emas tersedia untuk hasil lebih mewah.</p>
+                    <p className="text-[8px] text-muted-foreground italic ml-1">*Putih & Emas adalah pilihan standar kemewahan.</p>
                   </div>
                 </div>
 
@@ -347,7 +338,6 @@ export default function ProfilPage() {
           </CardContent>
         </Card>
 
-        {/* SOSIAL MEDIA */}
         <Card className="glass-card border-white/5 rounded-[2rem] overflow-hidden">
           <CardContent className="p-6 space-y-6">
             <h3 className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2 text-white"><Share2 size={16} className="text-primary" /> Hubungkan Sosial Media</h3>
