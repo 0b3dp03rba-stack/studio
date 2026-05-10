@@ -1,7 +1,7 @@
 
 "use client";
 
-import { LayoutDashboard, User, Link as LinkIcon, Share2 } from 'lucide-react';
+import { LayoutDashboard, User, Palette, FolderKanban } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -13,16 +13,17 @@ export default function BottomNav() {
 
   if (!user) return null;
   
-  // Sembunyikan Nav jika sedang di halaman publik profile (u/[userId])
-  if (pathname.startsWith('/u/')) return null;
+  if (pathname.startsWith('/u/') || (pathname.length > 1 && !pathname.startsWith('/dashboard'))) return null;
 
   const navItems = [
-    { label: 'Dash', icon: LayoutDashboard, href: '/dashboard' },
+    { label: 'Overview', icon: LayoutDashboard, href: '/dashboard' },
+    { label: 'Manage', icon: FolderKanban, href: '/dashboard/manage' },
+    { label: 'Theme', icon: Palette, href: '/dashboard/theme' },
     { label: 'Profil', icon: User, href: '/dashboard/profil' },
   ];
 
   return (
-    <nav className="bottom-nav">
+    <nav className="bottom-nav h-24">
       {navItems.map((item) => {
         const isActive = pathname === item.href;
         const Icon = item.icon;
@@ -32,21 +33,21 @@ export default function BottomNav() {
             href={item.href}
             className={cn(
               "relative flex flex-col items-center justify-center gap-1.5 flex-1 h-full transition-all duration-500",
-              isActive ? "text-primary scale-110" : "text-white/30 hover:text-white"
+              isActive ? "text-primary scale-110" : "text-white/20 hover:text-white"
             )}
           >
             <div className={cn(
-              "p-2.5 rounded-2xl transition-all duration-500",
-              isActive && "bg-primary/20 glow-primary shadow-[0_0_15px_rgba(255,0,0,0.3)]"
+              "p-3 rounded-2xl transition-all duration-500",
+              isActive && "bg-primary/20 glow-primary shadow-[0_0_20px_rgba(255,0,0,0.4)]"
             )}>
-              <Icon size={24} strokeWidth={isActive ? 3 : 2} />
+              <Icon size={22} strokeWidth={isActive ? 3 : 2} />
             </div>
             <span className={cn(
-              "text-[9px] font-black uppercase tracking-tighter transition-all duration-500",
+              "text-[8px] font-black uppercase tracking-widest transition-all duration-500",
               isActive ? "opacity-100 mt-1" : "opacity-0 scale-75 -mt-2"
             )}>{item.label}</span>
             {isActive && (
-              <div className="absolute -bottom-1 w-8 h-1 rounded-full neon-gradient shadow-[0_0_10px_red]" />
+              <div className="absolute -bottom-1 w-10 h-1.5 rounded-full neon-gradient" />
             )}
           </Link>
         );

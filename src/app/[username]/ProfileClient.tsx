@@ -54,11 +54,17 @@ export default function ProfileClient({ username }: { username: string }) {
         const userRef = doc(db, 'usernames', username.toLowerCase());
         const userSnap = await getDoc(userRef);
         if (userSnap.exists()) {
-          setResolvedUserId(userSnap.data().userId);
+          const uid = userSnap.data().userId;
+          setResolvedUserId(uid);
+          // Increment daily views
+          updateDoc(doc(db, 'userProfiles', uid), { views: increment(1) }).catch(() => {});
         } else {
           const profileRef = doc(db, 'userProfiles', username);
           const profileSnap = await getDoc(profileRef);
-          if (profileSnap.exists()) setResolvedUserId(username);
+          if (profileSnap.exists()) {
+            setResolvedUserId(username);
+            updateDoc(doc(db, 'userProfiles', username), { views: increment(1) }).catch(() => {});
+          }
         }
       } catch (e) {
         console.error("Resolution failed:", e);

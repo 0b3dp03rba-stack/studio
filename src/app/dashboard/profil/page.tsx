@@ -13,7 +13,6 @@ import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, serverTimestamp, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { getAuth, signOut } from 'firebase/auth';
 import ImageCropperModal from '@/components/ImageCropperModal';
-import { extractPaletteFromImage, getRecommendedSecondary, PRESTIGE_SECONDARIES } from '@/lib/utils-app';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const TikTokIcon = ({ className, size = 16 }: { className?: string, size?: number }) => (
@@ -65,9 +64,6 @@ export default function ProfilPage() {
   const [username, setUsername] = useState('');
   const [bio, setBio] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
-  const [themeColor, setThemeColor] = useState('#ff0000');
-  const [themeColorSecondary, setThemeColorSecondary] = useState('#ffea00');
-  const [extractedPalette, setExtractedPalette] = useState<string[]>([]);
   const [socialLinks, setSocialLinks] = useState<any[]>([]);
   
   const [isEditing, setIsEditing] = useState(false);
@@ -88,17 +84,11 @@ export default function ProfilPage() {
       setUsername(profile.username || '');
       setBio(profile.bio || '');
       setAvatarUrl(profile.avatarUrl || '');
-      setThemeColor(profile.themeColor || '#ff0000');
-      setThemeColorSecondary(profile.themeColorSecondary || '#ffea00');
       setSocialLinks(profile.socialLinks || []);
       
       if (typeof window !== 'undefined') {
         const domain = window.location.origin;
         setFullUrl(`${domain}/${profile.username || profile.id}`);
-      }
-
-      if (profile.avatarUrl && extractedPalette.length === 0) {
-        extractPaletteFromImage(profile.avatarUrl).then(setExtractedPalette);
       }
     }
   }, [profile]);
@@ -106,7 +96,7 @@ export default function ProfilPage() {
   const handleCopyUrl = () => {
     if (!fullUrl) return;
     navigator.clipboard.writeText(fullUrl);
-    toast({ title: "Berhasil Salin", description: "URL profil Linku Anda telah disalin." });
+    toast({ title: "Tersalin!", description: "Link profil Anda siap dibagikan." });
   };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -124,15 +114,7 @@ export default function ProfilPage() {
   const onCropComplete = async (cropped: string) => {
     setAvatarUrl(cropped);
     setIsEditing(true);
-    const palette = await extractPaletteFromImage(cropped);
-    setExtractedPalette(palette);
-    
-    // OTOMATIS: Pilih warna primer terbaik dan pasangkan dengan sekunder prestige
-    const primary = palette[0];
-    const secondary = getRecommendedSecondary(primary);
-    
-    setThemeColor(primary);
-    setThemeColorSecondary(secondary);
+    // Note: Theme logic moved to ThemePage. Profil only handles Image change.
   };
 
   const handleLogout = async () => {
@@ -161,12 +143,10 @@ export default function ProfilPage() {
         username: cleanUsername,
         bio,
         avatarUrl,
-        themeColor,
-        themeColorSecondary,
         socialLinks,
         updatedAt: serverTimestamp()
       });
-      toast({ title: "Tersimpan", description: "Profil Linku Anda telah diperbarui." });
+      toast({ title: "Tersimpan", description: "Detail identitas diperbarui." });
       setIsEditing(false);
     } catch (e: any) {
       toast({ variant: "destructive", title: "Gagal menyimpan" });
@@ -176,11 +156,7 @@ export default function ProfilPage() {
   };
 
   const handleAddSocialLink = () => {
-    if (!newSocial.platform || !newSocial.label) {
-      toast({ variant: "destructive", title: "Lengkapi Form", description: "Platform dan Username wajib diisi." });
-      return;
-    }
-    
+    if (!newSocial.platform || !newSocial.label) return;
     setSocialLinks([...socialLinks, { ...newSocial }]);
     setNewSocial({ platform: '', label: '' });
     setIsEditing(true);
@@ -194,173 +170,70 @@ export default function ProfilPage() {
   };
 
   return (
-    <div className="space-y-6 animate-in pb-12">
-      <div className="text-center space-y-4 py-8">
-        <div 
-          className="mx-auto w-28 h-28 rounded-[2rem] flex items-center justify-center border-4 border-background shadow-2xl overflow-hidden relative aspect-square animate-flowing-gradient"
-          style={{ 
-            backgroundImage: `linear-gradient(-45deg, ${themeColor}, ${themeColorSecondary})`,
-            backgroundSize: '200% 200%',
-            boxShadow: `0 0 40px -5px ${themeColor}99`
-          }}
-        >
-           {avatarUrl ? (
-             <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover relative z-10" />
-           ) : (
-             <User size={56} className="text-white relative z-10" />
-           )}
-           <div className="absolute inset-0 bg-black/10" />
-        </div>
-        <div className="px-4 text-center">
-          <h1 className="text-2xl font-black text-white tracking-tight leading-none">{displayName || profile?.username || 'User Linku'}</h1>
-          <div className="flex items-center justify-center gap-1.5 mt-1">
-            <AtSign size={12} style={{ color: themeColor }} />
-            <p className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: themeColor }}>{profile?.username || 'user'}</p>
-          </div>
-        </div>
+    <div className="space-y-8 animate-in pb-24">
+      <div className="space-y-1">
+        <h1 className="text-4xl font-black tracking-tighter text-white uppercase">Profile Set</h1>
+        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/70">Identitas Publik Anda</p>
       </div>
 
-      <Card className="glass-card border-none bg-primary/5 rounded-[2rem] overflow-hidden">
-        <CardContent className="p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="space-y-1 min-w-0 flex-1">
-              <p className="text-[10px] font-black uppercase text-primary tracking-widest">URL Profil Linku</p>
-              <p className="text-sm font-bold text-white truncate pr-4">{fullUrl || 'Menyiapkan URL...'}</p>
-            </div>
-            <Button variant="ghost" size="icon" onClick={handleCopyUrl} className="h-12 w-12 rounded-2xl bg-white/5 hover:bg-primary/20 hover:text-primary shadow-xl shrink-0">
-              <Copy size={20} />
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="space-y-4">
-        <Card className="glass-card border-white/5 rounded-[2rem] overflow-hidden">
-          <CardContent className="p-6 space-y-5">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2 text-white"><Edit3 size={16} className="text-primary" /> Konfigurasi Visual</h3>
-              {!isEditing && (
-                <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)} className="h-8 px-4 text-[10px] font-black text-primary rounded-xl hover:bg-primary/10">Edit Profil</Button>
-              )}
-            </div>
-            
-            {isEditing ? (
-              <div className="space-y-6">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-muted-foreground uppercase ml-1">Nama Tampilan</label>
-                  <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Nama Anda..." className="bg-white/5 h-14 text-sm rounded-2xl border-white/10 text-white font-bold" />
-                </div>
-                
-                <div className="space-y-8 p-5 bg-white/[0.03] rounded-[2rem] border border-white/5 shadow-inner">
-                  {/* GRID 20 WARNA PRIMER DARI GAMBAR */}
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between px-1">
-                      <label className="text-[10px] font-black text-muted-foreground uppercase flex items-center gap-2 tracking-widest"><Palette size={14} className="text-primary" /> Warna Utama (20 Pilihan)</label>
-                      <div className="w-5 h-5 rounded-full shadow-lg border border-white/20" style={{ backgroundColor: themeColor }} />
-                    </div>
-                    <div className="grid grid-cols-4 gap-3">
-                      {extractedPalette.map((color, i) => (
-                        <button 
-                          key={`p-${i}`} 
-                          onClick={() => {
-                            setThemeColor(color);
-                            setThemeColorSecondary(getRecommendedSecondary(color));
-                          }} 
-                          className={`aspect-square rounded-2xl border-2 transition-all flex items-center justify-center ${themeColor === color ? 'border-primary scale-110 shadow-[0_0_15px_rgba(255,0,0,0.4)]' : 'border-white/5 opacity-70 hover:opacity-100'}`} 
-                          style={{ backgroundColor: color }}
-                        >
-                          {themeColor === color && <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />}
-                        </button>
-                      ))}
-                    </div>
-                    <p className="text-[8px] text-muted-foreground italic ml-1">*Warna Utama diekstrak otomatis dari foto Anda (Vibrant ke Deep).</p>
-                  </div>
-
-                  {/* GRID 20 WARNA SEKUNDER PERMANEN */}
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between px-1">
-                      <label className="text-[10px] font-black text-muted-foreground uppercase flex items-center gap-2 tracking-widest"><Sparkles size={14} className="text-secondary" /> Warna Gradasi (Prestige)</label>
-                      <div className="w-5 h-5 rounded-full shadow-lg border border-white/20" style={{ backgroundColor: themeColorSecondary }} />
-                    </div>
-                    <div className="grid grid-cols-4 gap-3">
-                      {PRESTIGE_SECONDARIES.map((sHex) => (
-                        <button 
-                          key={sHex}
-                          onClick={() => setThemeColorSecondary(sHex)}
-                          className={`aspect-square rounded-2xl border-2 transition-all flex items-center justify-center ${themeColorSecondary === sHex ? 'border-secondary scale-110 shadow-[0_0_15px_rgba(255,234,0,0.4)]' : 'border-white/5 opacity-70 hover:opacity-100'}`}
-                          style={{ backgroundColor: sHex }}
-                        >
-                           {themeColorSecondary === sHex && <div className="w-1.5 h-1.5 bg-background rounded-full animate-pulse" />}
-                        </button>
-                      ))}
-                    </div>
-                    <p className="text-[8px] text-muted-foreground italic ml-1">*Koleksi 20 warna sekunder permanen untuk menjamin kesan mewah.</p>
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-muted-foreground uppercase ml-1">Ganti Foto Profil</label>
-                  <label className="flex items-center justify-center gap-3 h-14 bg-white/5 border border-dashed border-white/20 rounded-2xl cursor-pointer hover:bg-white/10 transition-all">
-                    <Upload size={18} className="text-primary" />
-                    <span className="text-xs font-bold text-white/40 uppercase">Pilih Gambar Baru</span>
-                    <input type="file" className="hidden" accept="image/*" onChange={handleImageSelect} />
-                  </label>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-muted-foreground uppercase ml-1">Bio Singkat</label>
-                  <Textarea value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Tulis bio Anda..." className="bg-white/5 h-24 text-sm rounded-2xl border-white/10 text-white font-medium" />
+      <div className="space-y-6">
+        <Card className="glass-card border-none rounded-[2.5rem] overflow-hidden">
+          <CardContent className="p-8 space-y-6">
+            <div className="flex flex-col items-center gap-6">
+              <div className="relative group">
+                <div className="w-32 h-32 rounded-[2.5rem] bg-white/5 flex items-center justify-center overflow-hidden border-2 border-white/10 shadow-2xl relative">
+                   {avatarUrl ? <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" /> : <User size={56} className="text-white/20" />}
+                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                     <label className="cursor-pointer p-3 bg-white/10 rounded-2xl backdrop-blur-xl">
+                        <Upload size={24} className="text-white" />
+                        <input type="file" className="hidden" accept="image/*" onChange={handleImageSelect} />
+                     </label>
+                   </div>
                 </div>
               </div>
-            ) : (
-              <div className="space-y-5">
-                <div className="p-4 bg-white/[0.02] rounded-2xl border border-white/5">
-                  <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">Bio Anda</p>
-                  <p className="text-sm font-medium text-white/80 leading-relaxed">{bio || 'Belum ada bio.'}</p>
-                </div>
-                <div className="flex gap-4">
-                  <div className="flex-1 p-3 rounded-xl border border-white/5 flex items-center justify-between">
-                    <span className="text-[8px] font-black uppercase text-muted-foreground">Primary</span>
-                    <div className="w-4 h-4 rounded-full" style={{ backgroundColor: themeColor }} />
-                  </div>
-                  <div className="flex-1 p-3 rounded-xl border border-white/5 flex items-center justify-between">
-                    <span className="text-[8px] font-black uppercase text-muted-foreground">Secondary</span>
-                    <div className="w-4 h-4 rounded-full" style={{ backgroundColor: themeColorSecondary }} />
-                  </div>
-                </div>
+
+              <div className="w-full space-y-4">
+                 <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-muted-foreground uppercase ml-1">Nama Tampilan</label>
+                    <Input value={displayName} onChange={(e) => { setDisplayName(e.target.value); setIsEditing(true); }} className="bg-white/5 h-14 border-none font-bold text-sm rounded-2xl" placeholder="Nama Anda" />
+                 </div>
+                 <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-muted-foreground uppercase ml-1">Username Unik</label>
+                    <div className="relative">
+                      <AtSign className="absolute left-4 top-1/2 -translate-y-1/2 text-primary" size={14} />
+                      <Input value={username} onChange={(e) => { setUsername(e.target.value); setIsEditing(true); }} className="bg-white/5 h-14 border-none pl-12 font-bold text-sm rounded-2xl" placeholder="username" />
+                    </div>
+                 </div>
+                 <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-muted-foreground uppercase ml-1">Bio Singkat</label>
+                    <Textarea value={bio} onChange={(e) => { setBio(e.target.value); setIsEditing(true); }} className="bg-white/5 h-24 border-none text-xs font-medium rounded-2xl" placeholder="Ceritakan siapa Anda..." />
+                 </div>
               </div>
-            )}
+            </div>
           </CardContent>
         </Card>
 
-        <Card className="glass-card border-white/5 rounded-[2rem] overflow-hidden">
-          <CardContent className="p-6 space-y-6">
-            <h3 className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2 text-white"><Share2 size={16} className="text-primary" /> Hubungkan Sosial Media</h3>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="text-[9px] font-black text-muted-foreground uppercase ml-1">Platform</label>
-                  <Select value={newSocial.platform} onValueChange={(v) => setNewSocial({...newSocial, platform: v})}>
-                    <SelectTrigger className="bg-white/5 border-white/10 h-12 rounded-xl text-xs font-bold">
-                      <SelectValue placeholder="Pilih" />
-                    </SelectTrigger>
-                    <SelectContent className="glass-card border-none rounded-xl">
-                      {socialPlatforms.map(p => (
-                        <SelectItem key={p.name} value={p.name} className="text-xs font-bold">{p.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[9px] font-black text-muted-foreground uppercase ml-1">Username / ID</label>
-                  <Input value={newSocial.label} onChange={(e) => setNewSocial({...newSocial, label: e.target.value})} placeholder="misal: gunxmod" className="bg-white/5 border-white/10 h-12 rounded-xl text-xs font-bold" />
-                </div>
-              </div>
-              <Button onClick={handleAddSocialLink} className="w-full h-12 neon-gradient text-background font-black rounded-xl text-[10px] uppercase tracking-widest glow-primary">
-                Tambah Sosmed Otomatis
-              </Button>
+        <Card className="glass-card border-none rounded-[2.5rem] overflow-hidden">
+          <CardContent className="p-8 space-y-6">
+            <h3 className="text-xs font-black uppercase tracking-widest flex items-center gap-2 text-white"><Share2 size={16} className="text-primary" /> Sosial Media</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <Select value={newSocial.platform} onValueChange={(v) => setNewSocial({...newSocial, platform: v})}>
+                <SelectTrigger className="bg-white/5 border-none h-12 rounded-xl text-[10px] font-black uppercase">
+                  <SelectValue placeholder="Platform" />
+                </SelectTrigger>
+                <SelectContent className="glass-card border-none rounded-xl">
+                  {socialPlatforms.map(p => (
+                    <SelectItem key={p.name} value={p.name} className="text-xs font-bold">{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input value={newSocial.label} onChange={(e) => setNewSocial({...newSocial, label: e.target.value})} placeholder="@username" className="bg-white/5 border-none h-12 rounded-xl text-xs font-bold" />
             </div>
-            <div className="grid gap-3 pt-4 border-t border-white/5">
+            <Button onClick={handleAddSocialLink} className="w-full h-12 bg-white/5 hover:bg-white/10 text-white font-black rounded-xl text-[9px] uppercase tracking-widest border border-white/5">
+              Hubungkan Media
+            </Button>
+            
+            <div className="grid gap-3">
               {socialLinks.map((social, i) => {
                 const Icon = platformIcons[social.platform] || Link2;
                 return (
@@ -384,17 +257,28 @@ export default function ProfilPage() {
           </CardContent>
         </Card>
 
-        {isEditing && (
-          <div className="flex gap-2 pt-4">
-            <Button variant="outline" onClick={() => setIsEditing(false)} disabled={isSaving} className="flex-1 h-14 rounded-2xl">Batal</Button>
-            <Button onClick={handleSaveProfile} disabled={isSaving} className="flex-1 h-14 neon-gradient text-background font-black rounded-2xl shadow-xl">
-              {isSaving ? <Loader2 className="animate-spin" size={20} /> : "Simpan Perubahan"}
+        <Card className="glass-card border-none rounded-[2rem] p-6 shadow-2xl space-y-4">
+           <div className="flex items-center justify-between">
+              <div>
+                 <p className="text-[9px] font-black uppercase text-primary tracking-widest mb-1">Public URL</p>
+                 <p className="text-xs font-bold text-white truncate max-w-[200px]">{fullUrl || 'Loading...'}</p>
+              </div>
+              <Button variant="ghost" size="icon" onClick={handleCopyUrl} className="h-12 w-12 rounded-2xl bg-primary/10 hover:bg-primary/20 text-primary shadow-xl">
+                <Copy size={20} />
+              </Button>
+           </div>
+        </Card>
+
+        <div className="flex flex-col gap-3 pt-4">
+          {isEditing && (
+            <Button onClick={handleSaveProfile} disabled={isSaving} className="w-full h-16 neon-gradient text-background font-black rounded-3xl shadow-xl uppercase tracking-widest text-sm">
+              {isSaving ? <Loader2 className="animate-spin" size={20} /> : "Simpan Identitas"}
             </Button>
-          </div>
-        )}
-        <Button variant="destructive" className="w-full h-16 rounded-[2rem] font-black text-sm uppercase mt-6" onClick={handleLogout}>
-          <LogOut size={20} className="mr-3" /> Keluar Sesi
-        </Button>
+          )}
+          <Button variant="destructive" className="w-full h-16 rounded-3xl font-black text-xs uppercase tracking-[0.2em] bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20" onClick={handleLogout}>
+            <LogOut size={16} className="mr-3" /> Keluar Sesi
+          </Button>
+        </div>
       </div>
       <ImageCropperModal imageSrc={tempImage} isOpen={cropperOpen} onClose={() => setCropperOpen(false)} onCropComplete={onCropComplete} />
     </div>

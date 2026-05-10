@@ -15,7 +15,7 @@ export function formatDate(dateString: string) {
 }
 
 /**
- * 20 Warna Sekunder "Prestige" Permanen untuk kesan mewah maksimal.
+ * 20 Warna Sekunder "Prestige" Terkurasi (Elegan & Vibrant)
  */
 export const PRESTIGE_SECONDARIES = [
   '#FFFFFF', // White Crystal
@@ -24,20 +24,20 @@ export const PRESTIGE_SECONDARIES = [
   '#FFFF00', // Neon Yellow
   '#FF00FF', // Vivid Magenta
   '#00FF00', // Lime Neon
-  '#FF4500', // Orange Red
+  '#FF0000', // True Red
+  '#7B00FF', // Deep Majesty Purple
   '#E0FFFF', // Cloud Blue
   '#FF69B4', // Hot Pink
   '#F0E68C', // Khaki/Silk
   '#7DF9FF', // Diamond Blue
   '#B76E79', // Rose Gold
-  '#F5F5DC', // Beige Luxury
-  '#D8BFD8', // Thistle Purple
-  '#AFEEEE', // Pale Turquoise
-  '#FFFACD', // Lemon Chiffon
-  '#E6E6FA', // Lavender
-  '#98FB98', // Mint Green
-  '#FFB6C1', // Light Pink
   '#C0C0C0', // Silver Metallic
+  '#FF4500', // Orange Red
+  '#00FF7F', // Spring Green
+  '#87CEEB', // Sky Blue
+  '#D8BFD8', // Thistle Purple
+  '#FFE4E1', // Misty Rose
+  '#F5F5DC', // Beige Luxury
 ];
 
 /**
@@ -67,22 +67,28 @@ function hexToHsl(hex: string) {
 }
 
 /**
- * Memberikan saran warna sekunder dari daftar permanen berdasarkan warna primer.
+ * SMART COLOR AI: Memberikan saran warna sekunder paling estetis berdasarkan warna primer.
  */
 export function getRecommendedSecondary(primaryHex: string): string {
   const hsl = hexToHsl(primaryHex);
   
-  // Jika primer cenderung gelap (L < 50), berikan sekunder yang sangat terang
-  if (hsl.l < 50) {
-    if (hsl.h <= 45 || hsl.h >= 340) return '#FFD700'; // Merah/Coklat Gelap -> Gold
-    if (hsl.h > 150 && hsl.h <= 260) return '#00FFFF'; // Biru Gelap -> Cyan
-    return '#FFFFFF'; // Sisanya -> Putih
+  // Logic AI Design:
+  // 1. Jika Primer Gelap (Maroon, Navy, Brown, Black) -> Gunakan Emas atau Putih
+  if (hsl.l < 45) {
+    if (hsl.h <= 30 || hsl.h >= 330) return '#FFD700'; // Dark Red/Maroon -> Gold
+    return '#FFFFFF'; // Dark others -> White
   }
-  
-  // Jika primer sudah terang, cari kontras warna
-  if (hsl.h > 240 && hsl.h < 340) return '#FFFFFF'; // Ungu -> Putih
-  if (hsl.h > 45 && hsl.h <= 150) return '#FFFF00'; // Hijau -> Kuning
-  
+
+  // 2. Jika Primer Merah Terang -> Gunakan Putih atau Emas
+  if ((hsl.h <= 10 || hsl.h >= 345) && hsl.s > 50) return '#FFFFFF';
+
+  // 3. Jika Primer Biru/Hijau -> Gunakan Kuning atau Putih
+  if (hsl.h > 150 && hsl.h < 280) return '#FFFF00'; 
+
+  // 4. Jika Primer Ungu -> Gunakan Lime atau Putih
+  if (hsl.h >= 280 && hsl.h < 330) return '#00FF00';
+
+  // 5. Default Prestige
   return '#FFFFFF';
 }
 
@@ -113,9 +119,8 @@ export async function extractPaletteFromImage(base64: string): Promise<string[]>
         const g = data[i + 1];
         const b = data[i + 2];
         const a = data[i + 3];
-        if (a < 180) continue; // Abaikan pixel transparan
+        if (a < 180) continue;
 
-        // Kuantisasi warna untuk mengurangi noise
         const factor = 15; 
         const qr = Math.round(r / factor) * factor;
         const qg = Math.round(g / factor) * factor;
@@ -123,11 +128,9 @@ export async function extractPaletteFromImage(base64: string): Promise<string[]>
         const hex = `#${((1 << 24) + (qr << 16) + (qg << 8) + qb).toString(16).slice(1)}`;
 
         const hsl = hexToHsl(hex);
-        
-        // Singkirkan warna yang terlalu dekat dengan hitam pekat atau putih pekat murni
-        if (hsl.l < 10 || hsl.l > 95) continue;
+        if (hsl.l < 5 || hsl.l > 98) continue;
 
-        // Scoring: Mix Saturasi dan Lightness. Warna vibrant di atas, redup di bawah.
+        // Vibrancy Score
         const score = (hsl.s * 3) + (hsl.l * 2); 
 
         if (!colors[hex]) {
@@ -138,8 +141,8 @@ export async function extractPaletteFromImage(base64: string): Promise<string[]>
       }
 
       const sortedColors = Object.entries(colors)
-        .sort(([, a], [, b]) => b.score - a.score) // Urutkan berdasarkan Vibrancy Score
-        .slice(0, 20) // Ambil 20 warna
+        .sort(([, a], [, b]) => b.score - a.score) 
+        .slice(0, 20) 
         .map(([color]) => color);
 
       if (sortedColors.length < 5) return resolve(standardBackup);
