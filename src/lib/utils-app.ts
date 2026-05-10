@@ -15,6 +15,32 @@ export function formatDate(dateString: string) {
 }
 
 /**
+ * 20 Warna Sekunder "Prestige" Permanen untuk kesan mewah maksimal.
+ */
+export const PRESTIGE_SECONDARIES = [
+  '#FFFFFF', // White Crystal
+  '#FFD700', // Royal Gold
+  '#00FFFF', // Electric Cyan
+  '#FFFF00', // Neon Yellow
+  '#FF00FF', // Vivid Magenta
+  '#00FF00', // Lime Neon
+  '#FF4500', // Orange Red
+  '#E0FFFF', // Cloud Blue
+  '#FF69B4', // Hot Pink
+  '#F0E68C', // Khaki/Silk
+  '#7DF9FF', // Diamond Blue
+  '#B76E79', // Rose Gold
+  '#F5F5DC', // Beige Luxury
+  '#D8BFD8', // Thistle Purple
+  '#AFEEEE', // Pale Turquoise
+  '#FFFACD', // Lemon Chiffon
+  '#E6E6FA', // Lavender
+  '#98FB98', // Mint Green
+  '#FFB6C1', // Light Pink
+  '#C0C0C0', // Silver Metallic
+];
+
+/**
  * Konversi Hex ke HSL untuk analisa vibrance
  */
 function hexToHsl(hex: string) {
@@ -41,37 +67,28 @@ function hexToHsl(hex: string) {
 }
 
 /**
- * Memberikan saran warna sekunder yang mewah (Prestige Pairs) berdasarkan warna utama.
- * Logika: Merah-Emas, Hijau-Kuning, Biru-Cyan/Cloud, Ungu-Putih.
+ * Memberikan saran warna sekunder dari daftar permanen berdasarkan warna primer.
  */
 export function getRecommendedSecondary(primaryHex: string): string {
   const hsl = hexToHsl(primaryHex);
   
-  // MERAH / COKLAT / ORANGE -> Emas Mewah
-  if (hsl.h <= 45 || hsl.h >= 340) {
-    return '#FFD700'; 
+  // Jika primer cenderung gelap (L < 50), berikan sekunder yang sangat terang
+  if (hsl.l < 50) {
+    if (hsl.h <= 45 || hsl.h >= 340) return '#FFD700'; // Merah/Coklat Gelap -> Gold
+    if (hsl.h > 150 && hsl.h <= 260) return '#00FFFF'; // Biru Gelap -> Cyan
+    return '#FFFFFF'; // Sisanya -> Putih
   }
   
-  // KUNING / LIME / HIJAU -> Kuning atau Putih
-  if (hsl.h > 45 && hsl.h <= 150) {
-    return '#FFFF00';
-  }
-
-  // CYAN / BIRU -> Cloud atau Cyan Terang
-  if (hsl.h > 150 && hsl.h <= 240) {
-    return '#00FFFF';
-  }
-
-  // UNGU / MAGENTA -> Putih Kristal
-  if (hsl.h > 240 && hsl.h < 340) {
-    return '#FFFFFF';
-  }
+  // Jika primer sudah terang, cari kontras warna
+  if (hsl.h > 240 && hsl.h < 340) return '#FFFFFF'; // Ungu -> Putih
+  if (hsl.h > 45 && hsl.h <= 150) return '#FFFF00'; // Hijau -> Kuning
   
   return '#FFFFFF';
 }
 
 /**
- * Mengekstrak palet warna dari gambar base64 dengan prioritas pada warna cerah/vibrant.
+ * Mengekstrak 20 palet warna dari gambar base64.
+ * Diurutkan dari yang paling vibrant (terang/jenuh) ke yang lebih redup.
  */
 export async function extractPaletteFromImage(base64: string): Promise<string[]> {
   return new Promise((resolve) => {
@@ -80,26 +97,26 @@ export async function extractPaletteFromImage(base64: string): Promise<string[]>
     img.onload = () => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      // Warna-warna cerah standar jika ekstraksi gagal
-      const luxuryBackup = ['#FF0000', '#00FF00', '#0000FF', '#FF00FF', '#FFD700', '#00FFFF', '#FFA500', '#FFFF00'];
+      const standardBackup = ['#FF0000', '#00FF00', '#0000FF', '#FF00FF', '#FFD700', '#00FFFF', '#FFA500', '#FFFF00'];
       
-      if (!ctx) return resolve(luxuryBackup);
+      if (!ctx) return resolve(standardBackup);
 
       canvas.width = 100;
       canvas.height = 100;
       ctx.drawImage(img, 0, 0, 100, 100);
       const data = ctx.getImageData(0, 0, 100, 100).data;
 
-      const colors: Record<string, { count: number, score: number }> = {};
+      const colors: Record<string, { count: number, score: number, hsl: any }> = {};
       
       for (let i = 0; i < data.length; i += 4) {
         const r = data[i];
         const g = data[i + 1];
         const b = data[i + 2];
         const a = data[i + 3];
-        if (a < 200) continue; // Abaikan pixel transparan
+        if (a < 180) continue; // Abaikan pixel transparan
 
-        const factor = 10; 
+        // Kuantisasi warna untuk mengurangi noise
+        const factor = 15; 
         const qr = Math.round(r / factor) * factor;
         const qg = Math.round(g / factor) * factor;
         const qb = Math.round(b / factor) * factor;
@@ -107,28 +124,25 @@ export async function extractPaletteFromImage(base64: string): Promise<string[]>
 
         const hsl = hexToHsl(hex);
         
-        // FILTER AGRESIVE: Buang warna gelap (L < 45) atau kusam (S < 40)
-        if (hsl.l < 45 || hsl.s < 40) continue;
+        // Singkirkan warna yang terlalu dekat dengan hitam pekat atau putih pekat murni
+        if (hsl.l < 10 || hsl.l > 95) continue;
 
-        // SCORING: Utamakan Saturasi (Kejenuhan warna)
-        const score = (hsl.s * 4) + (hsl.l * 1); 
+        // Scoring: Mix Saturasi dan Lightness. Warna vibrant di atas, redup di bawah.
+        const score = (hsl.s * 3) + (hsl.l * 2); 
 
         if (!colors[hex]) {
-          colors[hex] = { count: 1, score: score };
+          colors[hex] = { count: 1, score: score, hsl: hsl };
         } else {
           colors[hex].count++;
         }
       }
 
       const sortedColors = Object.entries(colors)
-        .sort(([, a], [, b]) => (b.score * b.count) - (a.score * a.count))
-        .slice(0, 8)
+        .sort(([, a], [, b]) => b.score - a.score) // Urutkan berdasarkan Vibrancy Score
+        .slice(0, 20) // Ambil 20 warna
         .map(([color]) => color);
 
-      if (sortedColors.length < 4) {
-        return resolve(luxuryBackup);
-      }
-
+      if (sortedColors.length < 5) return resolve(standardBackup);
       resolve(sortedColors);
     };
     img.onerror = () => resolve(['#FF0000', '#FFD700', '#00FFFF', '#FFFFFF']);
