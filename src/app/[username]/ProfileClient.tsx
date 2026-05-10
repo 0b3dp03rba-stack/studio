@@ -4,7 +4,7 @@
 import { useMemo, useEffect, useState } from 'react';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc, collection, updateDoc, increment, getDoc, query, orderBy, onSnapshot } from 'firebase/firestore';
-import { User, Share2, MousePointer2, Link2, ChevronRight, LayoutGrid, ArrowLeft, Instagram, Youtube, Facebook, Mail, MessageCircle, ExternalLink, Globe, Search, X, Sparkles } from 'lucide-react';
+import { User, Share2, MousePointer2, Link2, ChevronRight, LayoutGrid, ArrowLeft, Instagram, Youtube, Facebook, Mail, MessageCircle, ExternalLink, Globe, Search, X, Sparkles, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -78,7 +78,6 @@ export default function ProfileClient({ username }: { username: string }) {
   const standaloneLinksQuery = useMemoFirebase(() => resolvedUserId ? query(collection(db, 'userProfiles', resolvedUserId, 'links'), orderBy('order', 'asc')) : null, [db, resolvedUserId]);
   const { data: standaloneLinks, isLoading: isStandaloneLoading } = useCollection(standaloneLinksQuery);
 
-  // Fetch all links from all groups for global search & latest link logic
   useEffect(() => {
     if (!resolvedUserId || !groups) return;
 
@@ -339,10 +338,22 @@ export default function ProfileClient({ username }: { username: string }) {
           </div>
         </div>
 
-        <div className="pt-12 text-center space-y-3">
-          <div className="flex items-center justify-center gap-2 opacity-40">
-            <Link2 size={12} style={{ color: primaryColor }} />
-            <p className="text-[9px] font-black uppercase tracking-[0.4em] text-white">Powering with Linku Engine</p>
+        <div className="pt-12 text-center space-y-8">
+          <div className="flex flex-col items-center gap-4">
+            <div className="flex items-center justify-center gap-2 opacity-40">
+              <Link2 size={12} style={{ color: primaryColor }} />
+              <p className="text-[9px] font-black uppercase tracking-[0.4em] text-white">Powering with Linku Engine</p>
+            </div>
+            
+            <Button 
+              asChild
+              className="w-full h-14 neon-gradient text-background font-black rounded-2xl glow-primary text-[10px] uppercase tracking-widest shadow-2xl active:scale-95 transition-all animate-flowing-gradient"
+              style={{ background: dynamicGradient, backgroundSize: '200% 200%' }}
+            >
+              <Link href="/register">
+                <UserPlus size={16} className="mr-2" /> Bergabung dengan {profile.displayName || profile.username} di Linku
+              </Link>
+            </Button>
           </div>
         </div>
       </div>
