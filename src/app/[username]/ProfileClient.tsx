@@ -3,11 +3,12 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc, collection, updateDoc, increment, getDoc, query, orderBy, onSnapshot, limit } from 'firebase/firestore';
-import { User, Share2, MousePointer2, Link2, LayoutGrid, ChevronRight, Search, X, Instagram, Youtube, Facebook, MessageCircle, Globe, Mail, Sparkles } from 'lucide-react';
+import { doc, collection, updateDoc, increment, getDoc, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { User, Share2, MousePointer2, Link2, LayoutGrid, ChevronRight, Search, X, Instagram, Youtube, Facebook, MessageCircle, Globe, Mail, Sparkles, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import Link from 'next/link';
 
 const TikTokIcon = ({ className, size = 16 }: { className?: string, size?: number }) => (
@@ -32,6 +33,7 @@ export default function ProfileClient({ username }: { username: string }) {
   const [isResolving, setIsResolving] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [allLinks, setAllLinks] = useState<any[]>([]);
+  const [selectedSocial, setSelectedSocial] = useState<any>(null);
 
   useEffect(() => {
     const resolveUserAndTrackView = async () => {
@@ -73,11 +75,9 @@ export default function ProfileClient({ username }: { username: string }) {
   }, [db, resolvedUserId]);
   const { data: standaloneLinks } = useCollection(standaloneLinksQuery);
 
-  // Aggregation for Search and "NEW" feature
   useEffect(() => {
     if (!resolvedUserId) return;
 
-    // Listen to standalone links
     const unsubStandalone = onSnapshot(collection(db, 'userProfiles', resolvedUserId, 'links'), (snap) => {
       const links = snap.docs.map(d => ({ ...d.data(), id: d.id, isStandalone: true }));
       setAllLinks(prev => {
@@ -86,7 +86,6 @@ export default function ProfileClient({ username }: { username: string }) {
       });
     });
 
-    // Listen to all links inside groups
     if (groups) {
       const groupUnsubs = groups.map(group => {
         return onSnapshot(collection(db, 'userProfiles', resolvedUserId, 'linkGroups', group.id, 'links'), (snap) => {
@@ -186,16 +185,13 @@ export default function ProfileClient({ username }: { username: string }) {
               {profile.socialLinks.map((social: any, i: number) => {
                 const Icon = platformIcons[social.platform] || Globe;
                 return (
-                  <a 
+                  <button 
                     key={i} 
-                    href={social.platform === 'Email' ? `mailto:${social.label}` : social.url || '#'} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
+                    onClick={() => setSelectedSocial(social)}
                     className="w-12 h-12 rounded-2xl glass-card flex items-center justify-center text-white/60 hover:text-white transition-all hover:scale-110 border border-white/5 active:scale-95"
-                    style={{ '--glow-color': primaryColor } as any}
                   >
                     <Icon size={22} style={{ color: primaryColor }} />
-                  </a>
+                  </button>
                 );
               })}
             </div>
@@ -222,7 +218,6 @@ export default function ProfileClient({ username }: { username: string }) {
         </div>
 
         <div className="space-y-6">
-          {/* Newest Link Feature - Global New */}
           {!searchQuery && newestLink && (
             <div className="space-y-3">
               <p className="text-[10px] font-black text-primary uppercase tracking-[0.4em] ml-1 flex items-center gap-2">
@@ -252,7 +247,6 @@ export default function ProfileClient({ username }: { username: string }) {
             </div>
           )}
 
-          {/* Groups Section */}
           <div className="space-y-4 pt-4 border-t border-white/5">
              <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em] ml-1">Koleksi Konten</p>
             {filteredGroups.map(group => (
@@ -276,7 +270,6 @@ export default function ProfileClient({ username }: { username: string }) {
             ))}
           </div>
 
-          {/* Search Result: Links from Groups */}
           {searchQuery && filteredGroupedLinks.map(link => (
              <button
               key={`search-${link.id}`}
@@ -297,7 +290,6 @@ export default function ProfileClient({ username }: { username: string }) {
             </button>
           ))}
 
-          {/* Standalone Links */}
           <div className="space-y-4 pt-4 border-t border-white/5">
             {(!searchQuery || filteredStandaloneLinks.length > 0) && (
               <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em] ml-1">Tautan Mandiri</p>
@@ -335,6 +327,45 @@ export default function ProfileClient({ username }: { username: string }) {
           </Button>
         </div>
       </div>
+
+      {/* Social Media Popup */}
+      <Dialog open={!!selectedSocial} onOpenChange={(open) => !open && setSelectedSocial(null)}>
+        <DialogContent className="glass-card border-none rounded-[2.5rem] bg-background/95 backdrop-blur-3xl p-8 shadow-2xl max-w-[90%] sm:max-w-sm mx-auto overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1.5 neon-gradient" style={{ backgroundImage: dynamicGradient }} />
+          <div className="flex flex-col items-center text-center space-y-6 py-4">
+            <div 
+              className="w-24 h-24 rounded-[2rem] p-1 shadow-2xl animate-flowing-gradient"
+              style={{ backgroundImage: dynamicGradient, backgroundSize: '200% 200%' }}
+            >
+              <div className="w-full h-full rounded-[1.85rem] bg-background flex items-center justify-center overflow-hidden border-4 border-background">
+                {selectedSocial && (() => {
+                  const Icon = platformIcons[selectedSocial.platform] || Globe;
+                  return <Icon size={48} style={{ color: primaryColor }} />;
+                })()}
+              </div>
+            </div>
+            
+            <div className="space-y-1">
+              <h2 className="text-2xl font-black text-white tracking-tighter uppercase">{selectedSocial?.platform}</h2>
+              <p className="text-sm font-bold text-primary uppercase tracking-widest">@{selectedSocial?.label}</p>
+            </div>
+
+            <Button 
+              asChild 
+              className="w-full h-14 neon-gradient text-background font-black rounded-2xl glow-primary text-[10px] uppercase tracking-[0.2em] shadow-xl active:scale-95 transition-all"
+              style={{ backgroundImage: dynamicGradient, backgroundSize: '200% 200%' }}
+            >
+              <a 
+                href={selectedSocial?.platform === 'Email' ? `mailto:${selectedSocial.label}` : (selectedSocial?.url || '#')} 
+                target="_blank" 
+                rel="noopener noreferrer"
+              >
+                Kunjungi Profil <ExternalLink size={14} className="ml-2" />
+              </a>
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

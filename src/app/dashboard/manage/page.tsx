@@ -38,21 +38,18 @@ export default function ManagePage() {
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const [groupLinksData, setGroupLinksData] = useState<Record<string, any[]>>({});
 
-  // Query groups
   const groupsQuery = useMemoFirebase(() => {
     if (!user) return null;
     return query(collection(db, 'userProfiles', user.uid, 'linkGroups'), orderBy('order', 'asc'));
   }, [db, user?.uid]);
   const { data: groups, isLoading: isGroupsLoading } = useCollection(groupsQuery);
 
-  // Query standalone links
   const linksQuery = useMemoFirebase(() => {
     if (!user) return null;
     return query(collection(db, 'userProfiles', user.uid, 'links'), orderBy('createdAt', 'desc'));
   }, [db, user?.uid]);
   const { data: standaloneLinks, isLoading: isLinksLoading } = useCollection(linksQuery);
 
-  // Listener for links inside groups
   useEffect(() => {
     if (!user || !groups) return;
     const unsubs = groups.map(group => {
@@ -280,7 +277,6 @@ export default function ManagePage() {
           <div className="py-20 text-center animate-pulse text-primary font-black uppercase text-[10px]">Menyinkronkan...</div>
         ) : (
           <div className="space-y-4">
-            {/* Groups Section */}
             {groups?.map((group, idx) => (
               <div key={group.id} className="space-y-2">
                 <Card className="glass-card border-none rounded-2xl p-4 flex items-center gap-4 relative overflow-hidden group">
@@ -306,7 +302,6 @@ export default function ManagePage() {
                   </div>
                 </Card>
 
-                {/* Display links inside group */}
                 {expandedGroups[group.id] && (
                   <div className="ml-8 space-y-2 animate-in slide-in-from-top-2">
                     {groupLinksData[group.id]?.length === 0 ? (
@@ -332,7 +327,6 @@ export default function ManagePage() {
               </div>
             ))}
 
-            {/* Standalone Links Section */}
             <div className="pt-4 border-t border-white/5">
               <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/20 mb-4 px-2">Tautan Hub Utama</p>
               {standaloneLinks?.map((link) => (

@@ -75,7 +75,8 @@ export default function ProfilPage() {
 
   const [newSocial, setNewSocial] = useState({
     platform: '',
-    label: ''
+    label: '',
+    url: ''
   });
 
   useEffect(() => {
@@ -114,7 +115,6 @@ export default function ProfilPage() {
   const onCropComplete = async (cropped: string) => {
     setAvatarUrl(cropped);
     setIsEditing(true);
-    // Note: Theme logic moved to ThemePage. Profil only handles Image change.
   };
 
   const handleLogout = async () => {
@@ -158,7 +158,7 @@ export default function ProfilPage() {
   const handleAddSocialLink = () => {
     if (!newSocial.platform || !newSocial.label) return;
     setSocialLinks([...socialLinks, { ...newSocial }]);
-    setNewSocial({ platform: '', label: '' });
+    setNewSocial({ platform: '', label: '', url: '' });
     setIsEditing(true);
   };
 
@@ -216,18 +216,21 @@ export default function ProfilPage() {
         <Card className="glass-card border-none rounded-[2.5rem] overflow-hidden">
           <CardContent className="p-8 space-y-6">
             <h3 className="text-xs font-black uppercase tracking-widest flex items-center gap-2 text-white"><Share2 size={16} className="text-primary" /> Sosial Media</h3>
-            <div className="grid grid-cols-2 gap-3">
-              <Select value={newSocial.platform} onValueChange={(v) => setNewSocial({...newSocial, platform: v})}>
-                <SelectTrigger className="bg-white/5 border-none h-12 rounded-xl text-[10px] font-black uppercase">
-                  <SelectValue placeholder="Platform" />
-                </SelectTrigger>
-                <SelectContent className="glass-card border-none rounded-xl">
-                  {socialPlatforms.map(p => (
-                    <SelectItem key={p.name} value={p.name} className="text-xs font-bold">{p.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Input value={newSocial.label} onChange={(e) => setNewSocial({...newSocial, label: e.target.value})} placeholder="@username" className="bg-white/5 border-none h-12 rounded-xl text-xs font-bold" />
+            <div className="grid gap-3">
+              <div className="grid grid-cols-2 gap-3">
+                <Select value={newSocial.platform} onValueChange={(v) => setNewSocial({...newSocial, platform: v})}>
+                  <SelectTrigger className="bg-white/5 border-none h-12 rounded-xl text-[10px] font-black uppercase">
+                    <SelectValue placeholder="Platform" />
+                  </SelectTrigger>
+                  <SelectContent className="glass-card border-none rounded-xl">
+                    {socialPlatforms.map(p => (
+                      <SelectItem key={p.name} value={p.name} className="text-xs font-bold">{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input value={newSocial.label} onChange={(e) => setNewSocial({...newSocial, label: e.target.value})} placeholder="@username" className="bg-white/5 border-none h-12 rounded-xl text-xs font-bold" />
+              </div>
+              <Input value={newSocial.url} onChange={(e) => setNewSocial({...newSocial, url: e.target.value})} placeholder="Link Profil (https://...)" className="bg-white/5 border-none h-12 rounded-xl text-xs font-medium" />
             </div>
             <Button onClick={handleAddSocialLink} className="w-full h-12 bg-white/5 hover:bg-white/10 text-white font-black rounded-xl text-[9px] uppercase tracking-widest border border-white/5">
               Hubungkan Media

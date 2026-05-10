@@ -2,27 +2,36 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Akses penuh untuk pemilik data (Login = Raja atas data sendiri)
+    // Profil Pengguna: Publik bisa baca & update (untuk views), Pemilik bisa tulis
     match /userProfiles/{userId} {
       allow read: if true;
       allow write: if request.auth != null && request.auth.uid == userId;
+      // Memungkinkan publik menambah views atau klik tanpa login
+      allow update: if true;
       
       match /{allSubcollections=**} {
         allow read: if true;
         allow write: if request.auth != null && request.auth.uid == userId;
+        allow update: if true;
       }
     }
     
-    // Username mapping (Global Read)
+    // Username mapping
     match /usernames/{username} {
       allow read: if true;
       allow write: if request.auth != null;
     }
 
-    // Platform Reviews (Global Read, Owner Write)
+    // Platform Reviews
     match /platformReviews/{userId} {
       allow read: if true;
       allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Tracker Email Duplikat
+    match /submittedEmails/{email} {
+      allow read: if true;
+      allow write: if request.auth != null;
     }
   }
 }
