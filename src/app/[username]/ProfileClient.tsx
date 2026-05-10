@@ -3,12 +3,26 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc, collection, updateDoc, increment, getDoc, query, orderBy, onSnapshot } from 'firebase/firestore';
-import { User, Share2, MousePointer2, Link2, LayoutGrid, ChevronRight, Search, X } from 'lucide-react';
+import { doc, collection, updateDoc, increment, getDoc, query, orderBy, onSnapshot, limit } from 'firebase/firestore';
+import { User, Share2, MousePointer2, Link2, LayoutGrid, ChevronRight, Search, X, Instagram, Youtube, Facebook, MessageCircle, Globe, Mail, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
+
+const TikTokIcon = ({ className, size = 16 }: { className?: string, size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" /></svg>
+);
+
+const platformIcons: Record<string, any> = {
+  Instagram: Instagram,
+  YouTube: Youtube,
+  TikTok: TikTokIcon,
+  Facebook: Facebook,
+  WhatsApp: MessageCircle,
+  Email: Mail,
+  Website: Globe
+};
 
 export default function ProfileClient({ username }: { username: string }) {
   const db = useFirestore();
@@ -59,20 +73,43 @@ export default function ProfileClient({ username }: { username: string }) {
   }, [db, resolvedUserId]);
   const { data: standaloneLinks } = useCollection(standaloneLinksQuery);
 
-  // Listen to all links inside groups for search
+  // Aggregation for Search and "NEW" feature
   useEffect(() => {
-    if (!resolvedUserId || !groups) return;
-    const unsubscribers = groups.map(group => {
-      return onSnapshot(collection(db, 'userProfiles', resolvedUserId, 'linkGroups', group.id, 'links'), (snap) => {
-        const links = snap.docs.map(d => ({ ...d.data(), id: d.id, groupId: group.id }));
-        setAllLinks(prev => {
-          const filtered = prev.filter(l => l.groupId !== group.id);
-          return [...filtered, ...links];
-        });
+    if (!resolvedUserId) return;
+
+    // Listen to standalone links
+    const unsubStandalone = onSnapshot(collection(db, 'userProfiles', resolvedUserId, 'links'), (snap) => {
+      const links = snap.docs.map(d => ({ ...d.data(), id: d.id, isStandalone: true }));
+      setAllLinks(prev => {
+        const others = prev.filter(l => !l.isStandalone);
+        return [...others, ...links];
       });
     });
-    return () => unsubscribers.forEach(u => u());
+
+    // Listen to all links inside groups
+    if (groups) {
+      const groupUnsubs = groups.map(group => {
+        return onSnapshot(collection(db, 'userProfiles', resolvedUserId, 'linkGroups', group.id, 'links'), (snap) => {
+          const links = snap.docs.map(d => ({ ...d.data(), id: d.id, groupId: group.id, isStandalone: false }));
+          setAllLinks(prev => {
+            const others = prev.filter(l => l.groupId !== group.id);
+            return [...others, ...links];
+          });
+        });
+      });
+      return () => {
+        unsubStandalone();
+        groupUnsubs.forEach(u => u());
+      };
+    }
+
+    return () => unsubStandalone();
   }, [resolvedUserId, groups, db]);
+
+  const newestLink = useMemo(() => {
+    if (allLinks.length === 0) return null;
+    return [...allLinks].sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))[0];
+  }, [allLinks]);
 
   const handleLinkClick = (linkId: string, url: string, groupId?: string) => {
     if (!resolvedUserId) return;
@@ -96,7 +133,7 @@ export default function ProfileClient({ username }: { username: string }) {
 
   const filteredGroupedLinks = useMemo(() => {
     if (!searchQuery) return [];
-    return allLinks.filter(l => l.title.toLowerCase().includes(searchQuery.toLowerCase()));
+    return allLinks.filter(l => !l.isStandalone && l.title.toLowerCase().includes(searchQuery.toLowerCase()));
   }, [allLinks, searchQuery]);
 
   if (isResolving) {
@@ -142,6 +179,27 @@ export default function ProfileClient({ username }: { username: string }) {
             <h1 className="text-4xl font-black text-white tracking-tighter leading-none">{profile.displayName || 'User'}</h1>
             {profile.bio && <p className="text-sm font-medium text-white/70 max-w-xs mx-auto leading-relaxed">{profile.bio}</p>}
           </div>
+
+          {/* Social Links Bar */}
+          {profile.socialLinks && profile.socialLinks.length > 0 && (
+            <div className="flex items-center justify-center gap-4 pt-2">
+              {profile.socialLinks.map((social: any, i: number) => {
+                const Icon = platformIcons[social.platform] || Globe;
+                return (
+                  <a 
+                    key={i} 
+                    href={social.platform === 'Email' ? `mailto:${social.label}` : social.url || '#'} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="w-12 h-12 rounded-2xl glass-card flex items-center justify-center text-white/60 hover:text-white transition-all hover:scale-110 border border-white/5 active:scale-95"
+                    style={{ '--glow-color': primaryColor } as any}
+                  >
+                    <Icon size={22} style={{ color: primaryColor }} />
+                  </a>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Global Search Bar */}
@@ -164,26 +222,59 @@ export default function ProfileClient({ username }: { username: string }) {
         </div>
 
         <div className="space-y-6">
-          {/* Groups First */}
-          {filteredGroups.map(group => (
-            <Link key={group.id} href={`/${username}/g/${group.id}`} className="block">
-              <div 
-                className="p-0.5 rounded-2xl animate-flowing-gradient transition-transform active:scale-95 shadow-xl"
+          {/* Newest Link Feature - Global New */}
+          {!searchQuery && newestLink && (
+            <div className="space-y-3">
+              <p className="text-[10px] font-black text-primary uppercase tracking-[0.4em] ml-1 flex items-center gap-2">
+                <Sparkles size={12} className="animate-pulse" /> Update Terbaru
+              </p>
+              <button
+                onClick={() => handleLinkClick(newestLink.id, newestLink.url, newestLink.groupId)}
+                className="w-full p-1 rounded-2xl hover:scale-[1.02] transition-transform shadow-2xl animate-flowing-gradient relative overflow-hidden"
                 style={{ backgroundImage: dynamicGradient, backgroundSize: '200% 200%' }}
               >
-                <div className="w-full h-24 bg-black/70 backdrop-blur-2xl rounded-[0.95rem] flex items-center px-6 gap-4 border border-white/10 relative overflow-hidden">
-                  <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10 shadow-xl shrink-0">
-                    {group.imageUrl ? <img src={group.imageUrl} className="w-full h-full object-cover" /> : <LayoutGrid size={32} style={{ color: primaryColor }} />}
+                <div className="absolute top-0 right-0 p-2">
+                   <div className="bg-white text-background text-[8px] font-black px-2 py-0.5 rounded-full shadow-lg">NEW</div>
+                </div>
+                <div className="w-full h-24 bg-black/80 backdrop-blur-2xl rounded-[0.95rem] flex items-center px-6 gap-4 border border-white/10">
+                  <div className="w-16 h-16 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10 shadow-xl">
+                    {newestLink.imageUrl ? <img src={newestLink.imageUrl} className="w-full h-full object-cover" /> : <Link2 size={32} style={{ color: primaryColor }} />}
                   </div>
                   <div className="flex-1 text-left min-w-0">
-                    <span className="text-lg font-black text-white tracking-tight block truncate">{group.title}</span>
-                    <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] mt-1">Koleksi</p>
+                    <span className="text-lg font-black text-white tracking-tight truncate block">{newestLink.title}</span>
+                    <p className="text-[8px] font-black text-primary uppercase tracking-widest mt-1">
+                      {newestLink.groupId ? 'Ditemukan di Koleksi' : 'Tautan Hub Utama'}
+                    </p>
                   </div>
-                  <ChevronRight size={24} className="text-white/50" />
+                  <MousePointer2 size={24} style={{ color: primaryColor }} />
                 </div>
-              </div>
-            </Link>
-          ))}
+              </button>
+            </div>
+          )}
+
+          {/* Groups Section */}
+          <div className="space-y-4 pt-4 border-t border-white/5">
+             <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em] ml-1">Koleksi Konten</p>
+            {filteredGroups.map(group => (
+              <Link key={group.id} href={`/${username}/g/${group.id}`} className="block">
+                <div 
+                  className="p-0.5 rounded-2xl animate-flowing-gradient transition-transform active:scale-95 shadow-xl"
+                  style={{ backgroundImage: dynamicGradient, backgroundSize: '200% 200%' }}
+                >
+                  <div className="w-full h-24 bg-black/70 backdrop-blur-2xl rounded-[0.95rem] flex items-center px-6 gap-4 border border-white/10 relative overflow-hidden">
+                    <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10 shadow-xl shrink-0">
+                      {group.imageUrl ? <img src={group.imageUrl} className="w-full h-full object-cover" /> : <LayoutGrid size={32} style={{ color: primaryColor }} />}
+                    </div>
+                    <div className="flex-1 text-left min-w-0">
+                      <span className="text-lg font-black text-white tracking-tight block truncate">{group.title}</span>
+                      <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] mt-1">Koleksi</p>
+                    </div>
+                    <ChevronRight size={24} className="text-white/50" />
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
 
           {/* Search Result: Links from Groups */}
           {searchQuery && filteredGroupedLinks.map(link => (
@@ -207,24 +298,29 @@ export default function ProfileClient({ username }: { username: string }) {
           ))}
 
           {/* Standalone Links */}
-          {filteredStandaloneLinks.map(link => (
-            <button
-              key={link.id}
-              onClick={() => handleLinkClick(link.id, link.url)}
-              className="w-full p-0.5 rounded-2xl hover:scale-[1.02] transition-transform shadow-xl animate-flowing-gradient"
-              style={{ backgroundImage: dynamicGradient, backgroundSize: '200% 200%' }}
-            >
-              <div className="w-full h-20 bg-black/80 backdrop-blur-xl rounded-[0.95rem] flex items-center px-6 gap-4 border border-white/10">
-                <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/5">
-                  {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <Link2 size={24} style={{ color: primaryColor }} />}
+          <div className="space-y-4 pt-4 border-t border-white/5">
+            {(!searchQuery || filteredStandaloneLinks.length > 0) && (
+              <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em] ml-1">Tautan Mandiri</p>
+            )}
+            {filteredStandaloneLinks.map(link => (
+              <button
+                key={link.id}
+                onClick={() => handleLinkClick(link.id, link.url)}
+                className="w-full p-0.5 rounded-2xl hover:scale-[1.02] transition-transform shadow-xl animate-flowing-gradient"
+                style={{ backgroundImage: dynamicGradient, backgroundSize: '200% 200%' }}
+              >
+                <div className="w-full h-20 bg-black/80 backdrop-blur-xl rounded-[0.95rem] flex items-center px-6 gap-4 border border-white/10">
+                  <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/5">
+                    {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <Link2 size={24} style={{ color: primaryColor }} />}
+                  </div>
+                  <div className="flex-1 text-left min-w-0">
+                    <span className="text-base font-black text-white tracking-tight truncate block">{link.title}</span>
+                  </div>
+                  <MousePointer2 size={20} style={{ color: primaryColor }} />
                 </div>
-                <div className="flex-1 text-left min-w-0">
-                  <span className="text-base font-black text-white tracking-tight truncate block">{link.title}</span>
-                </div>
-                <MousePointer2 size={20} style={{ color: primaryColor }} />
-              </div>
-            </button>
-          ))}
+              </button>
+            ))}
+          </div>
 
           {searchQuery && filteredGroups.length === 0 && filteredStandaloneLinks.length === 0 && filteredGroupedLinks.length === 0 && (
              <div className="text-center py-20 opacity-20 font-black uppercase text-xs tracking-widest">
