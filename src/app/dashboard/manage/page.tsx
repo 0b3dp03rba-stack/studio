@@ -5,9 +5,9 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Trash2, Link as LinkIcon, FolderPlus, Upload, LayoutGrid, ChevronUp, ChevronDown, Edit3, Loader2, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, Link as LinkIcon, FolderPlus, Upload, LayoutGrid, ChevronUp, ChevronDown, Edit3, Loader2, AlertCircle, ChevronRight, ListTree } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, addDoc, serverTimestamp, doc, deleteDoc, query, orderBy, updateDoc, writeBatch, onSnapshot } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, deleteDoc, query, orderBy, updateDoc, writeBatch, onSnapshot, getDoc, setDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import ImageCropperModal from '@/components/ImageCropperModal';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -50,6 +50,7 @@ export default function ManagePage() {
   }, [db, user?.uid]);
   const { data: standaloneLinks, isLoading: isLinksLoading } = useCollection(linksQuery);
 
+  // Monitor links inside each group
   useEffect(() => {
     if (!user || !groups) return;
     const unsubs = groups.map(group => {
@@ -154,25 +155,51 @@ export default function ManagePage() {
     if (!user || !editingItem) return;
     setIsSavingEdit(true);
     try {
-      let docRef;
+      // 1. Group Edit
       if (editingItem.type === 'group') {
-        docRef = doc(db, 'userProfiles', user.uid, 'linkGroups', editingItem.id);
-      } else {
-        docRef = editingItem.groupId 
-          ? doc(db, 'userProfiles', user.uid, 'linkGroups', editingItem.groupId, 'links', editingItem.id)
-          : doc(db, 'userProfiles', user.uid, 'links', editingItem.id);
+        const docRef = doc(db, 'userProfiles', user.uid, 'linkGroups', editingItem.id);
+        await updateDoc(docRef, {
+          title: editingItem.title,
+          imageUrl: editingItem.imageUrl || '',
+          updatedAt: serverTimestamp(),
+        });
+      } 
+      // 2. Link Edit
+      else {
+        const oldGroupId = editingItem.groupId || 'main';
+        const newGroupId = editingItem.newGroupId || oldGroupId;
+
+        const updateData: any = {
+          title: editingItem.title,
+          url: editingItem.url.startsWith('http') ? editingItem.url : `https://${editingItem.url}`,
+          imageUrl: editingItem.imageUrl || '',
+          updatedAt: serverTimestamp(),
+          groupId: newGroupId === 'main' ? null : newGroupId
+        };
+
+        // If group changed, move document
+        if (oldGroupId !== newGroupId) {
+          const oldRef = oldGroupId === 'main' 
+            ? doc(db, 'userProfiles', user.uid, 'links', editingItem.id)
+            : doc(db, 'userProfiles', user.uid, 'linkGroups', oldGroupId, 'links', editingItem.id);
+          
+          const newCol = newGroupId === 'main'
+            ? collection(db, 'userProfiles', user.uid, 'links')
+            : collection(db, 'userProfiles', user.uid, 'linkGroups', newGroupId, 'links');
+          
+          const existingDataSnap = await getDoc(oldRef);
+          if (existingDataSnap.exists()) {
+             await setDoc(doc(newCol), { ...existingDataSnap.data(), ...updateData });
+             await deleteDoc(oldRef);
+          }
+        } else {
+          const docRef = oldGroupId === 'main' 
+            ? doc(db, 'userProfiles', user.uid, 'links', editingItem.id)
+            : doc(db, 'userProfiles', user.uid, 'linkGroups', oldGroupId, 'links', editingItem.id);
+          await updateDoc(docRef, updateData);
+        }
       }
       
-      const updateData: any = {
-        title: editingItem.title,
-        imageUrl: editingItem.imageUrl || '',
-        updatedAt: serverTimestamp(),
-      };
-      if (editingItem.type === 'link') {
-        updateData.url = editingItem.url.startsWith('http') ? editingItem.url : `https://${editingItem.url}`;
-      }
-
-      await updateDoc(docRef, updateData);
       toast({ title: "Pembaruan Berhasil" });
       setEditingItem(null);
     } catch (e) {
@@ -221,7 +248,7 @@ export default function ManagePage() {
                 <FolderPlus size={16} />
                 <span>Buat kelompok baru</span>
               </div>
-              <Input placeholder="Nama Kelompok" value={newGroupTitle} onChange={(e) => setNewGroupTitle(e.target.value)} className="bg-white/5 border-none h-12 rounded-xl px-4 font-bold" />
+              <Input placeholder="Nama Kelompok (Misal: All Addon)" value={newGroupTitle} onChange={(e) => setNewGroupTitle(e.target.value)} className="bg-white/5 border-none h-12 rounded-xl px-4 font-bold" />
               <label className="flex items-center justify-center gap-2 w-full h-12 bg-white/5 border border-dashed border-white/20 rounded-xl cursor-pointer hover:bg-white/10 transition-all">
                 <Upload size={16} className="text-primary" /><span className="text-[10px] font-black uppercase text-white/60">{newGroupImage ? 'Ganti Foto' : 'Unggah Foto'}</span>
                 <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageSelect(e, 'group')} />
@@ -270,7 +297,7 @@ export default function ManagePage() {
 
       <div className="space-y-5">
         <h3 className="font-black text-[11px] uppercase tracking-[0.3em] text-white/50 flex items-center gap-2 px-1">
-          <LayoutGrid size={16} className="text-primary" /> Katalog Konten
+          <ListTree size={16} className="text-primary" /> Katalog Konten Aktif
         </h3>
         
         {(isGroupsLoading || isLinksLoading) ? (
@@ -279,45 +306,71 @@ export default function ManagePage() {
           <div className="space-y-4">
             {groups?.map((group, idx) => (
               <div key={group.id} className="space-y-2">
-                <Card className="glass-card border-none rounded-2xl p-4 flex items-center gap-4 relative overflow-hidden group">
-                  <div className="flex flex-col gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => handleMoveGroup(group.id, 'up')} disabled={idx === 0} className="h-6 w-6 opacity-40 hover:opacity-100 disabled:opacity-5"><ChevronUp size={14}/></Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleMoveGroup(group.id, 'down')} disabled={idx === (groups?.length || 0) - 1} className="h-6 w-6 opacity-40 hover:opacity-100 disabled:opacity-5"><ChevronDown size={14}/></Button>
+                <Card className="glass-card border-none rounded-[2rem] p-5 flex items-center gap-4 relative overflow-hidden group shadow-xl">
+                  <div className="flex flex-col gap-1 z-10">
+                    <Button variant="ghost" size="icon" onClick={() => handleMoveGroup(group.id, 'up')} disabled={idx === 0} className="h-7 w-7 opacity-40 hover:opacity-100 disabled:opacity-5"><ChevronUp size={16}/></Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleMoveGroup(group.id, 'down')} disabled={idx === (groups?.length || 0) - 1} className="h-7 w-7 opacity-40 hover:opacity-100 disabled:opacity-5"><ChevronDown size={16}/></Button>
                   </div>
                   <div 
                     onClick={() => toggleGroupExpand(group.id)}
-                    className="flex-1 flex items-center gap-4 cursor-pointer"
+                    className="flex-1 flex items-center gap-4 cursor-pointer z-10"
                   >
-                    <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/5 shrink-0">
-                      {group.imageUrl ? <img src={group.imageUrl} className="w-full h-full object-cover" /> : <LayoutGrid size={18} className="text-primary" />}
+                    <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10 shrink-0 shadow-2xl">
+                      {group.imageUrl ? <img src={group.imageUrl} className="w-full h-full object-cover" /> : <LayoutGrid size={24} className="text-primary" />}
                     </div>
                     <div className="flex-1 min-w-0 text-left">
-                      <h4 className="font-bold text-white text-sm truncate">{group.title}</h4>
-                      <p className="text-[8px] text-white/40 uppercase tracking-widest font-black">KELOMPOK • {groupLinksData[group.id]?.length || 0} ITEM</p>
+                      <h4 className="font-black text-white text-base truncate uppercase tracking-tight">{group.title}</h4>
+                      <p className="text-[9px] text-white/40 uppercase tracking-widest font-black flex items-center gap-1.5">
+                        {groupLinksData[group.id]?.length || 0} TAUTAN 
+                        <ChevronRight size={10} className={expandedGroups[group.id] ? 'rotate-90 transition-transform' : ''} />
+                      </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <Button size="icon" variant="ghost" onClick={() => setEditingItem({ ...group, type: 'group' })} className="h-10 w-10 text-white/40 hover:text-primary"><Edit3 size={16} /></Button>
-                    <Button size="icon" variant="ghost" onClick={() => setItemToDelete({ ...group, type: 'group' })} className="h-10 w-10 text-white/20 hover:text-destructive"><Trash2 size={16} /></Button>
+                  <div className="flex items-center gap-1 z-10">
+                    <Button 
+                      size="icon" 
+                      variant="ghost" 
+                      onClick={() => { setTargetGroupId(group.id); setActiveTab('link'); }}
+                      className="h-10 w-10 text-primary hover:bg-primary/10"
+                    >
+                      <Plus size={20} />
+                    </Button>
+                    <Button 
+                      size="icon" 
+                      variant="ghost" 
+                      onClick={() => setEditingItem({ ...group, type: 'group' })} 
+                      className="h-10 w-10 text-white/40 hover:text-white"
+                    >
+                      <Edit3 size={18} />
+                    </Button>
+                    <Button 
+                      size="icon" 
+                      variant="ghost" 
+                      onClick={() => setItemToDelete({ ...group, type: 'group' })} 
+                      className="h-10 w-10 text-destructive/40 hover:text-destructive"
+                    >
+                      <Trash2 size={18} />
+                    </Button>
                   </div>
                 </Card>
 
                 {expandedGroups[group.id] && (
-                  <div className="ml-8 space-y-2 animate-in slide-in-from-top-2">
+                  <div className="ml-10 space-y-3 animate-in slide-in-from-top-2 border-l-2 border-white/5 pl-4 pb-4">
                     {groupLinksData[group.id]?.length === 0 ? (
-                      <p className="text-[8px] font-black uppercase text-white/20 px-4 py-2">Belum ada tautan di kelompok ini</p>
+                      <p className="text-[8px] font-black uppercase text-white/20 px-4 py-4 italic">Belum ada tautan di kelompok ini</p>
                     ) : (
                       groupLinksData[group.id]?.map((link) => (
-                        <div key={link.id} className="flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-white/5">
-                          <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center overflow-hidden shrink-0">
-                            {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <LinkIcon size={12} className="text-primary/50" />}
+                        <div key={link.id} className="flex items-center gap-4 p-4 bg-white/[0.02] rounded-2xl border border-white/5 shadow-inner">
+                          <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden shrink-0 border border-white/5">
+                            {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <LinkIcon size={14} className="text-primary/50" />}
                           </div>
                           <div className="flex-1 min-w-0 text-left">
-                             <p className="text-xs font-bold text-white/80 truncate">{link.title}</p>
+                             <p className="text-sm font-bold text-white/90 truncate">{link.title}</p>
+                             <p className="text-[8px] text-white/20 truncate uppercase font-mono">{link.url}</p>
                           </div>
                           <div className="flex gap-1">
-                            <Button size="icon" variant="ghost" onClick={() => setEditingItem({ ...link, type: 'link' })} className="h-7 w-7 text-white/20 hover:text-primary"><Edit3 size={12} /></Button>
-                            <Button size="icon" variant="ghost" onClick={() => setItemToDelete({ ...link, type: 'link' })} className="h-7 w-7 text-white/10 hover:text-destructive"><Trash2 size={12} /></Button>
+                            <Button size="icon" variant="ghost" onClick={() => setEditingItem({ ...link, type: 'link' })} className="h-8 w-8 text-white/20 hover:text-primary"><Edit3 size={14} /></Button>
+                            <Button size="icon" variant="ghost" onClick={() => setItemToDelete({ ...link, type: 'link' })} className="h-8 w-8 text-white/10 hover:text-destructive"><Trash2 size={14} /></Button>
                           </div>
                         </div>
                       ))
@@ -327,23 +380,26 @@ export default function ManagePage() {
               </div>
             ))}
 
-            <div className="pt-4 border-t border-white/5">
-              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/20 mb-4 px-2">Tautan Hub Utama</p>
+            <div className="pt-8 border-t border-white/5">
+              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 mb-4 px-2">Tautan Hub Utama (Mandiri)</p>
               {standaloneLinks?.map((link) => (
-                <Card key={link.id} className="glass-card border-none rounded-2xl p-4 flex items-center gap-4 mb-3">
-                  <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/5 shrink-0">
-                    {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <LinkIcon size={18} className="text-primary" />}
+                <Card key={link.id} className="glass-card border-none rounded-2xl p-4 flex items-center gap-4 mb-3 shadow-xl hover:bg-white/[0.05] transition-colors">
+                  <div className="w-14 h-14 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/5 shrink-0 shadow-2xl">
+                    {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <LinkIcon size={20} className="text-primary" />}
                   </div>
                   <div className="flex-1 min-w-0 text-left">
-                    <h4 className="font-bold text-white text-sm truncate">{link.title}</h4>
-                    <p className="text-[10px] text-white/40 uppercase tracking-tighter font-mono">Tautan Mandiri</p>
+                    <h4 className="font-bold text-white text-base truncate uppercase tracking-tight">{link.title}</h4>
+                    <p className="text-[10px] text-white/20 uppercase tracking-tighter font-mono">{link.url}</p>
                   </div>
                   <div className="flex items-center gap-1">
-                    <Button size="icon" variant="ghost" onClick={() => setEditingItem({ ...link, type: 'link' })} className="h-10 w-10 text-white/40 hover:text-primary"><Edit3 size={16} /></Button>
-                    <Button size="icon" variant="ghost" onClick={() => setItemToDelete({ ...link, type: 'link' })} className="h-10 w-10 text-white/20 hover:text-destructive"><Trash2 size={16} /></Button>
+                    <Button size="icon" variant="ghost" onClick={() => setEditingItem({ ...link, type: 'link' })} className="h-10 w-10 text-white/40 hover:text-primary"><Edit3 size={18} /></Button>
+                    <Button size="icon" variant="ghost" onClick={() => setItemToDelete({ ...link, type: 'link' })} className="h-10 w-10 text-white/20 hover:text-destructive"><Trash2 size={18} /></Button>
                   </div>
                 </Card>
               ))}
+              {standaloneLinks?.length === 0 && (
+                <div className="text-center py-10 opacity-10 font-black uppercase text-[10px] tracking-widest border border-dashed border-white/10 rounded-3xl">Tautan Mandiri Kosong</div>
+              )}
             </div>
           </div>
         )}
@@ -357,7 +413,7 @@ export default function ManagePage() {
           <DialogHeader><DialogTitle className="text-xl font-black uppercase tracking-tighter text-white">Edit {editingItem?.type === 'group' ? 'Kelompok' : 'Tautan'}</DialogTitle></DialogHeader>
           <div className="space-y-5 py-4 text-left">
             <div className="flex flex-col items-center gap-4">
-               <div className="w-24 h-24 rounded-2xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10 relative group">
+               <div className="w-28 h-24 rounded-2xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10 relative group shadow-2xl">
                   {editingItem?.imageUrl ? <img src={editingItem.imageUrl} className="w-full h-full object-cover" /> : <Upload size={32} className="text-white/20" />}
                   <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity">
                     <Upload size={20} className="text-white" />
@@ -371,11 +427,28 @@ export default function ManagePage() {
                   <label className="text-[9px] font-black uppercase text-muted-foreground ml-1">Nama / Judul</label>
                   <Input value={editingItem?.title || ''} onChange={(e) => setEditingItem({...editingItem, title: e.target.value})} className="bg-white/5 border-none h-12 rounded-xl font-bold" />
                </div>
+               
                {editingItem?.type === 'link' && (
-                 <div className="space-y-1.5">
-                    <label className="text-[9px] font-black uppercase text-muted-foreground ml-1">URL Tujuan</label>
-                    <Input value={editingItem?.url || ''} onChange={(e) => setEditingItem({...editingItem, url: e.target.value})} className="bg-white/5 border-none h-12 rounded-xl font-medium" />
-                 </div>
+                 <>
+                   <div className="space-y-1.5">
+                      <label className="text-[9px] font-black uppercase text-muted-foreground ml-1">URL Tujuan</label>
+                      <Input value={editingItem?.url || ''} onChange={(e) => setEditingItem({...editingItem, url: e.target.value})} className="bg-white/5 border-none h-12 rounded-xl font-medium" />
+                   </div>
+                   <div className="space-y-1.5">
+                      <label className="text-[9px] font-black uppercase text-muted-foreground ml-1">Pindah ke Kelompok:</label>
+                      <Select value={editingItem.newGroupId || editingItem.groupId || 'main'} onValueChange={(v) => setEditingItem({...editingItem, newGroupId: v})}>
+                        <SelectTrigger className="bg-white/5 border-none h-12 rounded-xl text-[10px] font-black uppercase">
+                          <SelectValue placeholder="Pilih Tujuan" />
+                        </SelectTrigger>
+                        <SelectContent className="glass-card border-none rounded-xl">
+                          <SelectItem value="main" className="text-xs font-bold uppercase">Hub Utama</SelectItem>
+                          {groups?.map(g => (
+                            <SelectItem key={g.id} value={g.id} className="text-xs font-bold uppercase">{g.title}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                   </div>
+                 </>
                )}
             </div>
           </div>
@@ -390,18 +463,18 @@ export default function ManagePage() {
 
       {/* Delete AlertDialog */}
       <AlertDialog open={!!itemToDelete} onOpenChange={() => setItemToDelete(null)}>
-        <AlertDialogContent className="glass-card border-none rounded-[2rem] bg-background/95 backdrop-blur-2xl">
+        <AlertDialogContent className="glass-card border-none rounded-[2rem] bg-background/95 backdrop-blur-2xl border-white/5">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter flex items-center gap-3 text-white">
               <AlertCircle className="text-destructive" /> Konfirmasi Hapus
             </AlertDialogTitle>
             <AlertDialogDescription className="text-white/60 font-medium leading-relaxed">
-              Apakah Anda yakin ingin menghapus <strong>{itemToDelete?.title}</strong>? Tindakan ini permanen dan tidak bisa dibatalkan.
+              Apakah Anda yakin ingin menghapus <strong>{itemToDelete?.title}</strong>? Tindakan ini bersifat permanen dan tidak bisa dibatalkan.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2">
-            <AlertDialogCancel className="bg-white/5 border-white/5 rounded-xl text-[10px] font-black uppercase h-12 hover:bg-white/10">Batal</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-white hover:bg-destructive/80 rounded-xl text-[10px] font-black uppercase h-12">Hapus Sekarang</AlertDialogAction>
+          <AlertDialogFooter className="gap-2 pt-4">
+            <AlertDialogCancel className="bg-white/5 border-white/5 rounded-xl text-[10px] font-black uppercase h-12 hover:bg-white/10 text-white">Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-white hover:bg-destructive/80 rounded-xl text-[10px] font-black uppercase h-12 border-none">Hapus Sekarang</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
