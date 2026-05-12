@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview AI Flow to recommend matching secondary colors for a premium neon aesthetic.
@@ -31,20 +30,21 @@ const colorRecommendationFlow = ai.defineFlow(
   },
   async (input) => {
     const paletteContext = input.palette && input.palette.length > 0 
-      ? `Berikut adalah palet warna yang diekstrak dari foto profil user: ${input.palette.join(', ')}.`
+      ? `Berikut adalah palet warna asli dari foto profil user: ${input.palette.join(', ')}.`
       : '';
 
     const { output } = await ai.generate({
-      prompt: `You are a master UI designer specialized in High-Contrast Neon and Minecraft aesthetics.
+      prompt: `You are a master UI designer specialized in High-Contrast Neon aesthetics.
       
-      Primary Color: ${input.primaryColor}
+      Primary Color yang dipilih user: ${input.primaryColor}
       ${paletteContext}
       
       Tugas Anda:
       1. Berikan warna sekunder (secondaryColor) dalam format HEX.
-      2. Prioritas Utama: Cari warna sekunder yang ada di dalam palet warna yang diberikan (jika ada palet) yang menciptakan harmoni atau kontras terbaik dengan Primary Color.
-      3. Jika palet warna terlalu gelap, hanya berisi satu warna, atau tidak ada warna yang cocok, buatlah warna sekunder baru yang sangat kontras dan memberikan efek "neon glow".
-      4. Warna sekunder harus membuat gradasi yang mewah.
+      2. PRIORITAS UTAMA: Cari warna di dalam "palet warna asli" yang memberikan harmoni atau kontras mewah dengan Primary Color. 
+      3. Contoh: Jika user memilih Biru dan di palet ada warna Perak/Putih/Abu-abu cerah, PILIH warna tersebut karena itu menciptakan kesan "clean" dan "premium" daripada memilih warna kuning yang acak.
+      4. Jika palet warna asli tidak memiliki warna yang cocok (semua terlalu gelap atau terlalu mirip), barulah buat warna sekunder baru yang kontras tinggi (Neon).
+      5. Warna sekunder harus membuat gradasi yang terlihat profesional dan mahal.
       
       Return the result as JSON with secondaryColor (hex) and a short explanation in Bahasa Indonesia.`,
       output: { schema: ColorRecommendationOutputSchema },

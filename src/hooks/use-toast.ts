@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -8,8 +7,8 @@ import type {
 } from "@/components/ui/toast"
 
 const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 5000 
-const SPAM_COOLDOWN = 6000 
+const TOAST_REMOVE_DELAY = 4000 
+const SPAM_COOLDOWN = 5000 
 
 type ToasterToast = ToastProps & {
   id: string
@@ -41,12 +40,17 @@ interface State {
   toasts: ToasterToast[]
 }
 
+const listeners: Array<(state: State) => void> = []
+let memoryState: State = { toasts: [] }
+
+const lastToastTimes = new Map<string, number>()
+
 export const reducer = (state: State, action: Action): State => {
   switch (action.type) {
     case "ADD_TOAST":
       return {
         ...state,
-        toasts: [action.toast], // Selalu paksa hanya 1 toast
+        toasts: [action.toast],
       }
     case "UPDATE_TOAST":
       return {
@@ -74,29 +78,22 @@ export const reducer = (state: State, action: Action): State => {
   }
 }
 
-const listeners: Array<(state: State) => void> = []
-let memoryState: State = { toasts: [] }
-
-const lastToastTimes = new Map<string, number>()
-
 function dispatch(action: Action) {
   memoryState = reducer(memoryState, action)
   listeners.forEach((listener) => listener(memoryState))
 }
 
 function toast({ title, description, ...props }: Omit<ToasterToast, "id">) {
-  const messageKey = `${String(title)}-${String(description)}`
   const now = Date.now()
+  const messageKey = `${String(title)}-${String(description)}`
   
+  // 1. Cek Cooldown Spam
   const lastTime = lastToastTimes.get(messageKey) || 0
-  if (now - lastTime < SPAM_COOLDOWN) {
-    return { id: "blocked", dismiss: () => {}, update: () => {} }
-  }
+  if (now - lastTime < SPAM_COOLDOWN) return { id: "spam", dismiss: () => {}, update: () => {} }
 
-  // Jika ada toast yang sedang terbuka, jangan tambah baru (Cegah Spam Render)
-  if (memoryState.toasts.length > 0 && memoryState.toasts[0].open) {
-    return { id: "limited", dismiss: () => {}, update: () => {} }
-  }
+  // 2. Cek apakah sudah ada toast aktif
+  const activeToast = memoryState.toasts.find(t => t.open)
+  if (activeToast) return { id: "active", dismiss: () => {}, update: () => {} }
 
   lastToastTimes.set(messageKey, now)
   const id = genId()
