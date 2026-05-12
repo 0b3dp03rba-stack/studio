@@ -1,8 +1,9 @@
+
 "use client";
 
 import { useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Users, Eye, Link as LinkIcon, Globe, Clock, ArrowUpRight, Settings, MessageCircle, Wallet, Inbox } from 'lucide-react';
+import { Users, Eye, Link as LinkIcon, Globe, Clock, ArrowUpRight, Settings, ShieldCheck } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, limit, doc, collectionGroup } from 'firebase/firestore';
 import { Badge } from '@/components/ui/badge';
@@ -19,42 +20,36 @@ export default function AdminDashboard() {
   const globalStatsRef = useMemoFirebase(() => doc(db, 'appConfig', 'globalStats'), [db]);
   const { data: globalStats } = useDoc(globalStatsRef);
 
-  // 3. Data Link Global (Tanpa OrderBy untuk menghindari error index)
+  // 3. Data Link Global
   const linksQuery = useMemoFirebase(() => query(collectionGroup(db, 'links'), limit(50)), [db]);
   const { data: rawLinks } = useCollection(linksQuery);
 
-  // Sorting manual di memory untuk menghindari kebutuhan Index di Firestore Console
   const recentLinks = useMemo(() => {
     if (!rawLinks) return [];
     return [...rawLinks].sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)).slice(0, 10);
   }, [rawLinks]);
 
-  // Perhitungan Statistik
   const totalUsers = allUsers?.length || 0;
   const totalPublicViews = useMemo(() => {
     return allUsers?.reduce((acc, user) => acc + (user.views || 0), 0) || 0;
   }, [allUsers]);
 
   const stats = [
-    { label: 'Total Users', value: totalUsers, icon: Users, color: 'text-primary' },
-    { label: 'Public Profile Views', value: totalPublicViews, icon: Eye, color: 'text-secondary' },
-    { label: 'Homepage Visitors', value: globalStats?.landingPageViews || 0, icon: Globe, color: 'text-white' },
-    { label: 'Links Found', value: rawLinks?.length || 0, icon: LinkIcon, color: 'text-primary' },
+    { label: 'Total Pengguna', value: totalUsers, icon: Users, color: 'text-primary' },
+    { label: 'Total Views Profil', value: totalPublicViews, icon: Eye, color: 'text-secondary' },
+    { label: 'Views Homepage', value: globalStats?.landingPageViews || 0, icon: Globe, color: 'text-white' },
+    { label: 'Tautan Terdaftar', value: rawLinks?.length || 0, icon: LinkIcon, color: 'text-primary' },
   ];
 
   const adminMenus = [
-    { label: 'Manajemen User', icon: Users, href: '/admin/users', desc: 'Kelola data & hapus user' },
-    { label: 'Setoran Gmail', icon: Inbox, href: '/admin/setoran', desc: 'Validasi Gmail masuk' },
-    { label: 'Penarikan WD', icon: Wallet, href: '/admin/withdraw', desc: 'Proses penarikan dana' },
-    { label: 'Pusat Pesan', icon: MessageCircle, href: '/admin/chat', desc: 'Support & Konsultasi' },
-    { label: 'Sistem Global', icon: Settings, href: '/admin/settings', desc: 'Konfigurasi platform' },
+    { label: 'Manajemen User', icon: Users, href: '/admin/users', desc: 'Kelola basis data & hapus pengguna' },
   ];
 
   if (isUsersLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-4">
         <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-[10px] font-black uppercase tracking-widest text-primary/50">Membangun Admin Feed...</p>
+        <p className="text-[10px] font-black uppercase tracking-widest text-primary/50">Sinkronisasi Admin...</p>
       </div>
     );
   }
@@ -64,17 +59,16 @@ export default function AdminDashboard() {
       <div className="space-y-2">
         <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 rounded-full mb-2">
            <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-           <span className="text-[9px] font-black uppercase tracking-widest text-primary">System Online</span>
+           <span className="text-[9px] font-black uppercase tracking-widest text-primary">Admin Secure</span>
         </div>
         <h1 className="text-4xl font-black tracking-tighter uppercase text-white">Linku Control Panel</h1>
-        <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.3em]">ADMINISTRATOR: CREEPPERMOMENT@GMAIL.COM</p>
+        <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.3em]">ADMINISTRATOR ACCESS ONLY</p>
       </div>
 
-      {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((item, i) => (
           <Card key={i} className="glass-card border-none rounded-[2rem] p-6 shadow-2xl relative overflow-hidden group hover:scale-[1.02] transition-transform">
-            <div className={`absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full -mr-12 -mt-12 blur-2xl group-hover:bg-primary/10 transition-colors`} />
+            <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full -mr-12 -mt-12 blur-2xl group-hover:bg-primary/10 transition-colors" />
             <CardContent className="p-0 space-y-4 relative z-10 text-left">
               <div className={`w-10 h-10 rounded-2xl bg-white/5 flex items-center justify-center ${item.color}`}>
                 <item.icon size={20} />
@@ -89,7 +83,6 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Navigation & Control */}
         <div className="space-y-6">
            <h3 className="font-black text-xs uppercase tracking-widest text-white/50 flex items-center gap-2 px-2">
              <Settings size={16} className="text-primary" /> Management Console
@@ -114,13 +107,12 @@ export default function AdminDashboard() {
            </div>
         </div>
 
-        {/* Recent Links Feed */}
         <div className="lg:col-span-2 space-y-6">
           <div className="flex items-center justify-between px-2">
              <h3 className="font-black text-xs uppercase tracking-widest text-white/50 flex items-center gap-2">
                <Clock size={16} className="text-primary" /> Global Activity Feed
              </h3>
-             <Badge variant="outline" className="text-[8px] font-black uppercase border-white/10 text-white/40">LATEST UPDATES</Badge>
+             <Badge variant="outline" className="text-[8px] font-black uppercase border-white/10 text-white/40">LINK TERBARU</Badge>
           </div>
           
           <div className="space-y-3">
@@ -137,13 +129,10 @@ export default function AdminDashboard() {
                     <p className="text-[10px] font-black text-primary uppercase">{link.clicks || 0} CLICKS</p>
                     <p className="text-[7px] text-white/10 uppercase mt-1">ID: {link.id.slice(0, 8)}</p>
                  </div>
-                 <a href={link.url} target="_blank" className="p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <ArrowUpRight size={16} className="text-white/40 hover:text-white" />
-                 </a>
               </Card>
             ))}
             {recentLinks.length === 0 && (
-              <div className="py-20 text-center opacity-10 font-black uppercase text-[10px] tracking-widest border border-dashed border-white/10 rounded-[2rem]">No Global Activity Yet</div>
+              <div className="py-20 text-center opacity-10 font-black uppercase text-[10px] tracking-widest border border-dashed border-white/10 rounded-[2rem]">Belum ada aktivitas global.</div>
             )}
           </div>
         </div>
