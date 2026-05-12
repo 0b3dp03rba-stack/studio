@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Palette, Sparkles, Loader2, Save, Wand2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -24,6 +24,28 @@ export default function ThemePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [extractedPalette, setExtractedPalette] = useState<string[]>([]);
+  const [hasAutoSuggested, setHasAutoSuggested] = useState(false);
+
+  // Fungsi untuk memicu AI Recommendation
+  const triggerAIRecommendation = useCallback(async (primary: string, palette?: string[]) => {
+    if (isAiLoading) return;
+    setIsAiLoading(true);
+    try {
+      const recommendation = await getAIColorRecommendation({ 
+        primaryColor: primary,
+        palette: palette
+      });
+      setThemeColorSecondary(recommendation.secondaryColor);
+      toast({
+        title: "AI SUGGESTION APPLIED",
+        description: recommendation.explanation
+      });
+    } catch (e) {
+      setThemeColorSecondary(getRecommendedSecondary(primary));
+    } finally {
+      setIsAiLoading(false);
+    }
+  }, [isAiLoading, toast]);
 
   useEffect(() => {
     if (profile) {
@@ -31,32 +53,25 @@ export default function ThemePage() {
       setThemeColorSecondary(profile.themeColorSecondary || '#ffea00');
       
       if (profile.avatarUrl) {
-         import('@/lib/utils-app').then(utils => {
-           utils.extractPaletteFromImage(profile.avatarUrl).then(setExtractedPalette);
+         import('@/lib/utils-app').then(async (utils) => {
+           const palette = await utils.extractPaletteFromImage(profile.avatarUrl!);
+           setExtractedPalette(palette);
+
+           // AUTO-SUGGEST: Jika profil belum punya tema, atau baru saja ganti foto
+           if (!profile.themeColor && palette.length > 0 && !hasAutoSuggested) {
+             const bestPrimary = palette[0];
+             setThemeColor(bestPrimary);
+             triggerAIRecommendation(bestPrimary, palette);
+             setHasAutoSuggested(true);
+           }
          });
       }
     }
-  }, [profile]);
+  }, [profile, triggerAIRecommendation, hasAutoSuggested]);
 
   const handleColorSelect = async (color: string) => {
-    if (isAiLoading) return;
-    
     setThemeColor(color);
-    setIsAiLoading(true);
-    
-    try {
-      const recommendation = await getAIColorRecommendation({ primaryColor: color });
-      setThemeColorSecondary(recommendation.secondaryColor);
-      
-      toast({
-        title: "AI SUGGESTION APPLIED",
-        description: recommendation.explanation
-      });
-    } catch (e) {
-      setThemeColorSecondary(getRecommendedSecondary(color));
-    } finally {
-      setIsAiLoading(false);
-    }
+    triggerAIRecommendation(color, extractedPalette);
   };
 
   const handleSaveTheme = async () => {
@@ -87,7 +102,7 @@ export default function ThemePage() {
         <Card className="glass-card border-none rounded-[2.5rem] overflow-hidden p-6 shadow-2xl space-y-8">
           <div className="flex justify-center py-4">
              <div 
-               className="w-32 h-32 rounded-[2.5rem] flex items-center justify-center border-4 border-background shadow-2xl animate-flowing-gradient relative overflow-hidden"
+               className="w-32 h-32 rounded-[2.5rem] flex items-center justify-center border-4 border-background shadow-2xl relative overflow-hidden"
                style={{ 
                  backgroundImage: `linear-gradient(-45deg, ${themeColor} 0%, ${themeColorSecondary} 50%, ${themeColor} 100%)`,
                  backgroundSize: '200% 200%',
@@ -98,7 +113,7 @@ export default function ThemePage() {
                 {isAiLoading ? (
                   <div className="flex flex-col items-center gap-2 relative z-10">
                     <Loader2 size={32} className="text-white animate-spin" />
-                    <span className="text-[8px] font-black uppercase text-white tracking-widest">AI Pairing...</span>
+                    <span className="text-[8px] font-black uppercase text-white tracking-widest">AI Thinking...</span>
                   </div>
                 ) : (
                   <Sparkles size={48} className="text-background relative z-10" />
@@ -123,7 +138,7 @@ export default function ThemePage() {
                     className={`aspect-square rounded-2xl border-4 transition-all flex items-center justify-center ${themeColor === color ? 'border-primary scale-110 shadow-[0_0_20px_rgba(255,0,0,0.4)]' : 'border-white/5 opacity-70 hover:opacity-100'} disabled:opacity-30`} 
                     style={{ backgroundColor: color }}
                   >
-                    {themeColor === color && !isAiLoading && <div className="w-2 h-2 bg-white rounded-full animate-pulse" />}
+                    {themeColor === color && !isAiLoading && <div className="w-2 h-2 bg-white rounded-full" />}
                   </button>
                 )) : (
                   <div className="col-span-4 py-8 text-center text-[9px] font-black uppercase opacity-20 tracking-widest border border-dashed border-white/10 rounded-2xl">Unggah foto profil untuk palet</div>
@@ -144,7 +159,7 @@ export default function ThemePage() {
                     className={`aspect-square rounded-2xl border-4 transition-all flex items-center justify-center ${themeColorSecondary === sHex ? 'border-secondary scale-110 shadow-[0_0_20px_rgba(255,234,0,0.4)]' : 'border-white/5 opacity-70 hover:opacity-100'}`}
                     style={{ backgroundColor: sHex }}
                   >
-                     {themeColorSecondary === sHex && <div className="w-2 h-2 bg-background rounded-full animate-pulse" />}
+                     {themeColorSecondary === sHex && <div className="w-2 h-2 bg-background rounded-full" />}
                   </button>
                 ))}
               </div>

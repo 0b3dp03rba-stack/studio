@@ -17,7 +17,7 @@ const ToastViewport = React.forwardRef<
   <ToastPrimitives.Viewport
     ref={ref}
     className={cn(
-      "fixed inset-0 z-[1000] flex flex-col items-center justify-center pointer-events-none p-6",
+      "fixed top-0 left-0 right-0 z-[1000] flex flex-col items-center justify-center pointer-events-none p-6 pt-12",
       className
     )}
     {...props}
@@ -26,12 +26,12 @@ const ToastViewport = React.forwardRef<
 ToastViewport.displayName = ToastPrimitives.Viewport.displayName
 
 const toastVariants = cva(
-  "group pointer-events-auto relative flex w-full max-w-[420px] flex-col items-center justify-center space-y-6 overflow-hidden rounded-[2.5rem] p-10 shadow-2xl transition-all data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 border-[6px] text-center",
+  "group pointer-events-auto relative flex w-full max-w-[400px] flex-col items-center justify-center space-y-6 overflow-hidden rounded-[2.5rem] p-10 shadow-2xl transition-all data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 border-[4px] text-center",
   {
     variants: {
       variant: {
-        default: "bg-black/95 backdrop-blur-3xl border-primary text-white shadow-[0_0_100px_-10px_rgba(255,0,0,0.7)]",
-        destructive: "bg-black/95 backdrop-blur-3xl border-primary text-white shadow-[0_0_100px_-5px_rgba(255,0,0,0.9)]",
+        default: "bg-black/95 backdrop-blur-3xl border-primary text-white shadow-[0_0_80px_-10px_rgba(255,0,0,0.5)]",
+        destructive: "bg-black/95 backdrop-blur-3xl border-primary text-white shadow-[0_0_80px_-5px_rgba(255,0,0,0.7)]",
       },
     },
     defaultVariants: {
@@ -48,8 +48,7 @@ const Toast = React.forwardRef<
   return (
     <ToastPrimitives.Root
       ref={ref}
-      className={cn(toastVariants({ variant }), "animate-flowing-gradient", className)}
-      style={{ backgroundSize: '200% 200%' }}
+      className={cn(toastVariants({ variant }), className)}
       {...props}
     />
   )
@@ -95,7 +94,7 @@ const ToastTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("text-3xl font-black uppercase tracking-tighter leading-none mb-2", className)}
+    className={cn("text-2xl font-black uppercase tracking-tighter leading-none mb-1", className)}
     {...props}
   />
 ))
@@ -107,7 +106,7 @@ const ToastDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("text-sm font-bold leading-relaxed opacity-80 max-w-xs mx-auto", className)}
+    className={cn("text-xs font-bold leading-relaxed opacity-80 max-w-xs mx-auto", className)}
     {...props}
   />
 ))

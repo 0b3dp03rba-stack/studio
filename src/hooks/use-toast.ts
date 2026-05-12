@@ -8,8 +8,8 @@ import type {
 } from "@/components/ui/toast"
 
 const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 6000 
-const SPAM_COOLDOWN = 10000 // 10 seconds cooldown for same message
+const TOAST_REMOVE_DELAY = 5000 
+const SPAM_COOLDOWN = 6000 
 
 type ToasterToast = ToastProps & {
   id: string
@@ -46,7 +46,7 @@ export const reducer = (state: State, action: Action): State => {
     case "ADD_TOAST":
       return {
         ...state,
-        toasts: [action.toast].slice(0, TOAST_LIMIT),
+        toasts: [action.toast], // Selalu paksa hanya 1 toast
       }
     case "UPDATE_TOAST":
       return {
@@ -77,7 +77,6 @@ export const reducer = (state: State, action: Action): State => {
 const listeners: Array<(state: State) => void> = []
 let memoryState: State = { toasts: [] }
 
-// Anti-Spam Cache with Timestamps
 const lastToastTimes = new Map<string, number>()
 
 function dispatch(action: Action) {
@@ -89,14 +88,13 @@ function toast({ title, description, ...props }: Omit<ToasterToast, "id">) {
   const messageKey = `${String(title)}-${String(description)}`
   const now = Date.now()
   
-  // ABSOLUTE ANTI-SPAM: Block if message sent too recently
   const lastTime = lastToastTimes.get(messageKey) || 0
   if (now - lastTime < SPAM_COOLDOWN) {
     return { id: "blocked", dismiss: () => {}, update: () => {} }
   }
 
-  // LIMIT: Only one active toast allowed at a time
-  if (memoryState.toasts.some(t => t.open)) {
+  // Jika ada toast yang sedang terbuka, jangan tambah baru (Cegah Spam Render)
+  if (memoryState.toasts.length > 0 && memoryState.toasts[0].open) {
     return { id: "limited", dismiss: () => {}, update: () => {} }
   }
 
@@ -106,7 +104,6 @@ function toast({ title, description, ...props }: Omit<ToasterToast, "id">) {
   const update = (props: ToasterToast) => dispatch({ type: "UPDATE_TOAST", toast: { ...props, id } })
   const dismiss = () => {
     dispatch({ type: "DISMISS_TOAST", toastId: id })
-    // Cleanup cache after some time to allow same message again
     setTimeout(() => {
       lastToastTimes.delete(messageKey)
     }, SPAM_COOLDOWN)
