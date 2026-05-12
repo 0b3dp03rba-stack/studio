@@ -1,4 +1,3 @@
-
 'use client';
     
 import { useState, useEffect } from 'react';
@@ -63,8 +62,8 @@ export function useDoc<T = any>(
 
         toast({
           variant: "destructive",
-          title: "Database Error",
-          description: err.message || "Gagal memuat dokumen."
+          title: "Document Sync Failed",
+          description: `Error: ${err.message}\nPath: ${memoizedDocRef.path}`
         });
       }
     );

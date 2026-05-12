@@ -1,12 +1,10 @@
-
 "use client";
 
 import { useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Users, Eye, Link as LinkIcon, Globe, Clock, ArrowUpRight, MousePointer2, Settings, MessageCircle, Wallet, Inbox } from 'lucide-react';
+import { Users, Eye, Link as LinkIcon, Globe, Clock, ArrowUpRight, Settings, MessageCircle, Wallet, Inbox } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, limit, doc, collectionGroup } from 'firebase/firestore';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 
@@ -21,7 +19,7 @@ export default function AdminDashboard() {
   const globalStatsRef = useMemoFirebase(() => doc(db, 'appConfig', 'globalStats'), [db]);
   const { data: globalStats } = useDoc(globalStatsRef);
 
-  // 3. Data Link Global (Tanpa OrderBy untuk menghindari error index COLLECTION_GROUP_DESC)
+  // 3. Data Link Global (Tanpa OrderBy untuk menghindari error index)
   const linksQuery = useMemoFirebase(() => query(collectionGroup(db, 'links'), limit(50)), [db]);
   const { data: rawLinks } = useCollection(linksQuery);
 
@@ -77,7 +75,7 @@ export default function AdminDashboard() {
         {stats.map((item, i) => (
           <Card key={i} className="glass-card border-none rounded-[2rem] p-6 shadow-2xl relative overflow-hidden group hover:scale-[1.02] transition-transform">
             <div className={`absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full -mr-12 -mt-12 blur-2xl group-hover:bg-primary/10 transition-colors`} />
-            <CardContent className="p-0 space-y-4 relative z-10">
+            <CardContent className="p-0 space-y-4 relative z-10 text-left">
               <div className={`w-10 h-10 rounded-2xl bg-white/5 flex items-center justify-center ${item.color}`}>
                 <item.icon size={20} />
               </div>
@@ -99,7 +97,7 @@ export default function AdminDashboard() {
            <div className="grid gap-3">
               {adminMenus.map((menu, i) => (
                 <Link key={i} href={menu.href}>
-                  <Card className="glass-card border-none rounded-2xl p-4 hover:bg-white/[0.08] transition-all group shadow-xl">
+                  <Card className="glass-card border-none rounded-2xl p-4 hover:bg-white/[0.08] transition-all group shadow-xl text-left">
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center group-hover:neon-gradient group-hover:text-background transition-all">
                         <menu.icon size={20} />
@@ -127,7 +125,7 @@ export default function AdminDashboard() {
           
           <div className="space-y-3">
             {recentLinks.map((link) => (
-              <Card key={link.id} className="glass-card border-none rounded-2xl p-4 flex items-center gap-4 group hover:bg-white/[0.05] transition-colors">
+              <Card key={link.id} className="glass-card border-none rounded-2xl p-4 flex items-center gap-4 group hover:bg-white/[0.05] transition-colors text-left">
                  <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/5 shrink-0">
                     {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <LinkIcon size={20} className="text-primary/50" />}
                  </div>
@@ -135,7 +133,7 @@ export default function AdminDashboard() {
                     <h4 className="font-bold text-white text-sm truncate uppercase tracking-tight">{link.title}</h4>
                     <p className="text-[9px] text-white/20 truncate uppercase font-mono mt-0.5">{link.url}</p>
                  </div>
-                 <div className="text-right">
+                 <div className="text-right shrink-0">
                     <p className="text-[10px] font-black text-primary uppercase">{link.clicks || 0} CLICKS</p>
                     <p className="text-[7px] text-white/10 uppercase mt-1">ID: {link.id.slice(0, 8)}</p>
                  </div>

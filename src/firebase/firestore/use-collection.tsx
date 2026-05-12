@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -66,11 +65,11 @@ export function useCollection<T = any>(
         setData(null);
         setIsLoading(false);
 
-        // Tampilkan pesan error lewat Toast agar tidak crash
+        // Tampilkan pesan error lewat Toast Minecraft Style
         toast({
           variant: "destructive",
-          title: "Database Error",
-          description: err.message || "Gagal memuat data dari server."
+          title: "Database Access Denied",
+          description: `Error: ${err.message}\n\nPath: ${memoizedTargetRefOrQuery instanceof Query ? 'Complex Query' : memoizedTargetRefOrQuery.path}`
         });
       }
     );
