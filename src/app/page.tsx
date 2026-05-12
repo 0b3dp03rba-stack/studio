@@ -7,7 +7,7 @@ import { Link2, Sparkles, LayoutGrid, Palette, ArrowRight, Star, Quote } from 'l
 import Link from 'next/link';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { useRouter } from 'next/navigation';
-import { collection, query, orderBy, doc, updateDoc, increment, setDoc } from 'firebase/firestore';
+import { collection, query, orderBy, doc, increment, setDoc } from 'firebase/firestore';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 // Komponen untuk merender bintang parsial/desimal
@@ -80,7 +80,13 @@ export default function LandingPage() {
     return allReviews?.slice(0, 3) || [];
   }, [allReviews]);
 
-  if (!mounted || isUserLoading || user) {
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-background" />
+    );
+  }
+
+  if (isUserLoading || user) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-2xl animate-spin"></div>

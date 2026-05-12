@@ -87,11 +87,12 @@ export function getRecommendedSecondary(primaryHex: string): string {
 export async function extractPaletteFromImage(base64: string): Promise<string[]> {
   return new Promise((resolve) => {
     const img = new Image();
+    img.crossOrigin = "anonymous";
     img.src = base64;
     img.onload = () => {
       const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const standardBackup = ['#FF0000', '#00FF00', '#0000FF', '#FFD700', '#00FFFF', '#FF00FF', '#FFFFFF'];
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      const standardBackup = ['#FFD700', '#FFFFFF', '#F5F5F5', '#E0E0E0', '#BDBDBD'];
       
       if (!ctx) return resolve(standardBackup);
 
@@ -107,10 +108,10 @@ export async function extractPaletteFromImage(base64: string): Promise<string[]>
         const g = data[i + 1];
         const b = data[i + 2];
         const a = data[i + 3];
-        if (a < 200) continue;
+        if (a < 128) continue; // Skip transparan
 
-        // Low quantization factor = More vibrant & accurate colors
-        const factor = 8; 
+        // Quantization
+        const factor = 16; 
         const qr = Math.round(r / factor) * factor;
         const qg = Math.round(g / factor) * factor;
         const qb = Math.round(b / factor) * factor;
@@ -118,11 +119,8 @@ export async function extractPaletteFromImage(base64: string): Promise<string[]>
 
         const hsl = hexToHsl(hex);
         
-        // Filter out dull/grayish colors
-        if (hsl.s < 20 && (hsl.l > 15 && hsl.l < 85)) continue; 
-
-        // Score heavily based on Saturation (Vibrancy)
-        const score = (hsl.s * 8) + (hsl.l < 50 ? hsl.l : (100 - hsl.l)); 
+        // Scoring: Prioritaskan Vibrancy (Saturasi) dan Kecerahan (Luminance)
+        const score = (hsl.s * 10) + (hsl.l > 20 && hsl.l < 90 ? 50 : 0); 
 
         if (!colors[hex]) {
           colors[hex] = { count: 1, score: score };
@@ -131,14 +129,15 @@ export async function extractPaletteFromImage(base64: string): Promise<string[]>
         }
       }
 
+      // Gabungkan hasil dan sortir berdasarkan skor vibrance
       const sortedColors = Object.entries(colors)
         .sort(([, a], [, b]) => b.score - a.score) 
-        .slice(0, 20) 
+        .slice(0, 16) 
         .map(([color]) => color);
 
-      if (sortedColors.length < 3) return resolve(standardBackup);
+      if (sortedColors.length < 2) return resolve(standardBackup);
       resolve(sortedColors);
     };
-    img.onerror = () => resolve(standardBackup);
+    img.onerror = () => resolve(['#FFD700', '#FFFFFF', '#F5F5F5']);
   });
 }

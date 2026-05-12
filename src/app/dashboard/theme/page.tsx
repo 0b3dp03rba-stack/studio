@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Palette, Sparkles, Loader2, Save, Wand2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -24,11 +24,10 @@ export default function ThemePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [extractedPalette, setExtractedPalette] = useState<string[]>([]);
-  const [hasAutoSuggested, setHasAutoSuggested] = useState(false);
+  const hasInitialized = useRef(false);
 
   // Fungsi untuk memicu AI Recommendation
   const triggerAIRecommendation = useCallback(async (primary: string, palette?: string[]) => {
-    if (isAiLoading) return;
     setIsAiLoading(true);
     try {
       const recommendation = await getAIColorRecommendation({ 
@@ -45,33 +44,29 @@ export default function ThemePage() {
     } finally {
       setIsAiLoading(false);
     }
-  }, [isAiLoading, toast]);
+  }, [toast]);
 
+  // Sync state dengan database HANYA SEKALI saat mount atau profil berubah pertama kali
   useEffect(() => {
-    if (profile) {
+    if (profile && !hasInitialized.current) {
       setThemeColor(profile.themeColor || '#ff0000');
       setThemeColorSecondary(profile.themeColorSecondary || '#ffea00');
+      hasInitialized.current = true;
       
       if (profile.avatarUrl) {
-         import('@/lib/utils-app').then(async (utils) => {
-           const palette = await utils.extractPaletteFromImage(profile.avatarUrl!);
-           setExtractedPalette(palette);
-
-           // AUTO-SUGGEST: Jika profil belum punya tema, atau baru saja ganti foto
-           if (!profile.themeColor && palette.length > 0 && !hasAutoSuggested) {
-             const bestPrimary = palette[0];
-             setThemeColor(bestPrimary);
-             triggerAIRecommendation(bestPrimary, palette);
-             setHasAutoSuggested(true);
-           }
-         });
+        import('@/lib/utils-app').then(async (utils) => {
+          const palette = await utils.extractPaletteFromImage(profile.avatarUrl!);
+          setExtractedPalette(palette);
+        });
       }
     }
-  }, [profile, triggerAIRecommendation, hasAutoSuggested]);
+  }, [profile]);
 
   const handleColorSelect = async (color: string) => {
+    if (isAiLoading) return;
     setThemeColor(color);
-    triggerAIRecommendation(color, extractedPalette);
+    // Jalankan AI untuk memilih pasangan warna
+    await triggerAIRecommendation(color, extractedPalette);
   };
 
   const handleSaveTheme = async () => {
