@@ -174,6 +174,7 @@ export default function ManagePage() {
           groupId: newGroupId === 'main' ? null : newGroupId
         };
 
+        // Logika Pindah Kelompok
         if (oldGroupId !== newGroupId) {
           const oldRef = oldGroupId === 'main' 
             ? doc(db, 'userProfiles', user.uid, 'links', editingItem.id)
@@ -187,7 +188,9 @@ export default function ManagePage() {
           if (existingDataSnap.exists()) {
              const batch = writeBatch(db);
              const newRef = doc(newCol);
+             // Salin data lama + update data baru
              batch.set(newRef, { ...existingDataSnap.data(), ...updateData });
+             // Hapus di lokasi lama
              batch.delete(oldRef);
              await batch.commit();
           }

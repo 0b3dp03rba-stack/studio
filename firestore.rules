@@ -2,21 +2,23 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Fungsi bantu untuk cek admin
+    // Fungsi bantu untuk cek admin yang lebih tangguh
     function isAdmin() {
       return request.auth != null && (
         request.auth.token.email == 'creeppermoment@gmail.com' || 
-        get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == 'Admin'
+        (exists(/databases/$(database)/documents/userProfiles/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == 'Admin')
       );
     }
 
-    // Aturan Dasar: Pemilik bisa baca & tulis semua datanya
+    // Aturan Dasar: Profil Pengguna
     match /userProfiles/{userId} {
       allow read: if true;
       allow write: if (request.auth != null && request.auth.uid == userId) || isAdmin();
-      // Memungkinkan publik menambah views tanpa login
+      // Izinkan publik update views
       allow update: if true;
       
+      // Subkoleksi (Links & Groups)
       match /{allSubcollections=**} {
         allow read: if true;
         allow write: if (request.auth != null && request.auth.uid == userId) || isAdmin();
@@ -27,14 +29,13 @@ service cloud.firestore {
     match /appConfig/{docId} {
       allow read: if true;
       allow write: if isAdmin();
-      // Izinkan publik increment landing page views
-      allow update: if docId == 'globalStats';
+      allow update: if docId == 'globalStats' || isAdmin();
     }
 
     // Username mapping
     match /usernames/{username} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if request.auth != null || isAdmin();
     }
 
     // Platform Reviews
@@ -43,9 +44,15 @@ service cloud.firestore {
       allow write: if (request.auth != null && request.auth.uid == userId) || isAdmin();
     }
 
-    // Collection Group Access (untuk admin memantau link terbaru)
+    // Collection Group Access (untuk admin memantau link terbaru secara global)
     match /{path=**}/links/{linkId} {
-      allow read: if isAdmin();
+      allow read: if true; // Diperlukan agar pencarian global & admin feed bekerja
+      allow write: if isAdmin() || (request.auth != null && request.auth.uid in path);
+    }
+    
+    match /{path=**}/linkGroups/{groupId} {
+      allow read: if true;
+      allow write: if isAdmin() || (request.auth != null && request.auth.uid in path);
     }
   }
 }
