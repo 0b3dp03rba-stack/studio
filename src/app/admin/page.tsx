@@ -3,7 +3,7 @@
 
 import { useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Users, Eye, Link as LinkIcon, Globe, Clock, ArrowUpRight, Settings, ShieldCheck } from 'lucide-react';
+import { Users, Eye, Link as LinkIcon, Globe, Clock, ArrowUpRight, Settings, ExternalLink } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, limit, doc, collectionGroup } from 'firebase/firestore';
 import { Badge } from '@/components/ui/badge';
@@ -124,6 +124,15 @@ export default function AdminDashboard() {
                  <div className="flex-1 min-w-0">
                     <h4 className="font-bold text-white text-sm truncate uppercase tracking-tight">{link.title}</h4>
                     <p className="text-[9px] text-white/20 truncate uppercase font-mono mt-0.5">{link.url}</p>
+                    {link.userId && (
+                      <Link 
+                        href={`/u/${link.userId}`} 
+                        target="_blank"
+                        className="inline-flex items-center gap-1 text-[8px] font-black text-primary uppercase mt-1.5 hover:underline"
+                      >
+                        <ExternalLink size={8} /> View Creator Profile
+                      </Link>
+                    )}
                  </div>
                  <div className="text-right shrink-0">
                     <p className="text-[10px] font-black text-primary uppercase">{link.clicks || 0} CLICKS</p>

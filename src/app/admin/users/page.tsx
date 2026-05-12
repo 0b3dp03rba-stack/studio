@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { User, Mail, ShieldCheck, Trash2, ArrowLeft, Loader2, AlertCircle, Eye } from 'lucide-react';
+import { User, Mail, Trash2, ArrowLeft, Loader2, AlertCircle, Eye } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
@@ -29,19 +29,34 @@ export default function AdminUsersPage() {
   ));
 
   const handleDeleteUser = async () => {
-    if (!userToDelete) return;
+    if (!userToDelete || isDeleting) return;
+    
     setIsDeleting(true);
+    const targetUsername = userToDelete.username || 'unknown';
+    const targetId = userToDelete.id;
+
     try {
+      // 1. Hapus username mapping
       if (userToDelete.username) {
         await deleteDoc(doc(db, 'usernames', userToDelete.username.toLowerCase()));
       }
-      await deleteDoc(doc(db, 'userProfiles', userToDelete.id));
-      toast({ title: "User Dihapus", description: `Akun @${userToDelete.username} telah dihapus dari sistem.` });
+      // 2. Hapus profile
+      await deleteDoc(doc(db, 'userProfiles', targetId));
+      
+      toast({ 
+        title: "USER DIHAPUS", 
+        description: `Akun @${targetUsername.toUpperCase()} telah berhasil dihapus dari sistem.` 
+      });
+      
+      setUserToDelete(null);
     } catch (e) {
-      toast({ variant: "destructive", title: "Gagal Menghapus", description: "Terjadi kesalahan database." });
+      toast({ 
+        variant: "destructive", 
+        title: "GAGAL MENGHAPUS", 
+        description: "Terjadi kesalahan saat mengakses database." 
+      });
     } finally {
       setIsDeleting(false);
-      setUserToDelete(null);
     }
   };
 
@@ -120,7 +135,7 @@ export default function AdminUsersPage() {
          <p className="text-[10px] font-black uppercase leading-relaxed text-primary/70">Peringatan: Menghapus pengguna akan menghilangkan profil publik dan seluruh tautan mereka secara permanen.</p>
       </div>
 
-      <AlertDialog open={!!userToDelete} onOpenChange={() => !isDeleting && setUserToDelete(null)}>
+      <AlertDialog open={!!userToDelete} onOpenChange={(open) => { if(!open && !isDeleting) setUserToDelete(null); }}>
         <AlertDialogContent className="glass-card border-none rounded-[2.5rem] bg-background/95 backdrop-blur-3xl p-8 shadow-2xl max-w-[90%] sm:max-w-md mx-auto">
           <div className="absolute top-0 left-0 w-full h-1.5 bg-destructive" />
           <AlertDialogHeader>
@@ -130,7 +145,7 @@ export default function AdminUsersPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-8 flex gap-3">
-            <AlertDialogCancel className="bg-white/5 border-none rounded-xl text-[10px] font-black uppercase h-12 text-white hover:bg-white/10 flex-1">Batal</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting} className="bg-white/5 border-none rounded-xl text-[10px] font-black uppercase h-12 text-white hover:bg-white/10 flex-1">Batal</AlertDialogCancel>
             <AlertDialogAction 
               onClick={(e) => { e.preventDefault(); handleDeleteUser(); }}
               disabled={isDeleting}
