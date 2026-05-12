@@ -82,7 +82,7 @@ export function getRecommendedSecondary(primaryHex: string): string {
 }
 
 /**
- * VIBRANT COLOR EXTRACTION: Sekarang mengekstrak warna yang berani dan tajam.
+ * VIBRANT COLOR EXTRACTION: Sekarang mengekstrak warna asli dengan akurasi tinggi.
  */
 export async function extractPaletteFromImage(base64: string): Promise<string[]> {
   return new Promise((resolve) => {
@@ -92,9 +92,7 @@ export async function extractPaletteFromImage(base64: string): Promise<string[]>
     img.onload = () => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
-      const standardBackup = ['#FFD700', '#FFFFFF', '#F5F5F5', '#E0E0E0', '#BDBDBD'];
-      
-      if (!ctx) return resolve(standardBackup);
+      if (!ctx) return resolve(['#FFD700', '#FFFFFF']);
 
       canvas.width = 100;
       canvas.height = 100;
@@ -108,19 +106,18 @@ export async function extractPaletteFromImage(base64: string): Promise<string[]>
         const g = data[i + 1];
         const b = data[i + 2];
         const a = data[i + 3];
-        if (a < 128) continue; // Skip transparan
+        if (a < 200) continue; // Hanya warna solid
 
-        // Quantization
-        const factor = 16; 
-        const qr = Math.round(r / factor) * factor;
-        const qg = Math.round(g / factor) * factor;
-        const qb = Math.round(b / factor) * factor;
+        // Quantization ringan agar tidak "brutal"
+        const qr = Math.round(r / 8) * 8;
+        const qg = Math.round(g / 8) * 8;
+        const qb = Math.round(b / 8) * 8;
         const hex = `#${((1 << 24) + (qr << 16) + (qg << 8) + qb).toString(16).slice(1)}`;
 
         const hsl = hexToHsl(hex);
         
-        // Scoring: Prioritaskan Vibrancy (Saturasi) dan Kecerahan (Luminance)
-        const score = (hsl.s * 10) + (hsl.l > 20 && hsl.l < 90 ? 50 : 0); 
+        // Scoring: Prioritaskan Vibrancy dan Kecerahan
+        const score = (hsl.s * 5) + (hsl.l > 20 && hsl.l < 90 ? 20 : 0); 
 
         if (!colors[hex]) {
           colors[hex] = { count: 1, score: score };
@@ -129,15 +126,15 @@ export async function extractPaletteFromImage(base64: string): Promise<string[]>
         }
       }
 
-      // Gabungkan hasil dan sortir berdasarkan skor vibrance
       const sortedColors = Object.entries(colors)
-        .sort(([, a], [, b]) => b.score - a.score) 
-        .slice(0, 16) 
+        .sort(([, a], [, b]) => (b.count * b.score) - (a.count * a.score)) 
+        .slice(0, 12) 
         .map(([color]) => color);
 
-      if (sortedColors.length < 2) return resolve(standardBackup);
+      // Jika palet kosong, berikan warna dasar foto daripada pelangi brutal
+      if (sortedColors.length < 2) return resolve(['#FFFFFF', '#C0C0C0', '#FFD700']);
       resolve(sortedColors);
     };
-    img.onerror = () => resolve(['#FFD700', '#FFFFFF', '#F5F5F5']);
+    img.onerror = () => resolve(['#FFFFFF', '#FFD700']);
   });
 }

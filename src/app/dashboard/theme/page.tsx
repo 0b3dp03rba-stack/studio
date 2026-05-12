@@ -24,29 +24,31 @@ export default function ThemePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [extractedPalette, setExtractedPalette] = useState<string[]>([]);
+  
   const hasInitialized = useRef(false);
+  const isAiWorking = useRef(false);
 
   // Fungsi untuk memicu AI Recommendation
   const triggerAIRecommendation = useCallback(async (primary: string, palette?: string[]) => {
+    if (isAiWorking.current) return;
+    isAiWorking.current = true;
     setIsAiLoading(true);
     try {
       const recommendation = await getAIColorRecommendation({ 
         primaryColor: primary,
         palette: palette
       });
+      // UPDATE STATE TANPA OVERWRITE
       setThemeColorSecondary(recommendation.secondaryColor);
-      toast({
-        title: "AI SUGGESTION APPLIED",
-        description: recommendation.explanation
-      });
     } catch (e) {
       setThemeColorSecondary(getRecommendedSecondary(primary));
     } finally {
       setIsAiLoading(false);
+      isAiWorking.current = false;
     }
-  }, [toast]);
+  }, []);
 
-  // Sync state dengan database HANYA SEKALI saat mount atau profil berubah pertama kali
+  // Sync state dengan database HANYA SEKALI saat mount
   useEffect(() => {
     if (profile && !hasInitialized.current) {
       setThemeColor(profile.themeColor || '#ff0000');
@@ -57,10 +59,15 @@ export default function ThemePage() {
         import('@/lib/utils-app').then(async (utils) => {
           const palette = await utils.extractPaletteFromImage(profile.avatarUrl!);
           setExtractedPalette(palette);
+          
+          // OTOMATIS SARANKAN WARNA JIKA PERTAMA KALI ATAU BELUM ADA TEMA
+          if (!profile.themeColor) {
+             triggerAIRecommendation(palette[0], palette);
+          }
         });
       }
     }
-  }, [profile]);
+  }, [profile, triggerAIRecommendation]);
 
   const handleColorSelect = async (color: string) => {
     if (isAiLoading) return;
@@ -78,9 +85,9 @@ export default function ThemePage() {
         themeColorSecondary,
         updatedAt: serverTimestamp()
       });
-      toast({ title: "TEMA DIPERBARUI", description: "Warna visual profil Anda telah aktif." });
+      toast({ title: "VISUAL TERAPKAN", description: "Warna kustom Anda telah aktif." });
     } catch (e: any) {
-      toast({ variant: "destructive", title: "GAGAL MENYIMPAN" });
+      // Toast handles itself via the 1-toast policy in the hook
     } finally {
       setIsSaving(false);
     }
@@ -120,7 +127,7 @@ export default function ThemePage() {
             <div className="space-y-4">
               <div className="flex items-center justify-between px-1">
                 <label className="text-[10px] font-black text-muted-foreground uppercase flex items-center gap-2 tracking-widest">
-                  <Wand2 size={14} className="text-primary" /> AI-SMART PALETTE (DARI FOTO)
+                  <Wand2 size={14} className="text-primary" /> WARNA FOTO PROFIL
                 </label>
                 <div className="w-5 h-5 rounded-full shadow-lg border border-white/20" style={{ backgroundColor: themeColor }} />
               </div>
@@ -136,14 +143,14 @@ export default function ThemePage() {
                     {themeColor === color && !isAiLoading && <div className="w-2 h-2 bg-white rounded-full" />}
                   </button>
                 )) : (
-                  <div className="col-span-4 py-8 text-center text-[9px] font-black uppercase opacity-20 tracking-widest border border-dashed border-white/10 rounded-2xl">Unggah foto profil untuk palet</div>
+                  <div className="col-span-4 py-8 text-center text-[9px] font-black uppercase opacity-20 tracking-widest border border-dashed border-white/10 rounded-2xl">Unggah foto untuk palet warna</div>
                 )}
               </div>
             </div>
 
             <div className="space-y-4">
               <div className="flex items-center justify-between px-1">
-                <label className="text-[10px] font-black text-muted-foreground uppercase flex items-center gap-2 tracking-widest"><Sparkles size={14} className="text-secondary" /> WARNA GRADASI (PRESTIGE)</label>
+                <label className="text-[10px] font-black text-muted-foreground uppercase flex items-center gap-2 tracking-widest"><Sparkles size={14} className="text-secondary" /> GRADASI PRESTIGE</label>
                 <div className="w-5 h-5 rounded-full shadow-lg border border-white/20" style={{ backgroundColor: themeColorSecondary }} />
               </div>
               <div className="grid grid-cols-4 gap-3">
@@ -162,7 +169,7 @@ export default function ThemePage() {
           </div>
 
           <Button onClick={handleSaveTheme} disabled={isSaving || isAiLoading} className="w-full h-16 neon-gradient text-background font-black rounded-3xl shadow-xl active:scale-95 transition-all text-sm uppercase tracking-widest">
-            {isSaving ? <Loader2 className="animate-spin" size={20} /> : <><Save size={20} className="mr-2" /> TERAPKAN VISUAL</>}
+            {isSaving ? <Loader2 className="animate-spin" size={20} /> : <><Save size={20} className="mr-2" /> SIMPAN TEMA</>}
           </Button>
         </Card>
       </div>

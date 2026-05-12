@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -6,7 +7,6 @@ import type {
   ToastProps,
 } from "@/components/ui/toast"
 
-const TOAST_LIMIT = 1
 const TOAST_REMOVE_DELAY = 4000 
 const SPAM_COOLDOWN = 5000 
 
@@ -48,6 +48,7 @@ const lastToastTimes = new Map<string, number>()
 export const reducer = (state: State, action: Action): State => {
   switch (action.type) {
     case "ADD_TOAST":
+      // HANYA IZINKAN 1 TOAST DI LAYAR
       return {
         ...state,
         toasts: [action.toast],
@@ -87,24 +88,19 @@ function toast({ title, description, ...props }: Omit<ToasterToast, "id">) {
   const now = Date.now()
   const messageKey = `${String(title)}-${String(description)}`
   
-  // 1. Cek Cooldown Spam
+  // 1. CEK APAKAH ADA TOAST YANG SEDANG TERBUKA
+  const hasActiveToast = memoryState.toasts.some(t => t.open === true)
+  if (hasActiveToast) return { id: "blocked", dismiss: () => {}, update: () => {} }
+
+  // 2. COOLDOWN SPAM UNTUK PESAN YANG SAMA
   const lastTime = lastToastTimes.get(messageKey) || 0
   if (now - lastTime < SPAM_COOLDOWN) return { id: "spam", dismiss: () => {}, update: () => {} }
-
-  // 2. Cek apakah sudah ada toast aktif
-  const activeToast = memoryState.toasts.find(t => t.open)
-  if (activeToast) return { id: "active", dismiss: () => {}, update: () => {} }
 
   lastToastTimes.set(messageKey, now)
   const id = genId()
 
   const update = (props: ToasterToast) => dispatch({ type: "UPDATE_TOAST", toast: { ...props, id } })
-  const dismiss = () => {
-    dispatch({ type: "DISMISS_TOAST", toastId: id })
-    setTimeout(() => {
-      lastToastTimes.delete(messageKey)
-    }, SPAM_COOLDOWN)
-  }
+  const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
 
   dispatch({
     type: "ADD_TOAST",

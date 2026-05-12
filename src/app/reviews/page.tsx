@@ -8,33 +8,18 @@ import { Star, Quote, ChevronLeft, LayoutGrid } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { formatDistanceToNow } from 'date-fns';
-import { id } from 'date-fns/locale';
 
-const PartialStarRating = ({ rating, size = 20, className = "" }: { rating: number, size?: number, className?: string }) => {
+// Komponen rating statis untuk mencegah hydration mismatch
+const StaticStarRating = ({ rating, size = 16 }: { rating: number, size?: number }) => {
   return (
-    <div className={`flex items-center gap-1 ${className}`}>
-      {[1, 2, 3, 4, 5].map((starIndex) => {
-        const fillAmount = Math.max(0, Math.min(100, (rating - (starIndex - 1)) * 100));
-        return (
-          <div key={starIndex} className="relative" style={{ width: size, height: size }}>
-            <Star 
-              size={size} 
-              className="text-white/10 absolute inset-0" 
-            />
-            <div 
-              className="absolute inset-0 overflow-hidden text-primary fill-primary"
-              style={{ width: `${fillAmount}%` }}
-            >
-              <Star 
-                size={size} 
-                fill="currentColor" 
-                className="text-primary"
-              />
-            </div>
-          </div>
-        );
-      })}
+    <div className="flex items-center gap-0.5">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <Star 
+          key={i} 
+          size={size} 
+          className={i <= Math.round(rating) ? "text-primary fill-primary" : "text-white/10"} 
+        />
+      ))}
     </div>
   );
 };
@@ -60,7 +45,11 @@ export default function AllReviewsPage() {
   }, [reviews]);
 
   if (!mounted) {
-    return <div className="min-h-screen bg-background" />;
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
   }
 
   return (
@@ -88,8 +77,8 @@ export default function AllReviewsPage() {
               <div className="flex items-center gap-4">
                 <span className="text-6xl font-black text-white tracking-tighter">{stats.average}</span>
                 <div className="text-left">
-                  <PartialStarRating rating={stats.average} size={28} />
-                  <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mt-1">Total {stats.total} Ulasan Aktif</p>
+                  <StaticStarRating rating={stats.average} size={24} />
+                  <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mt-1">Total {stats.total} Ulasan</p>
                 </div>
               </div>
             </div>
@@ -113,16 +102,7 @@ export default function AllReviewsPage() {
                   </Avatar>
                   <div className="space-y-1">
                     <p className="text-base font-black text-white uppercase tracking-tight">{review.displayName || review.username}</p>
-                    <div className="flex items-center gap-3">
-                      <div className="flex gap-0.5">
-                        {[...Array(5)].map((_, i) => (
-                          <Star key={i} size={12} className={i < review.rating ? "text-primary fill-primary" : "text-white/10"} />
-                        ))}
-                      </div>
-                      <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">
-                        {review.createdAt?.seconds ? formatDistanceToNow(new Date(review.createdAt.seconds * 1000), { addSuffix: true, locale: id }) : '-'}
-                      </span>
-                    </div>
+                    <StaticStarRating rating={review.rating} size={14} />
                   </div>
                 </div>
                 <p className="text-sm md:text-base text-white/80 font-medium leading-relaxed italic">

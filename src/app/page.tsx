@@ -10,31 +10,17 @@ import { useRouter } from 'next/navigation';
 import { collection, query, orderBy, doc, increment, setDoc } from 'firebase/firestore';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
-// Komponen untuk merender bintang parsial/desimal
-const PartialStarRating = ({ rating, size = 20, className = "" }: { rating: number, size?: number, className?: string }) => {
+// Komponen rating statis sederhana untuk landing page
+const StaticStarRating = ({ rating, size = 16 }: { rating: number, size?: number }) => {
   return (
-    <div className={`flex items-center gap-1 ${className}`}>
-      {[1, 2, 3, 4, 5].map((starIndex) => {
-        const fillAmount = Math.max(0, Math.min(100, (rating - (starIndex - 1)) * 100));
-        return (
-          <div key={starIndex} className="relative" style={{ width: size, height: size }}>
-            <Star 
-              size={size} 
-              className="text-white/10 absolute inset-0" 
-            />
-            <div 
-              className="absolute inset-0 overflow-hidden text-primary fill-primary"
-              style={{ width: `${fillAmount}%` }}
-            >
-              <Star 
-                size={size} 
-                fill="currentColor" 
-                className="text-primary"
-              />
-            </div>
-          </div>
-        );
-      })}
+    <div className="flex items-center gap-0.5">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <Star 
+          key={i} 
+          size={size} 
+          className={i <= Math.round(rating) ? "text-primary fill-primary" : "text-white/10"} 
+        />
+      ))}
     </div>
   );
 };
@@ -52,7 +38,7 @@ export default function LandingPage() {
         const statsRef = doc(db, 'appConfig', 'globalStats');
         await setDoc(statsRef, { landingPageViews: increment(1) }, { merge: true });
       } catch (e) {
-        console.error("Failed to track landing visit", e);
+        // Silent catch to prevent console clutter
       }
     };
     trackLandingVisit();
@@ -81,9 +67,7 @@ export default function LandingPage() {
   }, [allReviews]);
 
   if (!mounted) {
-    return (
-      <div className="min-h-screen bg-background" />
-    );
+    return <div className="min-h-screen bg-black" />;
   }
 
   if (isUserLoading || user) {
@@ -140,7 +124,7 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* Reviews Section */}
+        {/* Reviews Section - REMOVED TIME AGO TO PREVENT HYDRATION ERROR */}
         <section className="space-y-12 py-12 animate-in" style={{ animationDelay: '0.4s' }}>
           <div className="space-y-4">
              <div className="space-y-1">
@@ -153,8 +137,8 @@ export default function LandingPage() {
                   <div className="flex items-center gap-4">
                     <span className="text-5xl font-black text-white tracking-tighter">{stats.average}</span>
                     <div className="text-left">
-                      <PartialStarRating rating={stats.average} size={24} />
-                      <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mt-1">Berdasarkan {stats.total} Ulasan</p>
+                      <StaticStarRating rating={stats.average} size={24} />
+                      <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mt-1">Rating dari {stats.total} User</p>
                     </div>
                   </div>
                </div>
@@ -172,11 +156,7 @@ export default function LandingPage() {
                   </Avatar>
                   <div>
                     <p className="text-sm font-black text-white uppercase tracking-tight">{review.displayName || review.username}</p>
-                    <div className="flex gap-0.5 mt-0.5">
-                      {[...Array(5)].map((_, i) => (
-                        <Star key={i} size={10} className={i < review.rating ? "text-primary fill-primary" : "text-white/10"} />
-                      ))}
-                    </div>
+                    <StaticStarRating rating={review.rating} size={10} />
                   </div>
                 </div>
                 <p className="text-sm text-white/70 italic font-medium leading-relaxed">"{review.comment}"</p>
@@ -189,10 +169,6 @@ export default function LandingPage() {
                   <Link href="/reviews">Lihat Semua Rating <ArrowRight size={14} className="ml-2" /></Link>
                 </Button>
               </div>
-            )}
-            
-            {!isReviewsLoading && stats.total === 0 && (
-              <p className="opacity-20 font-black uppercase text-[10px] tracking-widest">Belum ada ulasan.</p>
             )}
           </div>
         </section>
