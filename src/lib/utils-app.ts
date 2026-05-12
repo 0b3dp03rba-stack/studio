@@ -77,7 +77,7 @@ export function getRecommendedSecondary(primaryHex: string): string {
 /**
  * HUE-BASED VIBRANT EXTRACTION: 
  * Membagi lingkaran warna menjadi segmen dan mengambil warna paling cerah di tiap segmen.
- * Ini memastikan warna rambut (biru) atau baju (putih) tetap terjaring meskipun kulit mendominasi.
+ * Ini memastikan warna rambut (biru) atau baju (putih) tetap terjaring meskipun warna kulit mendominasi luas gambar.
  */
 export async function extractPaletteFromImage(base64: string): Promise<string[]> {
   return new Promise((resolve) => {
@@ -98,7 +98,7 @@ export async function extractPaletteFromImage(base64: string): Promise<string[]>
       const hueBuckets: Record<number, { hex: string, saturation: number, luminance: number, score: number }[]> = {};
       for(let i=0; i<12; i++) hueBuckets[i] = [];
 
-      for (let i = 0; i < data.length; i += 16) { // Sampling setiap 4 pixel
+      for (let i = 0; i < data.length; i += 16) { 
         const r = data[i];
         const g = data[i + 1];
         const b = data[i + 2];
@@ -108,35 +108,34 @@ export async function extractPaletteFromImage(base64: string): Promise<string[]>
         const hex = `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
         const hsl = hexToHsl(hex);
         
-        // Skip warna yang terlalu gelap atau terlalu pudar (untuk palet utama)
-        if (hsl.l < 10 || hsl.l > 95) continue;
+        // Skip warna yang terlalu gelap/terang total
+        if (hsl.l < 5 || hsl.l > 95) continue;
 
         const bucketIndex = Math.floor(hsl.h / 30) % 12;
-        // Scoring: Prioritaskan Saturation
-        const score = hsl.s * 2 + (hsl.l > 40 && hsl.l < 70 ? 20 : 0);
+        // Scoring: Sangat mengutamakan Saturation (Vibrancy)
+        const score = (hsl.s * 3) + (hsl.l > 30 && hsl.l < 80 ? 30 : 0);
 
         hueBuckets[bucketIndex].push({ hex, saturation: hsl.s, luminance: hsl.l, score });
       }
 
       const palette: string[] = [];
       
-      // Ambil 1 warna terbaik dari setiap bucket
+      // Ambil 1 warna terbaik dari setiap bucket yang terdeteksi
       Object.values(hueBuckets).forEach(bucket => {
         if (bucket.length > 0) {
-          const bestInBucket = bucket.sort((a, b) => b.score - a.score)[0];
-          palette.push(bestInBucket.hex);
+          const sorted = bucket.sort((a, b) => b.score - a.score);
+          palette.push(sorted[0].hex);
         }
       });
 
-      // Tambahkan warna netral cerah (seperti baju putih/perak) jika belum ada
-      palette.push('#FFFFFF', '#F5F5F5', '#E0E0E0');
+      // Tambahkan warna netral cerah secara manual untuk opsi "kaos putih"
+      palette.push('#FFFFFF', '#F5F5F5');
 
-      // Sortir hasil akhir agar warna paling cerah (vibrant) muncul di depan
       const finalPalette = [...new Set(palette)]
         .sort((a, b) => {
           const hslA = hexToHsl(a);
           const hslB = hexToHsl(b);
-          return (hslB.s + hslB.l) - (hslA.s + hslA.l);
+          return (hslB.s + (hslB.l/2)) - (hslA.s + (hslA.l/2));
         })
         .slice(0, 12);
 

@@ -32,7 +32,6 @@ export default function DashboardPage() {
   const userReviewRef = useMemoFirebase(() => user ? doc(db, 'platformReviews', user.uid) : null, [db, user?.uid]);
   const { data: userReview } = useDoc(userReviewRef);
 
-  // Initialize rating from existing review
   useEffect(() => {
     if (userReview) {
       setRating(userReview.rating);
@@ -41,7 +40,7 @@ export default function DashboardPage() {
   }, [userReview]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !mounted) return;
 
     const unsubStandalone = onSnapshot(collection(db, 'userProfiles', user.uid, 'links'), (snap) => {
       const standalone = snap.docs.map(d => ({ ...d.data(), id: d.id, isStandalone: true }));
@@ -67,7 +66,7 @@ export default function DashboardPage() {
       unsubStandalone();
       unsubGroups();
     };
-  }, [user, db]);
+  }, [user, db, mounted]);
 
   const topPerformers = useMemo(() => {
     return [...allLinks]
@@ -108,7 +107,14 @@ export default function DashboardPage() {
     }
   };
 
-  if (!mounted) return null;
+  if (!mounted) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-4">
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-[10px] font-black uppercase tracking-widest text-primary/50">Mempersiapkan Lab...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in pb-12">

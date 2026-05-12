@@ -25,10 +25,14 @@ export default function ThemePage() {
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [extractedPalette, setExtractedPalette] = useState<string[]>([]);
   
+  const [mounted, setMounted] = useState(false);
   const hasInitialized = useRef(false);
   const isAiWorking = useRef(false);
 
-  // Fungsi untuk memicu AI Recommendation
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const triggerAIRecommendation = useCallback(async (primary: string, palette?: string[]) => {
     if (isAiWorking.current) return;
     isAiWorking.current = true;
@@ -47,9 +51,8 @@ export default function ThemePage() {
     }
   }, []);
 
-  // Sync state dengan database HANYA SEKALI saat mount
   useEffect(() => {
-    if (profile && !hasInitialized.current) {
+    if (profile && !hasInitialized.current && mounted) {
       setThemeColor(profile.themeColor || '#ff0000');
       setThemeColorSecondary(profile.themeColorSecondary || '#ffea00');
       hasInitialized.current = true;
@@ -58,8 +61,6 @@ export default function ThemePage() {
         import('@/lib/utils-app').then(async (utils) => {
           const palette = await utils.extractPaletteFromImage(profile.avatarUrl!);
           setExtractedPalette(palette);
-          
-          // OTOMATIS SARANKAN WARNA JIKA BELUM ADA TEMA
           if (!profile.themeColor) {
              triggerAIRecommendation(palette[0], palette);
              setThemeColor(palette[0]);
@@ -67,7 +68,7 @@ export default function ThemePage() {
         });
       }
     }
-  }, [profile, triggerAIRecommendation]);
+  }, [profile, triggerAIRecommendation, mounted]);
 
   const handleColorSelect = async (color: string) => {
     if (isAiLoading) return;
@@ -86,11 +87,20 @@ export default function ThemePage() {
       });
       toast({ title: "VISUAL TERAPKAN", description: "Warna kustom Anda telah aktif." });
     } catch (e: any) {
-      // toast auto handled
+      // Toast auto handled
     } finally {
       setIsSaving(false);
     }
   };
+
+  if (!mounted) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-4">
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-[10px] font-black uppercase tracking-widest text-primary/50">Sinkronisasi Visual...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in pb-20">
