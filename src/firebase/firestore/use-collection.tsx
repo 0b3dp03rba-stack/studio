@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Query,
   onSnapshot,
@@ -37,12 +38,16 @@ export function useCollection<T = any>(
   const [data, setData] = useState<StateDataType>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
+  
+  // Ref to prevent spamming toast notifications for the same error
+  const lastErrorRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!memoizedTargetRefOrQuery) {
       setData(null);
       setIsLoading(false);
       setError(null);
+      lastErrorRef.current = null;
       return;
     }
 
@@ -59,18 +64,24 @@ export function useCollection<T = any>(
         setData(results);
         setError(null);
         setIsLoading(false);
+        lastErrorRef.current = null; // Clear error tracking on success
       },
       (err: FirestoreError) => {
         setError(err);
         setData(null);
         setIsLoading(false);
 
-        // Tampilkan pesan error lewat Toast Minecraft Style
-        toast({
-          variant: "destructive",
-          title: "Database Access Denied",
-          description: `Error: ${err.message}\n\nPath: ${memoizedTargetRefOrQuery instanceof Query ? 'Complex Query' : memoizedTargetRefOrQuery.path}`
-        });
+        // Prevent spamming identical toast messages
+        const errorKey = `${err.code}:${err.message}`;
+        if (lastErrorRef.current !== errorKey) {
+          lastErrorRef.current = errorKey;
+          
+          toast({
+            variant: "destructive",
+            title: "Database Access Denied",
+            description: `Error: ${err.message}\n\nPath: ${memoizedTargetRefOrQuery instanceof Query ? 'Complex Query' : memoizedTargetRefOrQuery?.path || 'Unknown'}`
+          });
+        }
       }
     );
 

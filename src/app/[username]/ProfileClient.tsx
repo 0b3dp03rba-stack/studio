@@ -4,7 +4,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc, collection, updateDoc, increment, getDoc, query, orderBy, onSnapshot } from 'firebase/firestore';
-import { User, Share2, MousePointer2, Link2, LayoutGrid, ChevronRight, Search, X, Instagram, Youtube, Facebook, MessageCircle, Globe, Mail, Sparkles, ExternalLink } from 'lucide-react';
+import { User, Share2, MousePointer2, Link2, LayoutGrid, ChevronRight, Search, X, Instagram, Youtube, Facebook, MessageCircle, Globe, Mail, Sparkles, ExternalLink, Ghost, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -145,7 +145,22 @@ export default function ProfileClient({ username }: { username: string }) {
     );
   }
 
-  if (!profile) return null;
+  if (!profile) {
+    return (
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6 text-center space-y-8">
+        <div className="w-24 h-24 rounded-[2rem] bg-primary/10 flex items-center justify-center text-primary glow-primary animate-bounce">
+          <Ghost size={48} />
+        </div>
+        <div className="space-y-4">
+          <h1 className="text-4xl font-black text-white uppercase tracking-tighter">Identitas Tidak Ditemukan</h1>
+          <p className="text-sm font-medium text-white/40 max-w-xs mx-auto uppercase tracking-widest">Maaf, profil @{username} telah dihapus atau belum pernah terdaftar di Linku.</p>
+        </div>
+        <Button asChild className="h-14 px-10 neon-gradient text-background font-black rounded-2xl uppercase text-[10px] tracking-[0.2em] shadow-2xl">
+          <Link href="/"><Home size={16} className="mr-2" /> Kembali ke Beranda</Link>
+        </Button>
+      </div>
+    );
+  }
 
   const primaryColor = profile.themeColor || '#ff0000';
   const secondaryColor = profile.themeColorSecondary || '#ffea00';

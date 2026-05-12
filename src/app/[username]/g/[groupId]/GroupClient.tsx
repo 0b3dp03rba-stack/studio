@@ -4,7 +4,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc, collection, updateDoc, increment, getDoc, query, orderBy } from 'firebase/firestore';
-import { MousePointer2, Link2, ChevronLeft, Search, X } from 'lucide-react';
+import { MousePointer2, Link2, ChevronLeft, Search, X, Ghost, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import Link from 'next/link';
@@ -12,14 +12,21 @@ import Link from 'next/link';
 export default function GroupClient({ username, groupId }: { username: string; groupId: string }) {
   const db = useFirestore();
   const [resolvedUserId, setResolvedUserId] = useState<string | null>(null);
+  const [isResolving, setIsResolving] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     const resolveUser = async () => {
-      const userRef = doc(db, 'usernames', username.toLowerCase());
-      const userSnap = await getDoc(userRef);
-      if (userSnap.exists()) setResolvedUserId(userSnap.data().userId);
-      else setResolvedUserId(username);
+      try {
+        const userRef = doc(db, 'usernames', username.toLowerCase());
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) setResolvedUserId(userSnap.data().userId);
+        else setResolvedUserId(username);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setIsResolving(false);
+      }
     };
     resolveUser();
   }, [db, username]);
@@ -48,11 +55,31 @@ export default function GroupClient({ username, groupId }: { username: string; g
     return links.filter(l => l.title.toLowerCase().includes(searchQuery.toLowerCase()));
   }, [links, searchQuery]);
 
-  if (!profile || !group) return (
-    <div className="min-h-screen bg-black flex items-center justify-center">
-      <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-2xl animate-spin"></div>
-    </div>
-  );
+  if (isResolving) {
+    return (
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center gap-4">
+        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-2xl animate-spin"></div>
+        <p className="text-[10px] font-black uppercase tracking-widest text-primary/50">Sinkronisasi Koleksi...</p>
+      </div>
+    );
+  }
+
+  if (!profile || !group) {
+    return (
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6 text-center space-y-8">
+        <div className="w-24 h-24 rounded-[2rem] bg-primary/10 flex items-center justify-center text-primary glow-primary animate-bounce">
+          <Ghost size={48} />
+        </div>
+        <div className="space-y-4">
+          <h1 className="text-4xl font-black text-white uppercase tracking-tighter">Koleksi Tidak Ditemukan</h1>
+          <p className="text-sm font-medium text-white/40 max-w-xs mx-auto uppercase tracking-widest">Maaf, koleksi yang Anda cari tidak tersedia atau telah dihapus.</p>
+        </div>
+        <Button asChild className="h-14 px-10 neon-gradient text-background font-black rounded-2xl uppercase text-[10px] tracking-[0.2em] shadow-2xl">
+          <Link href={`/${username}`}><ChevronLeft size={16} className="mr-2" /> Kembali ke Profil</Link>
+        </Button>
+      </div>
+    );
+  }
 
   const primaryColor = profile.themeColor || '#ff0000';
   const secondaryColor = profile.themeColorSecondary || '#ffea00';

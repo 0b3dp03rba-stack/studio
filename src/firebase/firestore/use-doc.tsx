@@ -1,6 +1,7 @@
+
 'use client';
     
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   DocumentReference,
   onSnapshot,
@@ -32,12 +33,16 @@ export function useDoc<T = any>(
   const [data, setData] = useState<WithId<T> | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
+  
+  // Ref to prevent spamming toast notifications for the same error
+  const lastErrorRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!memoizedDocRef) {
       setData(null);
       setIsLoading(false);
       setError(null);
+      lastErrorRef.current = null;
       return;
     }
 
@@ -54,17 +59,24 @@ export function useDoc<T = any>(
         }
         setError(null);
         setIsLoading(false);
+        lastErrorRef.current = null;
       },
       (err: FirestoreError) => {
         setError(err);
         setData(null);
         setIsLoading(false);
 
-        toast({
-          variant: "destructive",
-          title: "Document Sync Failed",
-          description: `Error: ${err.message}\nPath: ${memoizedDocRef.path}`
-        });
+        // Prevent spamming identical toast messages
+        const errorKey = `${err.code}:${err.message}`;
+        if (lastErrorRef.current !== errorKey) {
+          lastErrorRef.current = errorKey;
+
+          toast({
+            variant: "destructive",
+            title: "Document Sync Failed",
+            description: `Error: ${err.message}\nPath: ${memoizedDocRef.path}`
+          });
+        }
       }
     );
 

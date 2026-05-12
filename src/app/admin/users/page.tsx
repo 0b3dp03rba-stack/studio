@@ -43,20 +43,21 @@ export default function AdminUsersPage() {
       // 2. Hapus profile
       await deleteDoc(doc(db, 'userProfiles', targetId));
       
+      // Reset state first before notification to prevent spam
+      setUserToDelete(null);
+      setIsDeleting(false);
+
       toast({ 
         title: "USER DIHAPUS", 
         description: `Akun @${targetUsername.toUpperCase()} telah berhasil dihapus dari sistem.` 
       });
-      
-      setUserToDelete(null);
     } catch (e) {
+      setIsDeleting(false);
       toast({ 
         variant: "destructive", 
         title: "GAGAL MENGHAPUS", 
         description: "Terjadi kesalahan saat mengakses database." 
       });
-    } finally {
-      setIsDeleting(false);
     }
   };
 
