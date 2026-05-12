@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useMemo, useState, useEffect } from 'react';
@@ -23,7 +22,7 @@ const PartialStarRating = ({ rating, size = 20, className = "" }: { rating: numb
               className="text-white/10 absolute inset-0" 
             />
             <div 
-              className="absolute inset-0 overflow-hidden"
+              className="absolute inset-0 overflow-hidden text-primary fill-primary"
               style={{ width: `${fillAmount}%` }}
             >
               <Star 
@@ -59,7 +58,9 @@ export default function AllReviewsPage() {
     };
   }, [reviews]);
 
-  if (!mounted) return null;
+  if (!mounted) {
+    return <div className="min-h-screen bg-background" />;
+  }
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">

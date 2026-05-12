@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -8,7 +7,8 @@ import type {
 } from "@/components/ui/toast"
 
 const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 4000 
+const TOAST_REMOVE_DELAY = 6000 
+const SPAM_COOLDOWN = 10000 // 10 seconds cooldown for same message
 
 type ToasterToast = ToastProps & {
   id: string
@@ -76,8 +76,8 @@ export const reducer = (state: State, action: Action): State => {
 const listeners: Array<(state: State) => void> = []
 let memoryState: State = { toasts: [] }
 
-// Anti-Spam Cache
-const recentToastMessages = new Set<string>()
+// Anti-Spam Cache with Timestamps
+const lastToastTimes = new Map<string, number>()
 
 function dispatch(action: Action) {
   memoryState = reducer(memoryState, action)
@@ -86,21 +86,29 @@ function dispatch(action: Action) {
 
 function toast({ title, description, ...props }: Omit<ToasterToast, "id">) {
   const messageKey = `${String(title)}-${String(description)}`
+  const now = Date.now()
   
-  // BLOKIR SPAM: Jika pesan sama sedang aktif, jangan tambah lagi
-  if (recentToastMessages.has(messageKey)) {
-    return { id: "spam", dismiss: () => {}, update: () => {} }
+  // ABSOLUTE ANTI-SPAM: Block if message sent too recently
+  const lastTime = lastToastTimes.get(messageKey) || 0
+  if (now - lastTime < SPAM_COOLDOWN) {
+    return { id: "blocked", dismiss: () => {}, update: () => {} }
   }
 
-  recentToastMessages.add(messageKey)
+  // LIMIT: Only one active toast allowed at a time
+  if (memoryState.toasts.some(t => t.open)) {
+    return { id: "limited", dismiss: () => {}, update: () => {} }
+  }
+
+  lastToastTimes.set(messageKey, now)
   const id = genId()
 
   const update = (props: ToasterToast) => dispatch({ type: "UPDATE_TOAST", toast: { ...props, id } })
   const dismiss = () => {
     dispatch({ type: "DISMISS_TOAST", toastId: id })
+    // Cleanup cache after some time to allow same message again
     setTimeout(() => {
-      recentToastMessages.delete(messageKey)
-    }, 1000)
+      lastToastTimes.delete(messageKey)
+    }, SPAM_COOLDOWN)
   }
 
   dispatch({
