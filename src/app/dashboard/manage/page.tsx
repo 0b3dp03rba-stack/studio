@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Trash2, Link as LinkIcon, FolderPlus, Upload, LayoutGrid, ChevronUp, ChevronDown, Edit3, Loader2, AlertCircle, ChevronRight, ListTree } from 'lucide-react';
+import { Plus, Trash2, Link as LinkIcon, FolderPlus, Upload, LayoutGrid, ChevronUp, ChevronDown, Edit3, Loader2, AlertCircle, ChevronRight, ListTree, ChevronDown as ChevronDownIcon } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, addDoc, serverTimestamp, doc, deleteDoc, query, orderBy, updateDoc, writeBatch, onSnapshot, getDoc, setDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
@@ -98,9 +98,9 @@ export default function ManagePage() {
       });
       setNewGroupTitle('');
       setNewGroupImage('');
-      toast({ title: "Kelompok Berhasil Dibuat" });
+      toast({ title: "Berhasil", description: "Kelompok baru telah dibuat." });
     } catch (e) {
-      toast({ variant: "destructive", title: "Gagal membuat kelompok" });
+      toast({ variant: "destructive", title: "Gagal", description: "Terjadi kesalahan perizinan." });
     }
   };
 
@@ -124,9 +124,9 @@ export default function ManagePage() {
       setNewLinkTitle('');
       setNewLinkUrl('');
       setNewLinkImage('');
-      toast({ title: "Tautan Berhasil Ditambahkan" });
+      toast({ title: "Berhasil", description: "Tautan telah ditambahkan ke katalog." });
     } catch (e) {
-      toast({ variant: "destructive", title: "Gagal menambah tautan" });
+      toast({ variant: "destructive", title: "Gagal", description: "Terjadi kesalahan perizinan." });
     }
   };
 
@@ -146,7 +146,7 @@ export default function ManagePage() {
       batch.update(doc(db, 'userProfiles', user.uid, 'linkGroups', swap.id), { order: current.order });
       await batch.commit();
     } catch (e) {
-      toast({ variant: "destructive", title: "Gagal mengurutkan" });
+      console.error(e);
     }
   };
 
@@ -174,7 +174,6 @@ export default function ManagePage() {
           groupId: newGroupId === 'main' ? null : newGroupId
         };
 
-        // Logika Pindah Kelompok
         if (oldGroupId !== newGroupId) {
           const oldRef = oldGroupId === 'main' 
             ? doc(db, 'userProfiles', user.uid, 'links', editingItem.id)
@@ -188,9 +187,7 @@ export default function ManagePage() {
           if (existingDataSnap.exists()) {
              const batch = writeBatch(db);
              const newRef = doc(newCol);
-             // Salin data lama + update data baru
              batch.set(newRef, { ...existingDataSnap.data(), ...updateData });
-             // Hapus di lokasi lama
              batch.delete(oldRef);
              await batch.commit();
           }
@@ -202,10 +199,10 @@ export default function ManagePage() {
         }
       }
       
-      toast({ title: "Pembaruan Berhasil" });
+      toast({ title: "Berhasil", description: "Data telah diperbarui." });
       setEditingItem(null);
     } catch (e) {
-      toast({ variant: "destructive", title: "Gagal memperbarui" });
+      toast({ variant: "destructive", title: "Gagal", description: "Terjadi kesalahan perizinan." });
     } finally {
       setIsSavingEdit(false);
     }
@@ -222,9 +219,9 @@ export default function ManagePage() {
           : doc(db, 'userProfiles', user.uid, 'links', itemToDelete.id);
         await deleteDoc(docRef);
       }
-      toast({ title: "Item Telah Dihapus" });
+      toast({ title: "Dihapus", description: "Item telah dihapus secara permanen." });
     } catch (e) {
-      toast({ variant: "destructive", title: "Gagal menghapus" });
+      toast({ variant: "destructive", title: "Gagal", description: "Terjadi kesalahan perizinan." });
     } finally {
       setItemToDelete(null);
     }
@@ -234,13 +231,13 @@ export default function ManagePage() {
     <div className="space-y-8 animate-in pb-32">
       <div className="space-y-1">
         <h1 className="text-4xl font-black tracking-tighter text-white uppercase">Manage Hub</h1>
-        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/70">Atur Struktur Katalog Anda</p>
+        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/70">Kelola Struktur Katalog Hub</p>
       </div>
 
       <div className="grid gap-6">
         <div className="flex bg-white/5 p-1 rounded-2xl">
-          <button onClick={() => setActiveTab('group')} className={`flex-1 py-3 text-[10px] font-black uppercase rounded-xl transition-all ${activeTab === 'group' ? 'neon-gradient text-background glow-primary' : 'text-white/40'}`}>+ Kelompok</button>
-          <button onClick={() => setActiveTab('link')} className={`flex-1 py-3 text-[10px] font-black uppercase rounded-xl transition-all ${activeTab === 'link' ? 'neon-gradient text-background glow-primary' : 'text-white/40'}`}>+ Tautan</button>
+          <button onClick={() => setActiveTab('group')} className={`flex-1 py-3.5 text-[10px] font-black uppercase rounded-xl transition-all ${activeTab === 'group' ? 'neon-gradient text-background glow-primary' : 'text-white/40'}`}>+ Koleksi</button>
+          <button onClick={() => setActiveTab('link')} className={`flex-1 py-3.5 text-[10px] font-black uppercase rounded-xl transition-all ${activeTab === 'link' ? 'neon-gradient text-background glow-primary' : 'text-white/40'}`}>+ Tautan</button>
         </div>
 
         {activeTab === 'group' && (
@@ -248,14 +245,14 @@ export default function ManagePage() {
             <CardContent className="p-0 space-y-4 text-left">
               <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase tracking-widest">
                 <FolderPlus size={16} />
-                <span>Buat kelompok baru</span>
+                <span>Buat kelompok koleksi</span>
               </div>
-              <Input placeholder="Nama Kelompok (Misal: All Addon)" value={newGroupTitle} onChange={(e) => setNewGroupTitle(e.target.value)} className="bg-white/5 border-none h-12 rounded-xl px-4 font-bold" />
+              <Input placeholder="Nama Kelompok (Contoh: Addon Minecraft)" value={newGroupTitle} onChange={(e) => setNewGroupTitle(e.target.value)} className="bg-white/5 border-none h-12 rounded-xl px-4 font-bold" />
               <label className="flex items-center justify-center gap-2 w-full h-12 bg-white/5 border border-dashed border-white/20 rounded-xl cursor-pointer hover:bg-white/10 transition-all">
-                <Upload size={16} className="text-primary" /><span className="text-[10px] font-black uppercase text-white/60">{newGroupImage ? 'Ganti Foto' : 'Unggah Foto'}</span>
+                <Upload size={16} className="text-primary" /><span className="text-[10px] font-black uppercase text-white/60">{newGroupImage ? 'Ganti Foto' : 'Unggah Ikon'}</span>
                 <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageSelect(e, 'group')} />
               </label>
-              <Button onClick={handleAddGroup} disabled={!newGroupTitle} className="w-full h-12 neon-gradient text-background font-black rounded-xl glow-primary uppercase text-[10px] tracking-widest">Simpan Kelompok</Button>
+              <Button onClick={handleAddGroup} disabled={!newGroupTitle} className="w-full h-12 neon-gradient text-background font-black rounded-xl glow-primary uppercase text-[10px] tracking-widest">Simpan Koleksi</Button>
             </CardContent>
           </Card>
         )}
@@ -284,10 +281,10 @@ export default function ManagePage() {
               </div>
 
               <Input placeholder="Judul Tautan" value={newLinkTitle} onChange={(e) => setNewLinkTitle(e.target.value)} className="bg-white/5 h-12 rounded-xl px-4 font-bold border-none" />
-              <Input placeholder="URL (instagram.com/user)" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} className="bg-white/5 h-12 rounded-xl px-4 font-bold border-none" />
+              <Input placeholder="URL (Contoh: instagram.com/obed)" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} className="bg-white/5 h-12 rounded-xl px-4 font-bold border-none" />
               
               <label className="flex items-center justify-center gap-2 w-full h-12 bg-white/5 border border-dashed border-white/20 rounded-xl cursor-pointer hover:bg-white/10 transition-all">
-                <Upload size={16} className="text-primary" /><span className="text-[10px] font-black uppercase text-white/60">{newLinkImage ? 'Ganti Foto' : 'Unggah Foto'}</span>
+                <Upload size={16} className="text-primary" /><span className="text-[10px] font-black uppercase text-white/60">{newLinkImage ? 'Ganti Foto' : 'Unggah Ikon'}</span>
                 <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageSelect(e, 'link')} />
               </label>
               
@@ -299,11 +296,11 @@ export default function ManagePage() {
 
       <div className="space-y-5">
         <h3 className="font-black text-[11px] uppercase tracking-[0.3em] text-white/50 flex items-center gap-2 px-1">
-          <ListTree size={16} className="text-primary" /> Katalog Konten Aktif
+          <ListTree size={16} className="text-primary" /> Daftar Katalog Aktif
         </h3>
         
         {(isGroupsLoading || isLinksLoading) ? (
-          <div className="py-20 text-center animate-pulse text-primary font-black uppercase text-[10px]">Menyinkronkan...</div>
+          <div className="py-20 text-center animate-pulse text-primary font-black uppercase text-[10px]">Sinkronisasi Database...</div>
         ) : (
           <div className="space-y-4">
             {groups?.map((group, idx) => (
@@ -323,8 +320,8 @@ export default function ManagePage() {
                     <div className="flex-1 min-w-0 text-left">
                       <h4 className="font-black text-white text-base truncate uppercase tracking-tight">{group.title}</h4>
                       <p className="text-[9px] text-white/40 uppercase tracking-widest font-black flex items-center gap-1.5">
-                        {groupLinksData[group.id]?.length || 0} TAUTAN 
-                        <ChevronRight size={10} className={expandedGroups[group.id] ? 'rotate-90 transition-transform' : ''} />
+                        {groupLinksData[group.id]?.length || 0} ITEM 
+                        <ChevronDownIcon size={12} className={`transition-transform duration-300 ${expandedGroups[group.id] ? 'rotate-180 text-primary' : 'text-white/20'}`} />
                       </p>
                     </div>
                   </div>
@@ -333,7 +330,7 @@ export default function ManagePage() {
                       size="icon" 
                       variant="ghost" 
                       onClick={() => { setTargetGroupId(group.id); setActiveTab('link'); }}
-                      className="h-10 w-10 text-primary hover:bg-primary/10"
+                      className="h-10 w-10 text-primary hover:bg-primary/10 rounded-xl"
                     >
                       <Plus size={20} />
                     </Button>
@@ -341,7 +338,7 @@ export default function ManagePage() {
                       size="icon" 
                       variant="ghost" 
                       onClick={() => setEditingItem({ ...group, type: 'group' })} 
-                      className="h-10 w-10 text-white/40 hover:text-white"
+                      className="h-10 w-10 text-white/40 hover:text-white rounded-xl"
                     >
                       <Edit3 size={18} />
                     </Button>
@@ -349,7 +346,7 @@ export default function ManagePage() {
                       size="icon" 
                       variant="ghost" 
                       onClick={() => setItemToDelete({ ...group, type: 'group' })} 
-                      className="h-10 w-10 text-destructive/40 hover:text-destructive"
+                      className="h-10 w-10 text-destructive/40 hover:text-destructive rounded-xl"
                     >
                       <Trash2 size={18} />
                     </Button>
@@ -357,9 +354,9 @@ export default function ManagePage() {
                 </Card>
 
                 {expandedGroups[group.id] && (
-                  <div className="ml-10 space-y-3 animate-in slide-in-from-top-2 border-l-2 border-white/5 pl-4 pb-4">
+                  <div className="ml-10 space-y-3 animate-in slide-in-from-top-2 border-l-2 border-white/10 pl-4 pb-4">
                     {groupLinksData[group.id]?.length === 0 ? (
-                      <p className="text-[8px] font-black uppercase text-white/20 px-4 py-4 italic">Belum ada tautan di kelompok ini</p>
+                      <p className="text-[8px] font-black uppercase text-white/10 px-4 py-4 italic">Belum ada item di koleksi ini</p>
                     ) : (
                       groupLinksData[group.id]?.map((link) => (
                         <div key={link.id} className="flex items-center gap-4 p-4 bg-white/[0.02] rounded-2xl border border-white/5 shadow-inner">
@@ -371,8 +368,8 @@ export default function ManagePage() {
                              <p className="text-[8px] text-white/20 truncate uppercase font-mono">{link.url}</p>
                           </div>
                           <div className="flex gap-1">
-                            <Button size="icon" variant="ghost" onClick={() => setEditingItem({ ...link, type: 'link' })} className="h-8 w-8 text-white/20 hover:text-primary"><Edit3 size={14} /></Button>
-                            <Button size="icon" variant="ghost" onClick={() => setItemToDelete({ ...link, type: 'link' })} className="h-8 w-8 text-white/10 hover:text-destructive"><Trash2 size={14} /></Button>
+                            <Button size="icon" variant="ghost" onClick={() => setEditingItem({ ...link, type: 'link' })} className="h-8 w-8 text-white/20 hover:text-primary rounded-lg"><Edit3 size={14} /></Button>
+                            <Button size="icon" variant="ghost" onClick={() => setItemToDelete({ ...link, type: 'link' })} className="h-8 w-8 text-white/10 hover:text-destructive rounded-lg"><Trash2 size={14} /></Button>
                           </div>
                         </div>
                       ))
@@ -383,7 +380,7 @@ export default function ManagePage() {
             ))}
 
             <div className="pt-8 border-t border-white/5">
-              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 mb-4 px-2">Tautan Hub Utama (Mandiri)</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 mb-4 px-2">Item Hub Utama (Mandiri)</p>
               {standaloneLinks?.map((link) => (
                 <Card key={link.id} className="glass-card border-none rounded-2xl p-4 flex items-center gap-4 mb-3 shadow-xl hover:bg-white/[0.05] transition-colors">
                   <div className="w-14 h-14 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/5 shrink-0 shadow-2xl">
@@ -394,13 +391,13 @@ export default function ManagePage() {
                     <p className="text-[10px] text-white/20 uppercase tracking-tighter font-mono">{link.url}</p>
                   </div>
                   <div className="flex items-center gap-1">
-                    <Button size="icon" variant="ghost" onClick={() => setEditingItem({ ...link, type: 'link' })} className="h-10 w-10 text-white/40 hover:text-primary"><Edit3 size={18} /></Button>
-                    <Button size="icon" variant="ghost" onClick={() => setItemToDelete({ ...link, type: 'link' })} className="h-10 w-10 text-white/20 hover:text-destructive"><Trash2 size={18} /></Button>
+                    <Button size="icon" variant="ghost" onClick={() => setEditingItem({ ...link, type: 'link' })} className="h-10 w-10 text-white/40 hover:text-primary rounded-xl"><Edit3 size={18} /></Button>
+                    <Button size="icon" variant="ghost" onClick={() => setItemToDelete({ ...link, type: 'link' })} className="h-10 w-10 text-white/20 hover:text-destructive rounded-xl"><Trash2 size={18} /></Button>
                   </div>
                 </Card>
               ))}
               {standaloneLinks?.length === 0 && (
-                <div className="text-center py-10 opacity-10 font-black uppercase text-[10px] tracking-widest border border-dashed border-white/10 rounded-3xl">Tautan Mandiri Kosong</div>
+                <div className="text-center py-10 opacity-10 font-black uppercase text-[10px] tracking-widest border border-dashed border-white/10 rounded-3xl">Hub Utama Masih Kosong</div>
               )}
             </div>
           </div>
@@ -409,20 +406,20 @@ export default function ManagePage() {
 
       <ImageCropperModal imageSrc={tempImage} isOpen={cropperOpen} onClose={() => setCropperOpen(false)} onCropComplete={onCropComplete} />
 
-      {/* Edit Dialog */}
+      {/* MODAL EDIT ITEM */}
       <Dialog open={!!editingItem} onOpenChange={() => setEditingItem(null)}>
         <DialogContent className="glass-card border-none rounded-[2.5rem] bg-background/95 backdrop-blur-3xl p-8 shadow-2xl max-w-[95%] sm:max-w-md mx-auto">
-          <DialogHeader><DialogTitle className="text-xl font-black uppercase tracking-tighter text-white">Edit {editingItem?.type === 'group' ? 'Kelompok' : 'Tautan'}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="text-xl font-black uppercase tracking-tighter text-white">Edit {editingItem?.type === 'group' ? 'Koleksi' : 'Tautan'}</DialogTitle></DialogHeader>
           <div className="space-y-5 py-4 text-left">
             <div className="flex flex-col items-center gap-4">
-               <div className="w-28 h-24 rounded-2xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10 relative group shadow-2xl">
+               <div className="w-28 h-28 rounded-2xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10 relative group shadow-2xl">
                   {editingItem?.imageUrl ? <img src={editingItem.imageUrl} className="w-full h-full object-cover" /> : <Upload size={32} className="text-white/20" />}
                   <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity">
                     <Upload size={20} className="text-white" />
                     <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageSelect(e, 'edit')} />
                   </label>
                </div>
-               <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Klik foto untuk mengganti</p>
+               <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Klik foto untuk mengganti ikon</p>
             </div>
             <div className="space-y-4">
                <div className="space-y-1.5">
@@ -437,10 +434,10 @@ export default function ManagePage() {
                       <Input value={editingItem?.url || ''} onChange={(e) => setEditingItem({...editingItem, url: e.target.value})} className="bg-white/5 border-none h-12 rounded-xl font-medium" />
                    </div>
                    <div className="space-y-1.5">
-                      <label className="text-[9px] font-black uppercase text-muted-foreground ml-1">Pindah ke Kelompok:</label>
+                      <label className="text-[9px] font-black uppercase text-muted-foreground ml-1">Pindah Lokasi Ke:</label>
                       <Select value={editingItem.newGroupId || editingItem.groupId || 'main'} onValueChange={(v) => setEditingItem({...editingItem, newGroupId: v})}>
                         <SelectTrigger className="bg-white/5 border-none h-12 rounded-xl text-[10px] font-black uppercase">
-                          <SelectValue placeholder="Pilih Tujuan" />
+                          <SelectValue placeholder="Pilih Lokasi" />
                         </SelectTrigger>
                         <SelectContent className="glass-card border-none rounded-xl">
                           <SelectItem value="main" className="text-xs font-bold uppercase">Hub Utama</SelectItem>
@@ -463,7 +460,7 @@ export default function ManagePage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete AlertDialog */}
+      {/* POPUP KONFIRMASI HAPUS */}
       <AlertDialog open={!!itemToDelete} onOpenChange={() => setItemToDelete(null)}>
         <AlertDialogContent className="glass-card border-none rounded-[2rem] bg-background/95 backdrop-blur-2xl border-white/5">
           <AlertDialogHeader>
@@ -475,7 +472,7 @@ export default function ManagePage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-2 pt-4">
-            <AlertDialogCancel className="bg-white/5 border-white/5 rounded-xl text-[10px] font-black uppercase h-12 hover:bg-white/10 text-white">Batal</AlertDialogCancel>
+            <AlertDialogCancel className="bg-white/5 border-white/5 rounded-xl text-[10px] font-black uppercase h-12 hover:bg-white/10 text-white border-none">Batal</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-white hover:bg-destructive/80 rounded-xl text-[10px] font-black uppercase h-12 border-none">Hapus Sekarang</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
