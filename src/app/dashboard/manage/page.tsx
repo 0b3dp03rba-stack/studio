@@ -50,7 +50,6 @@ export default function ManagePage() {
   }, [db, user?.uid]);
   const { data: standaloneLinks, isLoading: isLinksLoading } = useCollection(linksQuery);
 
-  // Monitor links inside each group
   useEffect(() => {
     if (!user || !groups) return;
     const unsubs = groups.map(group => {
@@ -155,7 +154,6 @@ export default function ManagePage() {
     if (!user || !editingItem) return;
     setIsSavingEdit(true);
     try {
-      // 1. Group Edit
       if (editingItem.type === 'group') {
         const docRef = doc(db, 'userProfiles', user.uid, 'linkGroups', editingItem.id);
         await updateDoc(docRef, {
@@ -164,7 +162,6 @@ export default function ManagePage() {
           updatedAt: serverTimestamp(),
         });
       } 
-      // 2. Link Edit
       else {
         const oldGroupId = editingItem.groupId || 'main';
         const newGroupId = editingItem.newGroupId || oldGroupId;
@@ -177,7 +174,6 @@ export default function ManagePage() {
           groupId: newGroupId === 'main' ? null : newGroupId
         };
 
-        // If group changed, move document
         if (oldGroupId !== newGroupId) {
           const oldRef = oldGroupId === 'main' 
             ? doc(db, 'userProfiles', user.uid, 'links', editingItem.id)
@@ -189,8 +185,11 @@ export default function ManagePage() {
           
           const existingDataSnap = await getDoc(oldRef);
           if (existingDataSnap.exists()) {
-             await setDoc(doc(newCol), { ...existingDataSnap.data(), ...updateData });
-             await deleteDoc(oldRef);
+             const batch = writeBatch(db);
+             const newRef = doc(newCol);
+             batch.set(newRef, { ...existingDataSnap.data(), ...updateData });
+             batch.delete(oldRef);
+             await batch.commit();
           }
         } else {
           const docRef = oldGroupId === 'main' 
