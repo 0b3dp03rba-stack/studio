@@ -69,12 +69,12 @@ export function useCollection<T = any>(
         setData(null);
         setIsLoading(false);
 
-        // Deduplication Logic: Show toast only once every 30 seconds for the same error
-        const errorKey = `${err.code}:${err.message}:${memoizedTargetRefOrQuery instanceof Query ? 'query' : memoizedTargetRefOrQuery?.path}`;
+        // Deduplication Logic: Show toast only once every 60 seconds for the same error
+        const errorKey = `col:${err.code}:${err.message}`;
         const now = Date.now();
         const lastToastTime = globalErrorMap.get(errorKey) || 0;
 
-        if (now - lastToastTime > 30000) {
+        if (now - lastToastTime > 60000) {
           globalErrorMap.set(errorKey, now);
           toast({
             variant: "destructive",

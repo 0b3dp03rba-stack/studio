@@ -10,26 +10,27 @@ import {
   ToastViewport,
   ToastAction,
 } from "@/components/ui/toast"
-import { ShieldAlert, AlertTriangle } from "lucide-react"
+import { Sparkles, AlertTriangle } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 export function Toaster() {
   const { toasts } = useToast()
 
   return (
-    <ToastProvider swipeDirection="right" duration={10000}>
+    <ToastProvider swipeDirection="down" duration={5000}>
       {toasts.map(function ({ id, title, description, action, variant, ...props }) {
         const isError = variant === 'destructive';
         
         return (
           <Toast key={id} variant={variant} {...props}>
-            <div className="flex gap-4 items-start w-full">
+            <div className="flex flex-col items-center gap-4 w-full text-center">
               <div className={cn(
-                "mt-0.5 p-2 rounded-xl shrink-0",
-                isError ? "bg-primary/20 text-primary" : "bg-white/10 text-white"
+                "p-3 rounded-2xl shadow-xl",
+                isError ? "bg-primary/20 text-primary glow-primary" : "bg-primary/10 text-primary"
               )}>
-                {isError ? <ShieldAlert size={20} /> : <AlertTriangle size={20} />}
+                {isError ? <AlertTriangle size={32} /> : <Sparkles size={32} />}
               </div>
-              <div className="grid gap-1.5 flex-1 min-w-0">
+              <div className="grid gap-2">
                 {title && <ToastTitle>{title}</ToastTitle>}
                 {description && (
                   <ToastDescription>{description}</ToastDescription>
@@ -44,8 +45,4 @@ export function Toaster() {
       <ToastViewport />
     </ToastProvider>
   )
-}
-
-function cn(...inputs: any[]) {
-  return inputs.filter(Boolean).join(" ");
 }
