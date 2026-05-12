@@ -7,7 +7,7 @@ import { Link2, Sparkles, LayoutGrid, Palette, ArrowRight, Star, Quote } from 'l
 import Link from 'next/link';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { useRouter } from 'next/navigation';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy, doc, updateDoc, increment, setDoc } from 'firebase/firestore';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 // Komponen untuk merender bintang parsial/desimal
@@ -18,12 +18,10 @@ const PartialStarRating = ({ rating, size = 20, className = "" }: { rating: numb
         const fillAmount = Math.max(0, Math.min(100, (rating - (starIndex - 1)) * 100));
         return (
           <div key={starIndex} className="relative" style={{ width: size, height: size }}>
-            {/* Background Bintang Kosong */}
             <Star 
               size={size} 
               className="text-white/10 absolute inset-0" 
             />
-            {/* Bintang Terisi dengan Clipping */}
             <div 
               className="absolute inset-0 overflow-hidden text-primary fill-primary"
               style={{ width: `${fillAmount}%` }}
@@ -46,6 +44,19 @@ export default function LandingPage() {
   const db = useFirestore();
   const router = useRouter();
 
+  // Track Landing Page View
+  useEffect(() => {
+    const trackLandingVisit = async () => {
+      try {
+        const statsRef = doc(db, 'appConfig', 'globalStats');
+        await setDoc(statsRef, { landingPageViews: increment(1) }, { merge: true });
+      } catch (e) {
+        console.error("Failed to track landing visit", e);
+      }
+    };
+    trackLandingVisit();
+  }, [db]);
+
   useEffect(() => {
     if (user && !isUserLoading) {
       router.push('/dashboard');
@@ -55,7 +66,6 @@ export default function LandingPage() {
   const reviewsQuery = useMemoFirebase(() => query(collection(db, 'platformReviews'), orderBy('createdAt', 'desc')), [db]);
   const { data: allReviews, isLoading: isReviewsLoading } = useCollection(reviewsQuery);
 
-  // Hitung Statistik Rating
   const stats = useMemo(() => {
     if (!allReviews || allReviews.length === 0) return { average: 0, total: 0 };
     const sum = allReviews.reduce((acc, rev) => acc + (rev.rating || 0), 0);
@@ -65,7 +75,6 @@ export default function LandingPage() {
     };
   }, [allReviews]);
 
-  // Ambil hanya 3 ulasan terbaru untuk ditampilkan sebagai kartu
   const displayedReviews = useMemo(() => {
     return allReviews?.slice(0, 3) || [];
   }, [allReviews]);
@@ -132,7 +141,6 @@ export default function LandingPage() {
                 <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/70">Apa kata mereka tentang Linku</p>
              </div>
              
-             {/* Statistik Rating Rata-rata */}
              {!isReviewsLoading && stats.total > 0 && (
                <div className="flex flex-col items-center gap-2 py-4 animate-in">
                   <div className="flex items-center gap-4">
@@ -202,7 +210,7 @@ export default function LandingPage() {
               <Link2 size={24} />
             </div>
             <h3 className="font-black text-white uppercase text-sm tracking-tight">Domain Kustom</h3>
-            <p className="text-xs text-white/40 leading-relaxed font-medium">Bagikan URL unik Anda sendiri (linku.com/username) dengan bangga ke seluruh dunia.</p>
+            <p className="text-xs text-white/40 leading-relaxed font-medium">Bagikan URL unik Anda sendiri (linku.biz.id/username) dengan bangga ke seluruh dunia.</p>
           </div>
         </div>
       </main>

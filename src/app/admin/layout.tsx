@@ -4,7 +4,6 @@
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import Header from '@/components/Header';
-import BottomNav from '@/components/BottomNav';
 import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 
@@ -24,8 +23,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     if (!user) {
       router.push('/login');
-    } else if (profile && profile.role !== 'Admin') {
-      router.push('/dashboard');
+    } else {
+      const isAdmin = profile?.role === 'Admin' || user?.email === 'creeppermoment@gmail.com';
+      if (!isAdmin) {
+        router.push('/dashboard');
+      }
     }
   }, [user, isUserLoading, profile, isProfileLoading, router]);
 
@@ -38,15 +40,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
-  if (!user || profile?.role !== 'Admin') return null;
+  const isAdmin = profile?.role === 'Admin' || user?.email === 'creeppermoment@gmail.com';
+  if (!user || !isAdmin) return null;
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <Header />
-      <main className="flex-1 p-4 pb-24 max-w-md mx-auto w-full animate-in">
+      <main className="flex-1 p-6 pb-24 max-w-4xl mx-auto w-full animate-in">
         {children}
       </main>
-      <BottomNav />
     </div>
   );
 }

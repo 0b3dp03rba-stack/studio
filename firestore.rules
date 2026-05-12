@@ -2,20 +2,35 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Fungsi bantu untuk cek admin
+    function isAdmin() {
+      return request.auth != null && (
+        request.auth.token.email == 'creeppermoment@gmail.com' || 
+        get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == 'Admin'
+      );
+    }
+
     // Aturan Dasar: Pemilik bisa baca & tulis semua datanya
     match /userProfiles/{userId} {
       allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == userId;
-      // Memungkinkan publik menambah views atau klik tanpa login
+      allow write: if (request.auth != null && request.auth.uid == userId) || isAdmin();
+      // Memungkinkan publik menambah views tanpa login
       allow update: if true;
       
       match /{allSubcollections=**} {
         allow read: if true;
-        allow write: if request.auth != null && request.auth.uid == userId;
-        allow update: if true;
+        allow write: if (request.auth != null && request.auth.uid == userId) || isAdmin();
       }
     }
     
+    // Global Stats & Config
+    match /appConfig/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+      // Izinkan publik increment landing page views
+      allow update: if docId == 'globalStats';
+    }
+
     // Username mapping
     match /usernames/{username} {
       allow read: if true;
@@ -25,7 +40,12 @@ service cloud.firestore {
     // Platform Reviews
     match /platformReviews/{userId} {
       allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == userId;
+      allow write: if (request.auth != null && request.auth.uid == userId) || isAdmin();
+    }
+
+    // Collection Group Access (untuk admin memantau link terbaru)
+    match /{path=**}/links/{linkId} {
+      allow read: if isAdmin();
     }
   }
 }

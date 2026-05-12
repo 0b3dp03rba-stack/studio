@@ -1,72 +1,146 @@
 
 "use client";
 
+import { useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Link as LinkIcon, Users, MousePointer2, Settings } from 'lucide-react';
-import { useFirestore, useCollection, useMemoFirebase, useDoc, useUser } from '@/firebase';
-import { collection, query, limit, doc } from 'firebase/firestore';
+import { Users, Eye, Link as LinkIcon, Globe, Clock, ArrowUpRight, MousePointer2 } from 'lucide-react';
+import { useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { collection, query, limit, orderBy, doc, collectionGroup } from 'firebase/firestore';
+import { formatCurrency } from '@/lib/utils-app';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 
 export default function AdminDashboard() {
-  const { user } = useUser();
   const db = useFirestore();
 
-  // Admin Verification
-  const profileRef = useMemoFirebase(() => user ? doc(db, 'userProfiles', user.uid) : null, [db, user]);
-  const { data: profile } = useDoc(profileRef);
-  const isAdmin = profile?.role === 'Admin';
-
-  const usersQuery = useMemoFirebase(() => 
-    isAdmin ? query(collection(db, 'userProfiles'), limit(500)) : null, 
-    [db, isAdmin]
-  );
+  // 1. Data User Profiles (untuk total user & total views publik)
+  const usersQuery = useMemoFirebase(() => query(collection(db, 'userProfiles'), limit(1000)), [db]);
   const { data: allUsers, isLoading: isUsersLoading } = useCollection(usersQuery);
 
-  // Stats
-  const totalUsers = allUsers?.filter(u => u.role === 'User').length || 0;
-  const totalAdmins = allUsers?.filter(u => u.role === 'Admin').length || 0;
+  // 2. Data Global Stats (untuk landing page views)
+  const globalStatsRef = useMemoFirebase(() => doc(db, 'appConfig', 'globalStats'), [db]);
+  const { data: globalStats } = useDoc(globalStatsRef);
 
-  if (isUsersLoading) return <div className="p-20 text-center animate-pulse font-black uppercase tracking-widest text-primary">Memuat Statistik Linku...</div>;
-  if (!isAdmin) return <div className="p-20 text-center opacity-20 font-black uppercase tracking-widest">Akses Ditolak</div>;
+  // 3. Data Link Global (untuk link baru & total link)
+  // Catatan: Menggunakan collectionGroup membutuhkan index yang tepat di Firestore jika diproduksi
+  const linksQuery = useMemoFirebase(() => query(collectionGroup(db, 'links'), orderBy('createdAt', 'desc'), limit(10)), [db]);
+  const { data: recentLinks, isLoading: isLinksLoading } = useCollection(linksQuery);
+
+  // Perhitungan Statistik
+  const totalUsers = allUsers?.length || 0;
+  const totalPublicViews = useMemo(() => {
+    return allUsers?.reduce((acc, user) => acc + (user.views || 0), 0) || 0;
+  }, [allUsers]);
+
+  const stats = [
+    { label: 'Total Users', value: totalUsers, icon: Users, color: 'text-primary' },
+    { label: 'Public Profile Views', value: totalPublicViews, icon: Eye, color: 'text-secondary' },
+    { label: 'Homepage Visitors', value: globalStats?.landingPageViews || 0, icon: Globe, color: 'text-white' },
+    { label: 'Recent Links Found', value: recentLinks?.length || 0, icon: LinkIcon, color: 'text-primary' },
+  ];
+
+  if (isUsersLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-4">
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-[10px] font-black uppercase tracking-widest text-primary/50">Membangun Admin Feed...</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6 animate-in">
+    <div className="space-y-10 animate-in">
       <div className="space-y-2">
-        <h1 className="text-3xl font-black tracking-tight">Linku Admin</h1>
-        <p className="text-muted-foreground text-sm font-medium uppercase tracking-widest">Monitor pertumbuhan platform tautan.</p>
+        <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 rounded-full mb-2">
+           <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+           <span className="text-[9px] font-black uppercase tracking-widest text-primary">System Online</span>
+        </div>
+        <h1 className="text-4xl font-black tracking-tighter uppercase text-white">Linku Control Panel</h1>
+        <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.3em]">ADMINISTRATOR: CREEPPERMOMENT@GMAIL.COM</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <Card className="glass-card border-none rounded-[1.5rem] relative overflow-hidden group">
-          <CardContent className="p-5 space-y-3">
-            <Users size={20} className="text-primary group-hover:scale-110 transition-transform" />
-            <div>
-              <div className="text-2xl font-black">{totalUsers}</div>
-              <div className="text-[10px] text-muted-foreground uppercase font-black tracking-tighter">Total Pengguna</div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="glass-card border-none rounded-[1.5rem] relative overflow-hidden group">
-          <CardContent className="p-5 space-y-3">
-            <LinkIcon size={20} className="text-secondary group-hover:scale-110 transition-transform" />
-            <div>
-              <div className="text-2xl font-black">{totalAdmins}</div>
-              <div className="text-[10px] text-muted-foreground uppercase font-black tracking-tighter">Total Admin</div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="space-y-3">
-        <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground px-1">Kontrol Cepat</h3>
-        <div className="grid grid-cols-1 gap-3">
-          <Card className="glass-card border-none rounded-[1.5rem] hover:bg-white/5 cursor-pointer">
-            <CardContent className="p-5 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Settings size={20} className="text-primary" />
-                <span className="text-sm font-black uppercase">Pengaturan Global</span>
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {stats.map((item, i) => (
+          <Card key={i} className="glass-card border-none rounded-[2rem] p-6 shadow-2xl relative overflow-hidden group hover:scale-[1.02] transition-transform">
+            <div className={`absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full -mr-12 -mt-12 blur-2xl group-hover:bg-primary/10 transition-colors`} />
+            <CardContent className="p-0 space-y-4 relative z-10">
+              <div className={`w-10 h-10 rounded-2xl bg-white/5 flex items-center justify-center ${item.color}`}>
+                <item.icon size={20} />
+              </div>
+              <div>
+                <p className="text-3xl font-black tracking-tighter text-white">{item.value.toLocaleString()}</p>
+                <p className="text-[8px] font-black uppercase text-white/30 tracking-[0.2em] mt-1">{item.label}</p>
               </div>
             </CardContent>
           </Card>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Recent Links Feed */}
+        <div className="lg:col-span-2 space-y-6">
+          <div className="flex items-center justify-between px-2">
+             <h3 className="font-black text-xs uppercase tracking-widest text-white/50 flex items-center gap-2">
+               <Clock size={16} className="text-primary" /> Global Activity Feed
+             </h3>
+             <Badge variant="outline" className="text-[8px] font-black uppercase border-white/10 text-white/40">10 NEWEST LINKS</Badge>
+          </div>
+          
+          <div className="space-y-3">
+            {recentLinks?.map((link) => (
+              <Card key={link.id} className="glass-card border-none rounded-2xl p-4 flex items-center gap-4 group hover:bg-white/[0.05] transition-colors">
+                 <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/5 shrink-0">
+                    {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <LinkIcon size={20} className="text-primary/50" />}
+                 </div>
+                 <div className="flex-1 min-w-0">
+                    <h4 className="font-bold text-white text-sm truncate uppercase tracking-tight">{link.title}</h4>
+                    <p className="text-[9px] text-white/20 truncate uppercase font-mono mt-0.5">{link.url}</p>
+                 </div>
+                 <div className="text-right">
+                    <p className="text-[10px] font-black text-primary uppercase">{link.clicks || 0} CLICKS</p>
+                    <p className="text-[7px] text-white/10 uppercase mt-1">ID: {link.id.slice(0, 8)}</p>
+                 </div>
+                 <a href={link.url} target="_blank" className="p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <ArrowUpRight size={16} className="text-white/40 hover:text-white" />
+                 </a>
+              </Card>
+            ))}
+            {recentLinks?.length === 0 && (
+              <div className="py-20 text-center opacity-10 font-black uppercase text-[10px] tracking-widest border border-dashed border-white/10 rounded-[2rem]">No Global Activity Yet</div>
+            )}
+          </div>
+        </div>
+
+        {/* User Growth / Performance */}
+        <div className="space-y-6">
+           <h3 className="font-black text-xs uppercase tracking-widest text-white/50 flex items-center gap-2 px-2">
+             <MousePointer2 size={16} className="text-secondary" /> Top Public Profiles
+           </h3>
+           <div className="space-y-3">
+              {[...(allUsers || [])]
+                .sort((a, b) => (b.views || 0) - (a.views || 0))
+                .slice(0, 5)
+                .map((user, idx) => (
+                <div key={user.id} className="flex items-center gap-4 p-4 glass-card rounded-2xl border-none">
+                   <div className="relative">
+                      <Avatar className="w-10 h-10 border border-white/10">
+                         <AvatarImage src={user.avatarUrl} />
+                         <AvatarFallback className="bg-white/5 text-[10px] font-black uppercase">{user.username?.slice(0, 2)}</AvatarFallback>
+                      </Avatar>
+                      <div className="absolute -top-1 -left-1 w-5 h-5 bg-secondary text-background rounded-full flex items-center justify-center text-[8px] font-black shadow-lg">#{idx + 1}</div>
+                   </div>
+                   <div className="flex-1 min-w-0">
+                      <p className="text-xs font-black text-white uppercase truncate">@{user.username}</p>
+                      <p className="text-[8px] font-bold text-white/30 uppercase tracking-widest">{user.displayName || 'No Name'}</p>
+                   </div>
+                   <div className="text-right">
+                      <p className="text-sm font-black text-secondary tracking-tighter">{user.views?.toLocaleString()}</p>
+                      <p className="text-[7px] font-black text-white/20 uppercase">VIEWS</p>
+                   </div>
+                </div>
+              ))}
+           </div>
         </div>
       </div>
     </div>
