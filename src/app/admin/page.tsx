@@ -3,28 +3,33 @@
 
 import { useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Users, Eye, Link as LinkIcon, Globe, Clock, ArrowUpRight, MousePointer2 } from 'lucide-react';
+import { Users, Eye, Link as LinkIcon, Globe, Clock, ArrowUpRight, MousePointer2, Settings, MessageCircle, Wallet, Inbox } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, limit, orderBy, doc, collectionGroup } from 'firebase/firestore';
-import { formatCurrency } from '@/lib/utils-app';
+import { collection, query, limit, doc, collectionGroup } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import Link from 'next/link';
 
 export default function AdminDashboard() {
   const db = useFirestore();
 
-  // 1. Data User Profiles (untuk total user & total views publik)
+  // 1. Data User Profiles
   const usersQuery = useMemoFirebase(() => query(collection(db, 'userProfiles'), limit(1000)), [db]);
   const { data: allUsers, isLoading: isUsersLoading } = useCollection(usersQuery);
 
-  // 2. Data Global Stats (untuk landing page views)
+  // 2. Data Global Stats
   const globalStatsRef = useMemoFirebase(() => doc(db, 'appConfig', 'globalStats'), [db]);
   const { data: globalStats } = useDoc(globalStatsRef);
 
-  // 3. Data Link Global (untuk link baru & total link)
-  // Catatan: Menggunakan collectionGroup membutuhkan index yang tepat di Firestore jika diproduksi
-  const linksQuery = useMemoFirebase(() => query(collectionGroup(db, 'links'), orderBy('createdAt', 'desc'), limit(10)), [db]);
-  const { data: recentLinks, isLoading: isLinksLoading } = useCollection(linksQuery);
+  // 3. Data Link Global (Tanpa OrderBy untuk menghindari error index COLLECTION_GROUP_DESC)
+  const linksQuery = useMemoFirebase(() => query(collectionGroup(db, 'links'), limit(50)), [db]);
+  const { data: rawLinks } = useCollection(linksQuery);
+
+  // Sorting manual di memory untuk menghindari kebutuhan Index di Firestore Console
+  const recentLinks = useMemo(() => {
+    if (!rawLinks) return [];
+    return [...rawLinks].sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)).slice(0, 10);
+  }, [rawLinks]);
 
   // Perhitungan Statistik
   const totalUsers = allUsers?.length || 0;
@@ -36,7 +41,15 @@ export default function AdminDashboard() {
     { label: 'Total Users', value: totalUsers, icon: Users, color: 'text-primary' },
     { label: 'Public Profile Views', value: totalPublicViews, icon: Eye, color: 'text-secondary' },
     { label: 'Homepage Visitors', value: globalStats?.landingPageViews || 0, icon: Globe, color: 'text-white' },
-    { label: 'Recent Links Found', value: recentLinks?.length || 0, icon: LinkIcon, color: 'text-primary' },
+    { label: 'Links Found', value: rawLinks?.length || 0, icon: LinkIcon, color: 'text-primary' },
+  ];
+
+  const adminMenus = [
+    { label: 'Manajemen User', icon: Users, href: '/admin/users', desc: 'Kelola data & hapus user' },
+    { label: 'Setoran Gmail', icon: Inbox, href: '/admin/setoran', desc: 'Validasi Gmail masuk' },
+    { label: 'Penarikan WD', icon: Wallet, href: '/admin/withdraw', desc: 'Proses penarikan dana' },
+    { label: 'Pusat Pesan', icon: MessageCircle, href: '/admin/chat', desc: 'Support & Konsultasi' },
+    { label: 'Sistem Global', icon: Settings, href: '/admin/settings', desc: 'Konfigurasi platform' },
   ];
 
   if (isUsersLoading) {
@@ -78,17 +91,42 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Navigation & Control */}
+        <div className="space-y-6">
+           <h3 className="font-black text-xs uppercase tracking-widest text-white/50 flex items-center gap-2 px-2">
+             <Settings size={16} className="text-primary" /> Management Console
+           </h3>
+           <div className="grid gap-3">
+              {adminMenus.map((menu, i) => (
+                <Link key={i} href={menu.href}>
+                  <Card className="glass-card border-none rounded-2xl p-4 hover:bg-white/[0.08] transition-all group shadow-xl">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center group-hover:neon-gradient group-hover:text-background transition-all">
+                        <menu.icon size={20} />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-xs font-black uppercase tracking-tight text-white">{menu.label}</p>
+                        <p className="text-[8px] font-bold text-white/30 uppercase">{menu.desc}</p>
+                      </div>
+                      <ArrowUpRight size={14} className="text-white/20 group-hover:text-primary transition-colors" />
+                    </div>
+                  </Card>
+                </Link>
+              ))}
+           </div>
+        </div>
+
         {/* Recent Links Feed */}
         <div className="lg:col-span-2 space-y-6">
           <div className="flex items-center justify-between px-2">
              <h3 className="font-black text-xs uppercase tracking-widest text-white/50 flex items-center gap-2">
                <Clock size={16} className="text-primary" /> Global Activity Feed
              </h3>
-             <Badge variant="outline" className="text-[8px] font-black uppercase border-white/10 text-white/40">10 NEWEST LINKS</Badge>
+             <Badge variant="outline" className="text-[8px] font-black uppercase border-white/10 text-white/40">LATEST UPDATES</Badge>
           </div>
           
           <div className="space-y-3">
-            {recentLinks?.map((link) => (
+            {recentLinks.map((link) => (
               <Card key={link.id} className="glass-card border-none rounded-2xl p-4 flex items-center gap-4 group hover:bg-white/[0.05] transition-colors">
                  <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/5 shrink-0">
                     {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <LinkIcon size={20} className="text-primary/50" />}
@@ -106,41 +144,10 @@ export default function AdminDashboard() {
                  </a>
               </Card>
             ))}
-            {recentLinks?.length === 0 && (
+            {recentLinks.length === 0 && (
               <div className="py-20 text-center opacity-10 font-black uppercase text-[10px] tracking-widest border border-dashed border-white/10 rounded-[2rem]">No Global Activity Yet</div>
             )}
           </div>
-        </div>
-
-        {/* User Growth / Performance */}
-        <div className="space-y-6">
-           <h3 className="font-black text-xs uppercase tracking-widest text-white/50 flex items-center gap-2 px-2">
-             <MousePointer2 size={16} className="text-secondary" /> Top Public Profiles
-           </h3>
-           <div className="space-y-3">
-              {[...(allUsers || [])]
-                .sort((a, b) => (b.views || 0) - (a.views || 0))
-                .slice(0, 5)
-                .map((user, idx) => (
-                <div key={user.id} className="flex items-center gap-4 p-4 glass-card rounded-2xl border-none">
-                   <div className="relative">
-                      <Avatar className="w-10 h-10 border border-white/10">
-                         <AvatarImage src={user.avatarUrl} />
-                         <AvatarFallback className="bg-white/5 text-[10px] font-black uppercase">{user.username?.slice(0, 2)}</AvatarFallback>
-                      </Avatar>
-                      <div className="absolute -top-1 -left-1 w-5 h-5 bg-secondary text-background rounded-full flex items-center justify-center text-[8px] font-black shadow-lg">#{idx + 1}</div>
-                   </div>
-                   <div className="flex-1 min-w-0">
-                      <p className="text-xs font-black text-white uppercase truncate">@{user.username}</p>
-                      <p className="text-[8px] font-bold text-white/30 uppercase tracking-widest">{user.displayName || 'No Name'}</p>
-                   </div>
-                   <div className="text-right">
-                      <p className="text-sm font-black text-secondary tracking-tighter">{user.views?.toLocaleString()}</p>
-                      <p className="text-[7px] font-black text-white/20 uppercase">VIEWS</p>
-                   </div>
-                </div>
-              ))}
-           </div>
         </div>
       </div>
     </div>
