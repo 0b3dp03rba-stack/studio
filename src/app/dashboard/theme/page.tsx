@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -11,7 +12,7 @@ import { getRecommendedSecondary, PRESTIGE_SECONDARIES } from '@/lib/utils-app';
 import { getAIColorRecommendation } from '@/ai/flows/color-recommendation-flow';
 
 export default function ThemePage() {
-  const { user } = userUser();
+  const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
 
@@ -38,18 +39,20 @@ export default function ThemePage() {
   }, [profile]);
 
   const handleColorSelect = async (color: string) => {
+    if (isAiLoading) return;
+    
     setThemeColor(color);
     setIsAiLoading(true);
+    
     try {
-      // Use AI to find the best secondary match
       const recommendation = await getAIColorRecommendation({ primaryColor: color });
       setThemeColorSecondary(recommendation.secondaryColor);
+      
       toast({
-        title: "AI Suggestion Applied",
+        title: "AI SUGGESTION APPLIED",
         description: recommendation.explanation
       });
     } catch (e) {
-      // Fallback to local logic if AI fails
       setThemeColorSecondary(getRecommendedSecondary(color));
     } finally {
       setIsAiLoading(false);
@@ -65,9 +68,9 @@ export default function ThemePage() {
         themeColorSecondary,
         updatedAt: serverTimestamp()
       });
-      toast({ title: "Tema Diperbarui", description: "Warna baru profil Anda telah aktif." });
+      toast({ title: "TEMA DIPERBARUI", description: "Warna visual profil Anda telah aktif." });
     } catch (e: any) {
-      toast({ variant: "destructive", title: "Gagal menyimpan" });
+      toast({ variant: "destructive", title: "GAGAL MENYIMPAN" });
     } finally {
       setIsSaving(false);
     }
@@ -75,14 +78,13 @@ export default function ThemePage() {
 
   return (
     <div className="space-y-8 animate-in pb-20">
-      <div className="space-y-1">
+      <div className="space-y-1 text-center">
         <h1 className="text-4xl font-black tracking-tighter text-white uppercase">Visual Lab</h1>
         <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/70">Sesuaikan Estetika Hub Anda</p>
       </div>
 
       <div className="space-y-6">
         <Card className="glass-card border-none rounded-[2.5rem] overflow-hidden p-6 shadow-2xl space-y-8">
-          {/* Preview Bubble */}
           <div className="flex justify-center py-4">
              <div 
                className="w-32 h-32 rounded-[2.5rem] flex items-center justify-center border-4 border-background shadow-2xl animate-flowing-gradient relative overflow-hidden"
@@ -108,58 +110,52 @@ export default function ThemePage() {
             <div className="space-y-4">
               <div className="flex items-center justify-between px-1">
                 <label className="text-[10px] font-black text-muted-foreground uppercase flex items-center gap-2 tracking-widest">
-                  <Wand2 size={14} className="text-primary" /> AI-Smart Palette (Dari Foto)
+                  <Wand2 size={14} className="text-primary" /> AI-SMART PALETTE (DARI FOTO)
                 </label>
                 <div className="w-5 h-5 rounded-full shadow-lg border border-white/20" style={{ backgroundColor: themeColor }} />
               </div>
-              <div className="grid grid-cols-5 gap-3">
+              <div className="grid grid-cols-4 gap-3">
                 {extractedPalette.length > 0 ? extractedPalette.map((color, i) => (
                   <button 
                     key={`p-${i}`} 
                     disabled={isAiLoading}
                     onClick={() => handleColorSelect(color)} 
-                    className={`aspect-square rounded-2xl border-2 transition-all flex items-center justify-center ${themeColor === color ? 'border-primary scale-110 shadow-[0_0_15px_rgba(255,0,0,0.4)]' : 'border-white/5 opacity-70 hover:opacity-100'} disabled:opacity-30`} 
+                    className={`aspect-square rounded-2xl border-4 transition-all flex items-center justify-center ${themeColor === color ? 'border-primary scale-110 shadow-[0_0_20px_rgba(255,0,0,0.4)]' : 'border-white/5 opacity-70 hover:opacity-100'} disabled:opacity-30`} 
                     style={{ backgroundColor: color }}
                   >
-                    {themeColor === color && !isAiLoading && <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />}
+                    {themeColor === color && !isAiLoading && <div className="w-2 h-2 bg-white rounded-full animate-pulse" />}
                   </button>
                 )) : (
-                  <div className="col-span-5 py-8 text-center text-[9px] font-black uppercase opacity-20 tracking-widest border border-dashed border-white/10 rounded-2xl">Unggah foto di Profil untuk palet</div>
+                  <div className="col-span-4 py-8 text-center text-[9px] font-black uppercase opacity-20 tracking-widest border border-dashed border-white/10 rounded-2xl">Unggah foto profil untuk palet</div>
                 )}
               </div>
             </div>
 
             <div className="space-y-4">
               <div className="flex items-center justify-between px-1">
-                <label className="text-[10px] font-black text-muted-foreground uppercase flex items-center gap-2 tracking-widest"><Sparkles size={14} className="text-secondary" /> Warna Gradasi (Prestige)</label>
+                <label className="text-[10px] font-black text-muted-foreground uppercase flex items-center gap-2 tracking-widest"><Sparkles size={14} className="text-secondary" /> WARNA GRADASI (PRESTIGE)</label>
                 <div className="w-5 h-5 rounded-full shadow-lg border border-white/20" style={{ backgroundColor: themeColorSecondary }} />
               </div>
-              <div className="grid grid-cols-5 gap-3">
-                {PRESTIGE_SECONDARIES.map((sHex) => (
+              <div className="grid grid-cols-4 gap-3">
+                {PRESTIGE_SECONDARIES.slice(0, 12).map((sHex) => (
                   <button 
                     key={sHex}
                     onClick={() => setThemeColorSecondary(sHex)}
-                    className={`aspect-square rounded-2xl border-2 transition-all flex items-center justify-center ${themeColorSecondary === sHex ? 'border-secondary scale-110 shadow-[0_0_15px_rgba(255,234,0,0.4)]' : 'border-white/5 opacity-70 hover:opacity-100'}`}
+                    className={`aspect-square rounded-2xl border-4 transition-all flex items-center justify-center ${themeColorSecondary === sHex ? 'border-secondary scale-110 shadow-[0_0_20px_rgba(255,234,0,0.4)]' : 'border-white/5 opacity-70 hover:opacity-100'}`}
                     style={{ backgroundColor: sHex }}
                   >
-                     {themeColorSecondary === sHex && <div className="w-1.5 h-1.5 bg-background rounded-full animate-pulse" />}
+                     {themeColorSecondary === sHex && <div className="w-2 h-2 bg-background rounded-full animate-pulse" />}
                   </button>
                 ))}
               </div>
-              <p className="text-[8px] text-muted-foreground italic ml-1">*Pilih manual jika ingin mengesampingkan saran AI.</p>
             </div>
           </div>
 
           <Button onClick={handleSaveTheme} disabled={isSaving || isAiLoading} className="w-full h-16 neon-gradient text-background font-black rounded-3xl shadow-xl active:scale-95 transition-all text-sm uppercase tracking-widest">
-            {isSaving ? <Loader2 className="animate-spin" size={20} /> : <><Save size={20} className="mr-2" /> Terapkan Visual</>}
+            {isSaving ? <Loader2 className="animate-spin" size={20} /> : <><Save size={20} className="mr-2" /> TERAPKAN VISUAL</>}
           </Button>
         </Card>
       </div>
     </div>
   );
-}
-
-function userUser() {
-  const { user } = useUser();
-  return { user };
 }
