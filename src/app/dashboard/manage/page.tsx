@@ -5,9 +5,9 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Trash2, Link as LinkIcon, FolderPlus, Upload, LayoutGrid, ChevronUp, ChevronDown, Edit3, Loader2, AlertCircle, ChevronRight, ListTree, ChevronDown as ChevronDownIcon } from 'lucide-react';
+import { Plus, Trash2, Link as LinkIcon, FolderPlus, Upload, LayoutGrid, ChevronUp, ChevronDown, Edit3, Loader2, AlertCircle, ListTree, ChevronDown as ChevronDownIcon } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, addDoc, serverTimestamp, doc, deleteDoc, query, orderBy, updateDoc, writeBatch, onSnapshot, getDoc, setDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, deleteDoc, query, orderBy, updateDoc, writeBatch, onSnapshot, getDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import ImageCropperModal from '@/components/ImageCropperModal';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -100,7 +100,7 @@ export default function ManagePage() {
       setNewGroupImage('');
       toast({ title: "Berhasil", description: "Kelompok baru telah dibuat." });
     } catch (e) {
-      toast({ variant: "destructive", title: "Gagal", description: "Terjadi kesalahan perizinan." });
+      toast({ variant: "destructive", title: "Gagal", description: "Gagal membuat kelompok." });
     }
   };
 
@@ -124,9 +124,9 @@ export default function ManagePage() {
       setNewLinkTitle('');
       setNewLinkUrl('');
       setNewLinkImage('');
-      toast({ title: "Berhasil", description: "Tautan telah ditambahkan ke katalog." });
+      toast({ title: "Berhasil", description: "Tautan telah ditambahkan." });
     } catch (e) {
-      toast({ variant: "destructive", title: "Gagal", description: "Terjadi kesalahan perizinan." });
+      toast({ variant: "destructive", title: "Gagal", description: "Gagal menambah tautan." });
     }
   };
 
@@ -199,10 +199,10 @@ export default function ManagePage() {
         }
       }
       
-      toast({ title: "Berhasil", description: "Data telah diperbarui." });
+      toast({ title: "Berhasil", description: "Perubahan disimpan." });
       setEditingItem(null);
     } catch (e) {
-      toast({ variant: "destructive", title: "Gagal", description: "Terjadi kesalahan perizinan." });
+      toast({ variant: "destructive", title: "Gagal", description: "Gagal menyimpan perubahan." });
     } finally {
       setIsSavingEdit(false);
     }
@@ -219,9 +219,9 @@ export default function ManagePage() {
           : doc(db, 'userProfiles', user.uid, 'links', itemToDelete.id);
         await deleteDoc(docRef);
       }
-      toast({ title: "Dihapus", description: "Item telah dihapus secara permanen." });
+      toast({ title: "Dihapus", description: "Item telah dihapus." });
     } catch (e) {
-      toast({ variant: "destructive", title: "Gagal", description: "Terjadi kesalahan perizinan." });
+      toast({ variant: "destructive", title: "Gagal", description: "Gagal menghapus item." });
     } finally {
       setItemToDelete(null);
     }
@@ -231,7 +231,7 @@ export default function ManagePage() {
     <div className="space-y-8 animate-in pb-32">
       <div className="space-y-1">
         <h1 className="text-4xl font-black tracking-tighter text-white uppercase">Manage Hub</h1>
-        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/70">Kelola Struktur Katalog Hub</p>
+        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/70">Kelola Katalog Hub</p>
       </div>
 
       <div className="grid gap-6">
@@ -247,7 +247,7 @@ export default function ManagePage() {
                 <FolderPlus size={16} />
                 <span>Buat kelompok koleksi</span>
               </div>
-              <Input placeholder="Nama Kelompok (Contoh: Addon Minecraft)" value={newGroupTitle} onChange={(e) => setNewGroupTitle(e.target.value)} className="bg-white/5 border-none h-12 rounded-xl px-4 font-bold" />
+              <Input placeholder="Nama Kelompok" value={newGroupTitle} onChange={(e) => setNewGroupTitle(e.target.value)} className="bg-white/5 border-none h-12 rounded-xl px-4 font-bold" />
               <label className="flex items-center justify-center gap-2 w-full h-12 bg-white/5 border border-dashed border-white/20 rounded-xl cursor-pointer hover:bg-white/10 transition-all">
                 <Upload size={16} className="text-primary" /><span className="text-[10px] font-black uppercase text-white/60">{newGroupImage ? 'Ganti Foto' : 'Unggah Ikon'}</span>
                 <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageSelect(e, 'group')} />
@@ -281,7 +281,7 @@ export default function ManagePage() {
               </div>
 
               <Input placeholder="Judul Tautan" value={newLinkTitle} onChange={(e) => setNewLinkTitle(e.target.value)} className="bg-white/5 h-12 rounded-xl px-4 font-bold border-none" />
-              <Input placeholder="URL (Contoh: instagram.com/obed)" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} className="bg-white/5 h-12 rounded-xl px-4 font-bold border-none" />
+              <Input placeholder="URL (Tanpa https://)" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} className="bg-white/5 h-12 rounded-xl px-4 font-bold border-none" />
               
               <label className="flex items-center justify-center gap-2 w-full h-12 bg-white/5 border border-dashed border-white/20 rounded-xl cursor-pointer hover:bg-white/10 transition-all">
                 <Upload size={16} className="text-primary" /><span className="text-[10px] font-black uppercase text-white/60">{newLinkImage ? 'Ganti Foto' : 'Unggah Ikon'}</span>
@@ -296,11 +296,11 @@ export default function ManagePage() {
 
       <div className="space-y-5">
         <h3 className="font-black text-[11px] uppercase tracking-[0.3em] text-white/50 flex items-center gap-2 px-1">
-          <ListTree size={16} className="text-primary" /> Daftar Katalog Aktif
+          <ListTree size={16} className="text-primary" /> Daftar Katalog
         </h3>
         
         {(isGroupsLoading || isLinksLoading) ? (
-          <div className="py-20 text-center animate-pulse text-primary font-black uppercase text-[10px]">Sinkronisasi Database...</div>
+          <div className="py-20 text-center animate-pulse text-primary font-black uppercase text-[10px]">Sinkronisasi...</div>
         ) : (
           <div className="space-y-4">
             {groups?.map((group, idx) => (
@@ -356,7 +356,7 @@ export default function ManagePage() {
                 {expandedGroups[group.id] && (
                   <div className="ml-10 space-y-3 animate-in slide-in-from-top-2 border-l-2 border-white/10 pl-4 pb-4">
                     {groupLinksData[group.id]?.length === 0 ? (
-                      <p className="text-[8px] font-black uppercase text-white/10 px-4 py-4 italic">Belum ada item di koleksi ini</p>
+                      <p className="text-[8px] font-black uppercase text-white/10 px-4 py-4 italic">Kosong</p>
                     ) : (
                       groupLinksData[group.id]?.map((link) => (
                         <div key={link.id} className="flex items-center gap-4 p-4 bg-white/[0.02] rounded-2xl border border-white/5 shadow-inner">
@@ -380,9 +380,9 @@ export default function ManagePage() {
             ))}
 
             <div className="pt-8 border-t border-white/5">
-              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 mb-4 px-2">Item Hub Utama (Mandiri)</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 mb-4 px-2">Hub Utama (Mandiri)</p>
               {standaloneLinks?.map((link) => (
-                <Card key={link.id} className="glass-card border-none rounded-2xl p-4 flex items-center gap-4 mb-3 shadow-xl hover:bg-white/[0.05] transition-colors">
+                <Card key={link.id} className="glass-card border-none rounded-2xl p-4 flex items-center gap-4 mb-3 shadow-xl">
                   <div className="w-14 h-14 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/5 shrink-0 shadow-2xl">
                     {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <LinkIcon size={20} className="text-primary" />}
                   </div>
@@ -396,9 +396,6 @@ export default function ManagePage() {
                   </div>
                 </Card>
               ))}
-              {standaloneLinks?.length === 0 && (
-                <div className="text-center py-10 opacity-10 font-black uppercase text-[10px] tracking-widest border border-dashed border-white/10 rounded-3xl">Hub Utama Masih Kosong</div>
-              )}
             </div>
           </div>
         )}
@@ -419,7 +416,6 @@ export default function ManagePage() {
                     <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageSelect(e, 'edit')} />
                   </label>
                </div>
-               <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Klik foto untuk mengganti ikon</p>
             </div>
             <div className="space-y-4">
                <div className="space-y-1.5">
@@ -434,7 +430,7 @@ export default function ManagePage() {
                       <Input value={editingItem?.url || ''} onChange={(e) => setEditingItem({...editingItem, url: e.target.value})} className="bg-white/5 border-none h-12 rounded-xl font-medium" />
                    </div>
                    <div className="space-y-1.5">
-                      <label className="text-[9px] font-black uppercase text-muted-foreground ml-1">Pindah Lokasi Ke:</label>
+                      <label className="text-[9px] font-black uppercase text-muted-foreground ml-1">Pindah Lokasi:</label>
                       <Select value={editingItem.newGroupId || editingItem.groupId || 'main'} onValueChange={(v) => setEditingItem({...editingItem, newGroupId: v})}>
                         <SelectTrigger className="bg-white/5 border-none h-12 rounded-xl text-[10px] font-black uppercase">
                           <SelectValue placeholder="Pilih Lokasi" />
@@ -451,10 +447,10 @@ export default function ManagePage() {
                )}
             </div>
           </div>
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter>
              <Button variant="ghost" onClick={() => setEditingItem(null)} className="rounded-xl font-black uppercase text-[10px]">Batal</Button>
              <Button onClick={handleSaveEdit} disabled={isSavingEdit} className="neon-gradient text-background font-black rounded-xl glow-primary px-8 uppercase text-[10px]">
-               {isSavingEdit ? <Loader2 className="animate-spin" size={16} /> : "Simpan Perubahan"}
+               {isSavingEdit ? <Loader2 className="animate-spin" size={16} /> : "Simpan"}
              </Button>
           </DialogFooter>
         </DialogContent>
@@ -464,16 +460,12 @@ export default function ManagePage() {
       <AlertDialog open={!!itemToDelete} onOpenChange={() => setItemToDelete(null)}>
         <AlertDialogContent className="glass-card border-none rounded-[2rem] bg-background/95 backdrop-blur-2xl border-white/5">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter flex items-center gap-3 text-white">
-              <AlertCircle className="text-destructive" /> Konfirmasi Hapus
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-white/60 font-medium leading-relaxed">
-              Apakah Anda yakin ingin menghapus <strong>{itemToDelete?.title}</strong>? Tindakan ini bersifat permanen dan tidak bisa dibatalkan.
-            </AlertDialogDescription>
+            <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-white">Konfirmasi Hapus</AlertDialogTitle>
+            <AlertDialogDescription className="text-white/60 font-medium">Hapus permanently <strong>{itemToDelete?.title}</strong>? Aksi ini tidak bisa dibatalkan.</AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2 pt-4">
-            <AlertDialogCancel className="bg-white/5 border-white/5 rounded-xl text-[10px] font-black uppercase h-12 hover:bg-white/10 text-white border-none">Batal</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-white hover:bg-destructive/80 rounded-xl text-[10px] font-black uppercase h-12 border-none">Hapus Sekarang</AlertDialogAction>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-white/5 border-none rounded-xl text-[10px] font-black uppercase h-12 text-white">Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-white rounded-xl text-[10px] font-black uppercase h-12">Hapus</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
