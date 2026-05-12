@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy } from 'firebase/firestore';
 import { Star, Quote, ChevronLeft, LayoutGrid } from 'lucide-react';
@@ -11,7 +11,6 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 
-// Komponen untuk merender bintang parsial/desimal
 const PartialStarRating = ({ rating, size = 20, className = "" }: { rating: number, size?: number, className?: string }) => {
   return (
     <div className={`flex items-center gap-1 ${className}`}>
@@ -42,11 +41,15 @@ const PartialStarRating = ({ rating, size = 20, className = "" }: { rating: numb
 
 export default function AllReviewsPage() {
   const db = useFirestore();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const reviewsQuery = useMemoFirebase(() => query(collection(db, 'platformReviews'), orderBy('createdAt', 'desc')), [db]);
   const { data: reviews, isLoading } = useCollection(reviewsQuery);
 
-  // Hitung Statistik Rating
   const stats = useMemo(() => {
     if (!reviews || reviews.length === 0) return { average: 0, total: 0 };
     const sum = reviews.reduce((acc, rev) => acc + (rev.rating || 0), 0);
@@ -55,6 +58,8 @@ export default function AllReviewsPage() {
       total: reviews.length
     };
   }, [reviews]);
+
+  if (!mounted) return null;
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
@@ -76,7 +81,6 @@ export default function AllReviewsPage() {
             <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/70">Testimonial jujur pengguna Linku</p>
           </div>
 
-          {/* Summary Stats */}
           {!isLoading && stats.total > 0 && (
             <div className="flex flex-col items-center gap-2 pt-4">
               <div className="flex items-center gap-4">
@@ -103,7 +107,7 @@ export default function AllReviewsPage() {
                 <div className="flex items-center gap-5">
                   <Avatar className="w-14 h-14 border-2 border-primary/20 shadow-xl">
                     <AvatarImage src={review.avatarUrl} />
-                    <AvatarFallback className="bg-primary/10 text-primary font-black uppercase text-sm">{review.username?.slice(0, 2)}</AvatarFallback>
+                    <AvatarFallback className="bg-primary/10 text-primary font-black uppercase text-xs">{review.username?.slice(0, 2)}</AvatarFallback>
                   </Avatar>
                   <div className="space-y-1">
                     <p className="text-base font-black text-white uppercase tracking-tight">{review.displayName || review.username}</p>

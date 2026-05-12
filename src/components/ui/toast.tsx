@@ -26,12 +26,12 @@ const ToastViewport = React.forwardRef<
 ToastViewport.displayName = ToastPrimitives.Viewport.displayName
 
 const toastVariants = cva(
-  "group pointer-events-auto relative flex w-full max-w-[400px] flex-col items-center justify-center space-y-4 overflow-hidden rounded-[2.5rem] p-8 shadow-2xl transition-all data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 border-[6px] text-center",
+  "group pointer-events-auto relative flex w-full max-w-[420px] flex-col items-center justify-center space-y-6 overflow-hidden rounded-[2.5rem] p-10 shadow-2xl transition-all data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 border-[6px] text-center",
   {
     variants: {
       variant: {
-        default: "bg-black/95 backdrop-blur-3xl border-primary text-white shadow-[0_0_80px_-10px_rgba(255,0,0,0.6)]",
-        destructive: "bg-black/95 backdrop-blur-3xl border-primary text-white shadow-[0_0_80px_-5px_rgba(255,0,0,0.8)]",
+        default: "bg-black/95 backdrop-blur-3xl border-primary text-white shadow-[0_0_100px_-10px_rgba(255,0,0,0.7)]",
+        destructive: "bg-black/95 backdrop-blur-3xl border-primary text-white shadow-[0_0_100px_-5px_rgba(255,0,0,0.9)]",
       },
     },
     defaultVariants: {
@@ -93,9 +93,9 @@ const ToastTitle = React.forwardRef<
   React.ElementRef<typeof ToastPrimitives.Title>,
   React.ComponentPropsWithoutRef<typeof ToastPrimitives.Title>
 >(({ className, ...props }, ref) => (
-  <ToastPrimitives.Title
+  <div
     ref={ref}
-    className={cn("text-2xl font-black uppercase tracking-tighter leading-none mb-2", className)}
+    className={cn("text-3xl font-black uppercase tracking-tighter leading-none mb-2", className)}
     {...props}
   />
 ))
@@ -105,7 +105,7 @@ const ToastDescription = React.forwardRef<
   React.ElementRef<typeof ToastPrimitives.Description>,
   React.ComponentPropsWithoutRef<typeof ToastPrimitives.Description>
 >(({ className, ...props }, ref) => (
-  <ToastPrimitives.Description
+  <div
     ref={ref}
     className={cn("text-sm font-bold leading-relaxed opacity-80 max-w-xs mx-auto", className)}
     {...props}

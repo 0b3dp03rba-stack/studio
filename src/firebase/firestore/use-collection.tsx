@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Query,
   onSnapshot,
@@ -11,27 +12,16 @@ import {
 } from 'firebase/firestore';
 import { toast } from '@/hooks/use-toast';
 
-/** Utility type to add an 'id' field to a given type T. */
 export type WithId<T> = T & { id: string };
 
-/**
- * Global error tracker to prevent spam across different hook instances.
- */
 const globalErrorMap = new Map<string, number>();
 
-/**
- * Interface for the return value of the useCollection hook.
- * @template T Type of the document data.
- */
 export interface UseCollectionResult<T> {
-  data: WithId<T>[] | null; // Document data with ID, or null.
-  isLoading: boolean;       // True if loading.
-  error: FirestoreError | Error | null; // Error object, or null.
+  data: WithId<T>[] | null;
+  isLoading: boolean;
+  error: FirestoreError | Error | null;
 }
 
-/**
- * React hook to subscribe to a Firestore collection or query in real-time.
- */
 export function useCollection<T = any>(
     memoizedTargetRefOrQuery: ((CollectionReference<DocumentData> | Query<DocumentData>) & {__memo?: boolean})  | null | undefined,
 ): UseCollectionResult<T> {
@@ -69,12 +59,12 @@ export function useCollection<T = any>(
         setData(null);
         setIsLoading(false);
 
-        // Deduplication Logic: Show toast only once every 60 seconds for the same error
-        const errorKey = `col:${err.code}:${err.message}`;
+        const errorKey = `col:${err.code}`;
         const now = Date.now();
         const lastToastTime = globalErrorMap.get(errorKey) || 0;
 
-        if (now - lastToastTime > 60000) {
+        // AGGRESSIVE THROTTLING: Hanya tampilkan toast jika belum ada dalam 10 detik
+        if (now - lastToastTime > 10000) {
           globalErrorMap.set(errorKey, now);
           toast({
             variant: "destructive",

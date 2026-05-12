@@ -8,7 +8,7 @@ import type {
 } from "@/components/ui/toast"
 
 const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 5000 // Kurangi delay agar tidak menumpuk
+const TOAST_REMOVE_DELAY = 4000 
 
 type ToasterToast = ToastProps & {
   id: string
@@ -40,17 +40,12 @@ interface State {
   toasts: ToasterToast[]
 }
 
-const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
-
-// Anti-Spam Cache
-const recentToasts = new Map<string, number>()
-
 export const reducer = (state: State, action: Action): State => {
   switch (action.type) {
     case "ADD_TOAST":
       return {
         ...state,
-        toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT),
+        toasts: [action.toast].slice(0, TOAST_LIMIT),
       }
     case "UPDATE_TOAST":
       return {
@@ -81,25 +76,32 @@ export const reducer = (state: State, action: Action): State => {
 const listeners: Array<(state: State) => void> = []
 let memoryState: State = { toasts: [] }
 
+// Anti-Spam Cache
+const recentToastMessages = new Set<string>()
+
 function dispatch(action: Action) {
   memoryState = reducer(memoryState, action)
   listeners.forEach((listener) => listener(memoryState))
 }
 
 function toast({ title, description, ...props }: Omit<ToasterToast, "id">) {
-  // Anti-Spam Logic: Cek apakah notifikasi yang sama persis baru saja dikirim
-  const contentKey = `${title}-${description}`
-  const now = Date.now()
-  const lastTime = recentToasts.get(contentKey) || 0
+  const messageKey = `${String(title)}-${String(description)}`
   
-  if (now - lastTime < 4000) {
+  // BLOKIR SPAM: Jika pesan sama sedang aktif, jangan tambah lagi
+  if (recentToastMessages.has(messageKey)) {
     return { id: "spam", dismiss: () => {}, update: () => {} }
   }
-  recentToasts.set(contentKey, now)
 
+  recentToastMessages.add(messageKey)
   const id = genId()
+
   const update = (props: ToasterToast) => dispatch({ type: "UPDATE_TOAST", toast: { ...props, id } })
-  const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
+  const dismiss = () => {
+    dispatch({ type: "DISMISS_TOAST", toastId: id })
+    setTimeout(() => {
+      recentToastMessages.delete(messageKey)
+    }, 1000)
+  }
 
   dispatch({
     type: "ADD_TOAST",
@@ -114,7 +116,7 @@ function toast({ title, description, ...props }: Omit<ToasterToast, "id">) {
   })
 
   setTimeout(() => {
-    dispatch({ type: "DISMISS_TOAST", toastId: id })
+    dismiss()
     setTimeout(() => {
       dispatch({ type: "REMOVE_TOAST", toastId: id })
     }, 500)
