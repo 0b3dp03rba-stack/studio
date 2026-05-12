@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Link2, Sparkles, LayoutGrid, Palette, ArrowRight, Star, Quote } from 'lucide-react';
 import Link from 'next/link';
@@ -43,9 +43,10 @@ export default function LandingPage() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
 
-  // Track Landing Page View
   useEffect(() => {
+    setMounted(true);
     const trackLandingVisit = async () => {
       try {
         const statsRef = doc(db, 'appConfig', 'globalStats');
@@ -79,7 +80,7 @@ export default function LandingPage() {
     return allReviews?.slice(0, 3) || [];
   }, [allReviews]);
 
-  if (isUserLoading || user) {
+  if (!mounted || isUserLoading || user) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-2xl animate-spin"></div>
