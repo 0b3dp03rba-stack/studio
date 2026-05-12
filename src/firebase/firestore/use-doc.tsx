@@ -1,4 +1,3 @@
-
 'use client';
     
 import { useState, useEffect, useRef } from 'react';
@@ -13,6 +12,11 @@ import { toast } from '@/hooks/use-toast';
 
 /** Utility type to add an 'id' field to a given type T. */
 type WithId<T> = T & { id: string };
+
+/**
+ * Global error tracker to prevent spam across different hook instances.
+ */
+const globalErrorMap = new Map<string, number>();
 
 /**
  * Interface for the return value of the useDoc hook.
@@ -33,16 +37,12 @@ export function useDoc<T = any>(
   const [data, setData] = useState<WithId<T> | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
-  
-  // Ref to prevent spamming toast notifications for the same error
-  const lastErrorRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!memoizedDocRef) {
       setData(null);
       setIsLoading(false);
       setError(null);
-      lastErrorRef.current = null;
       return;
     }
 
@@ -59,22 +59,23 @@ export function useDoc<T = any>(
         }
         setError(null);
         setIsLoading(false);
-        lastErrorRef.current = null;
       },
       (err: FirestoreError) => {
         setError(err);
         setData(null);
         setIsLoading(false);
 
-        // Prevent spamming identical toast messages
-        const errorKey = `${err.code}:${err.message}`;
-        if (lastErrorRef.current !== errorKey) {
-          lastErrorRef.current = errorKey;
+        // Deduplication Logic: Show toast only once every 30 seconds for the same error
+        const errorKey = `doc:${err.code}:${err.message}:${memoizedDocRef.path}`;
+        const now = Date.now();
+        const lastToastTime = globalErrorMap.get(errorKey) || 0;
 
+        if (now - lastToastTime > 30000) {
+          globalErrorMap.set(errorKey, now);
           toast({
             variant: "destructive",
-            title: "Document Sync Failed",
-            description: `Error: ${err.message}\nPath: ${memoizedDocRef.path}`
+            title: "Document Access Alert",
+            description: err.message
           });
         }
       }

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -16,6 +15,11 @@ import { toast } from '@/hooks/use-toast';
 export type WithId<T> = T & { id: string };
 
 /**
+ * Global error tracker to prevent spam across different hook instances.
+ */
+const globalErrorMap = new Map<string, number>();
+
+/**
  * Interface for the return value of the useCollection hook.
  * @template T Type of the document data.
  */
@@ -27,7 +31,6 @@ export interface UseCollectionResult<T> {
 
 /**
  * React hook to subscribe to a Firestore collection or query in real-time.
- * Handles nullable references/queries.
  */
 export function useCollection<T = any>(
     memoizedTargetRefOrQuery: ((CollectionReference<DocumentData> | Query<DocumentData>) & {__memo?: boolean})  | null | undefined,
@@ -38,16 +41,12 @@ export function useCollection<T = any>(
   const [data, setData] = useState<StateDataType>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
-  
-  // Ref to prevent spamming toast notifications for the same error
-  const lastErrorRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!memoizedTargetRefOrQuery) {
       setData(null);
       setIsLoading(false);
       setError(null);
-      lastErrorRef.current = null;
       return;
     }
 
@@ -64,22 +63,23 @@ export function useCollection<T = any>(
         setData(results);
         setError(null);
         setIsLoading(false);
-        lastErrorRef.current = null; // Clear error tracking on success
       },
       (err: FirestoreError) => {
         setError(err);
         setData(null);
         setIsLoading(false);
 
-        // Prevent spamming identical toast messages
-        const errorKey = `${err.code}:${err.message}`;
-        if (lastErrorRef.current !== errorKey) {
-          lastErrorRef.current = errorKey;
-          
+        // Deduplication Logic: Show toast only once every 30 seconds for the same error
+        const errorKey = `${err.code}:${err.message}:${memoizedTargetRefOrQuery instanceof Query ? 'query' : memoizedTargetRefOrQuery?.path}`;
+        const now = Date.now();
+        const lastToastTime = globalErrorMap.get(errorKey) || 0;
+
+        if (now - lastToastTime > 30000) {
+          globalErrorMap.set(errorKey, now);
           toast({
             variant: "destructive",
-            title: "Database Access Denied",
-            description: `Error: ${err.message}\n\nPath: ${memoizedTargetRefOrQuery instanceof Query ? 'Complex Query' : memoizedTargetRefOrQuery?.path || 'Unknown'}`
+            title: "Database Access Alert",
+            description: err.message
           });
         }
       }

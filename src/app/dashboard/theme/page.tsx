@@ -1,17 +1,17 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Palette, Sparkles, Loader2, Save } from 'lucide-react';
+import { Palette, Sparkles, Loader2, Save, Wand2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { getRecommendedSecondary, PRESTIGE_SECONDARIES } from '@/lib/utils-app';
+import { getAIColorRecommendation } from '@/ai/flows/color-recommendation-flow';
 
 export default function ThemePage() {
-  const { user } = useUser();
+  const { user } = userUser();
   const db = useFirestore();
   const { toast } = useToast();
 
@@ -21,6 +21,7 @@ export default function ThemePage() {
   const [themeColor, setThemeColor] = useState('#ff0000');
   const [themeColorSecondary, setThemeColorSecondary] = useState('#ffea00');
   const [isSaving, setIsSaving] = useState(false);
+  const [isAiLoading, setIsAiLoading] = useState(false);
   const [extractedPalette, setExtractedPalette] = useState<string[]>([]);
 
   useEffect(() => {
@@ -28,7 +29,6 @@ export default function ThemePage() {
       setThemeColor(profile.themeColor || '#ff0000');
       setThemeColorSecondary(profile.themeColorSecondary || '#ffea00');
       
-      // Load image palette if available
       if (profile.avatarUrl) {
          import('@/lib/utils-app').then(utils => {
            utils.extractPaletteFromImage(profile.avatarUrl).then(setExtractedPalette);
@@ -36,6 +36,25 @@ export default function ThemePage() {
       }
     }
   }, [profile]);
+
+  const handleColorSelect = async (color: string) => {
+    setThemeColor(color);
+    setIsAiLoading(true);
+    try {
+      // Use AI to find the best secondary match
+      const recommendation = await getAIColorRecommendation({ primaryColor: color });
+      setThemeColorSecondary(recommendation.secondaryColor);
+      toast({
+        title: "AI Suggestion Applied",
+        description: recommendation.explanation
+      });
+    } catch (e) {
+      // Fallback to local logic if AI fails
+      setThemeColorSecondary(getRecommendedSecondary(color));
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
 
   const handleSaveTheme = async () => {
     if (!profileRef) return;
@@ -74,29 +93,35 @@ export default function ThemePage() {
                }}
              >
                 <div className="absolute inset-0 bg-black/10 backdrop-blur-[2px]" />
-                <Sparkles size={48} className="text-background relative z-10" />
+                {isAiLoading ? (
+                  <div className="flex flex-col items-center gap-2 relative z-10">
+                    <Loader2 size={32} className="text-white animate-spin" />
+                    <span className="text-[8px] font-black uppercase text-white tracking-widest">AI Pairing...</span>
+                  </div>
+                ) : (
+                  <Sparkles size={48} className="text-background relative z-10" />
+                )}
              </div>
           </div>
 
           <div className="space-y-6">
-            {/* GRID 20 WARNA PRIMER DARI GAMBAR */}
             <div className="space-y-4">
               <div className="flex items-center justify-between px-1">
-                <label className="text-[10px] font-black text-muted-foreground uppercase flex items-center gap-2 tracking-widest"><Palette size={14} className="text-primary" /> Warna Utama (Dari Foto)</label>
+                <label className="text-[10px] font-black text-muted-foreground uppercase flex items-center gap-2 tracking-widest">
+                  <Wand2 size={14} className="text-primary" /> AI-Smart Palette (Dari Foto)
+                </label>
                 <div className="w-5 h-5 rounded-full shadow-lg border border-white/20" style={{ backgroundColor: themeColor }} />
               </div>
               <div className="grid grid-cols-5 gap-3">
                 {extractedPalette.length > 0 ? extractedPalette.map((color, i) => (
                   <button 
                     key={`p-${i}`} 
-                    onClick={() => {
-                      setThemeColor(color);
-                      setThemeColorSecondary(getRecommendedSecondary(color));
-                    }} 
-                    className={`aspect-square rounded-2xl border-2 transition-all flex items-center justify-center ${themeColor === color ? 'border-primary scale-110 shadow-[0_0_15px_rgba(255,0,0,0.4)]' : 'border-white/5 opacity-70 hover:opacity-100'}`} 
+                    disabled={isAiLoading}
+                    onClick={() => handleColorSelect(color)} 
+                    className={`aspect-square rounded-2xl border-2 transition-all flex items-center justify-center ${themeColor === color ? 'border-primary scale-110 shadow-[0_0_15px_rgba(255,0,0,0.4)]' : 'border-white/5 opacity-70 hover:opacity-100'} disabled:opacity-30`} 
                     style={{ backgroundColor: color }}
                   >
-                    {themeColor === color && <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />}
+                    {themeColor === color && !isAiLoading && <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />}
                   </button>
                 )) : (
                   <div className="col-span-5 py-8 text-center text-[9px] font-black uppercase opacity-20 tracking-widest border border-dashed border-white/10 rounded-2xl">Unggah foto di Profil untuk palet</div>
@@ -104,7 +129,6 @@ export default function ThemePage() {
               </div>
             </div>
 
-            {/* GRID 20 WARNA SEKUNDER PERMANEN */}
             <div className="space-y-4">
               <div className="flex items-center justify-between px-1">
                 <label className="text-[10px] font-black text-muted-foreground uppercase flex items-center gap-2 tracking-widest"><Sparkles size={14} className="text-secondary" /> Warna Gradasi (Prestige)</label>
@@ -122,15 +146,20 @@ export default function ThemePage() {
                   </button>
                 ))}
               </div>
-              <p className="text-[8px] text-muted-foreground italic ml-1">*Koleksi warna sekunder mewah untuk kontras tinggi.</p>
+              <p className="text-[8px] text-muted-foreground italic ml-1">*Pilih manual jika ingin mengesampingkan saran AI.</p>
             </div>
           </div>
 
-          <Button onClick={handleSaveTheme} disabled={isSaving} className="w-full h-16 neon-gradient text-background font-black rounded-3xl shadow-xl active:scale-95 transition-all text-sm uppercase tracking-widest">
+          <Button onClick={handleSaveTheme} disabled={isSaving || isAiLoading} className="w-full h-16 neon-gradient text-background font-black rounded-3xl shadow-xl active:scale-95 transition-all text-sm uppercase tracking-widest">
             {isSaving ? <Loader2 className="animate-spin" size={20} /> : <><Save size={20} className="mr-2" /> Terapkan Visual</>}
           </Button>
         </Card>
       </div>
     </div>
   );
+}
+
+function userUser() {
+  const { user } = useUser();
+  return { user };
 }
