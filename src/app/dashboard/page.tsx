@@ -9,7 +9,6 @@ import { MousePointer2, Eye, Star, TrendingUp, Sparkles, LayoutGrid } from 'luci
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, orderBy, setDoc, doc, serverTimestamp, limit, onSnapshot } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { formatCurrency } from '@/lib/utils-app';
 import { Bar, BarChart, XAxis, ResponsiveContainer, Cell, Tooltip } from 'recharts';
 
 export default function DashboardPage() {
@@ -21,6 +20,11 @@ export default function DashboardPage() {
   const [comment, setComment] = useState('');
   const [isRatingSaving, setIsRatingSaving] = useState(false);
   const [allLinks, setAllLinks] = useState<any[]>([]);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const profileRef = useMemoFirebase(() => user ? doc(db, 'userProfiles', user.uid) : null, [db, user?.uid]);
   const { data: profile } = useDoc(profileRef);
@@ -36,11 +40,9 @@ export default function DashboardPage() {
     }
   }, [userReview]);
 
-  // Aggregate ALL links (standalone + inside groups) for accurate stats
   useEffect(() => {
     if (!user) return;
 
-    // Listen to standalone links
     const unsubStandalone = onSnapshot(collection(db, 'userProfiles', user.uid, 'links'), (snap) => {
       const standalone = snap.docs.map(d => ({ ...d.data(), id: d.id, isStandalone: true }));
       setAllLinks(prev => {
@@ -49,7 +51,6 @@ export default function DashboardPage() {
       });
     });
 
-    // Listen to groups and their links
     const unsubGroups = onSnapshot(collection(db, 'userProfiles', user.uid, 'linkGroups'), (snap) => {
       snap.docs.forEach(groupDoc => {
         onSnapshot(collection(db, 'userProfiles', user!.uid, 'linkGroups', groupDoc.id, 'links'), (linkSnap) => {
@@ -106,6 +107,8 @@ export default function DashboardPage() {
       setIsRatingSaving(false);
     }
   };
+
+  if (!mounted) return null;
 
   return (
     <div className="space-y-8 animate-in pb-12">

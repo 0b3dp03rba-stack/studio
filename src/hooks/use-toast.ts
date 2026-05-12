@@ -8,7 +8,6 @@ import type {
 } from "@/components/ui/toast"
 
 const TOAST_REMOVE_DELAY = 4000 
-const SPAM_COOLDOWN = 5000 
 
 type ToasterToast = ToastProps & {
   id: string
@@ -42,8 +41,6 @@ interface State {
 
 const listeners: Array<(state: State) => void> = []
 let memoryState: State = { toasts: [] }
-
-const lastToastTimes = new Map<string, number>()
 
 export const reducer = (state: State, action: Action): State => {
   switch (action.type) {
@@ -85,18 +82,12 @@ function dispatch(action: Action) {
 }
 
 function toast({ title, description, ...props }: Omit<ToasterToast, "id">) {
-  const now = Date.now()
-  const messageKey = `${String(title)}-${String(description)}`
-  
-  // 1. CEK APAKAH ADA TOAST YANG SEDANG TERBUKA
-  const hasActiveToast = memoryState.toasts.some(t => t.open === true)
-  if (hasActiveToast) return { id: "blocked", dismiss: () => {}, update: () => {} }
+  // ATURAN MUTLAK: Jika ada toast yang sedang terbuka, jangan tambah lagi (Stop Spam)
+  const isAnyToastOpen = memoryState.toasts.some(t => t.open === true)
+  if (isAnyToastOpen) {
+    return { id: "blocked", dismiss: () => {}, update: () => {} }
+  }
 
-  // 2. COOLDOWN SPAM UNTUK PESAN YANG SAMA
-  const lastTime = lastToastTimes.get(messageKey) || 0
-  if (now - lastTime < SPAM_COOLDOWN) return { id: "spam", dismiss: () => {}, update: () => {} }
-
-  lastToastTimes.set(messageKey, now)
   const id = genId()
 
   const update = (props: ToasterToast) => dispatch({ type: "UPDATE_TOAST", toast: { ...props, id } })
@@ -114,6 +105,7 @@ function toast({ title, description, ...props }: Omit<ToasterToast, "id">) {
     },
   })
 
+  // Auto dismiss after delay
   setTimeout(() => {
     dismiss()
     setTimeout(() => {
