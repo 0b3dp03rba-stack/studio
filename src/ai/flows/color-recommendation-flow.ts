@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview AI Flow to recommend matching secondary colors for a premium neon aesthetic.
@@ -42,9 +43,9 @@ const colorRecommendationFlow = ai.defineFlow(
       Tugas Anda:
       1. Berikan warna sekunder (secondaryColor) dalam format HEX.
       2. PRIORITAS UTAMA: Cari warna di dalam "palet warna asli" yang memberikan harmoni atau kontras mewah dengan Primary Color. 
-      3. Contoh: Jika user memilih Biru dan di palet ada warna Perak/Putih/Abu-abu cerah, PILIH warna tersebut karena itu menciptakan kesan "clean" dan "premium" daripada memilih warna kuning yang acak.
-      4. Jika palet warna asli tidak memiliki warna yang cocok (semua terlalu gelap atau terlalu mirip), barulah buat warna sekunder baru yang kontras tinggi (Neon).
-      5. Warna sekunder harus membuat gradasi yang terlihat profesional dan mahal.
+      3. KHUSUS: Jika user memilih Biru dan di palet ada warna Putih/Perak/Abu-abu cerah (seperti warna baju), PILIH warna tersebut karena itu menciptakan kesan "clean" dan "premium" daripada memilih warna kuning yang acak.
+      4. Jangan hanya memilih warna komplementer (seberangan roda warna), tapi cari warna pendukung yang ada di foto user untuk harmoni maksimal.
+      5. Jika palet warna asli benar-benar tidak memiliki warna yang cocok, barulah buat warna sekunder baru yang kontras tinggi (Neon).
       
       Return the result as JSON with secondaryColor (hex) and a short explanation in Bahasa Indonesia.`,
       output: { schema: ColorRecommendationOutputSchema },

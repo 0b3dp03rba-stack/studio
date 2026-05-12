@@ -7,13 +7,6 @@ export function formatCurrency(amount: number) {
   }).format(amount);
 }
 
-export function formatDate(dateString: string) {
-  return new Intl.DateTimeFormat('id-ID', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(new Date(dateString));
-}
-
 /**
  * SMART REDIRECT: Membangun link sosial media otomatis berdasarkan platform dan handle.
  */
@@ -82,7 +75,9 @@ export function getRecommendedSecondary(primaryHex: string): string {
 }
 
 /**
- * VIBRANT COLOR EXTRACTION: Sekarang mengekstrak warna asli dengan akurasi tinggi.
+ * HUE-BASED VIBRANT EXTRACTION: 
+ * Membagi lingkaran warna menjadi segmen dan mengambil warna paling cerah di tiap segmen.
+ * Ini memastikan warna rambut (biru) atau baju (putih) tetap terjaring meskipun kulit mendominasi.
  */
 export async function extractPaletteFromImage(base64: string): Promise<string[]> {
   return new Promise((resolve) => {
@@ -92,48 +87,60 @@ export async function extractPaletteFromImage(base64: string): Promise<string[]>
     img.onload = () => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
-      if (!ctx) return resolve(['#FFD700', '#FFFFFF']);
+      if (!ctx) return resolve(['#FFFFFF', '#FFD700']);
 
-      canvas.width = 100;
-      canvas.height = 100;
-      ctx.drawImage(img, 0, 0, 100, 100);
-      const data = ctx.getImageData(0, 0, 100, 100).data;
+      canvas.width = 150;
+      canvas.height = 150;
+      ctx.drawImage(img, 0, 0, 150, 150);
+      const data = ctx.getImageData(0, 0, 150, 150).data;
 
-      const colors: Record<string, { count: number, score: number }> = {};
-      
-      for (let i = 0; i < data.length; i += 4) {
+      // Gunakan Map untuk menyimpan warna terbaik per segmen Hue (12 segmen)
+      const hueBuckets: Record<number, { hex: string, saturation: number, luminance: number, score: number }[]> = {};
+      for(let i=0; i<12; i++) hueBuckets[i] = [];
+
+      for (let i = 0; i < data.length; i += 16) { // Sampling setiap 4 pixel
         const r = data[i];
         const g = data[i + 1];
         const b = data[i + 2];
         const a = data[i + 3];
-        if (a < 200) continue; // Hanya warna solid
+        if (a < 250) continue; 
 
-        // Quantization ringan agar tidak "brutal"
-        const qr = Math.round(r / 8) * 8;
-        const qg = Math.round(g / 8) * 8;
-        const qb = Math.round(b / 8) * 8;
-        const hex = `#${((1 << 24) + (qr << 16) + (qg << 8) + qb).toString(16).slice(1)}`;
-
+        const hex = `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
         const hsl = hexToHsl(hex);
         
-        // Scoring: Prioritaskan Vibrancy dan Kecerahan
-        const score = (hsl.s * 5) + (hsl.l > 20 && hsl.l < 90 ? 20 : 0); 
+        // Skip warna yang terlalu gelap atau terlalu pudar (untuk palet utama)
+        if (hsl.l < 10 || hsl.l > 95) continue;
 
-        if (!colors[hex]) {
-          colors[hex] = { count: 1, score: score };
-        } else {
-          colors[hex].count++;
-        }
+        const bucketIndex = Math.floor(hsl.h / 30) % 12;
+        // Scoring: Prioritaskan Saturation
+        const score = hsl.s * 2 + (hsl.l > 40 && hsl.l < 70 ? 20 : 0);
+
+        hueBuckets[bucketIndex].push({ hex, saturation: hsl.s, luminance: hsl.l, score });
       }
 
-      const sortedColors = Object.entries(colors)
-        .sort(([, a], [, b]) => (b.count * b.score) - (a.count * a.score)) 
-        .slice(0, 12) 
-        .map(([color]) => color);
+      const palette: string[] = [];
+      
+      // Ambil 1 warna terbaik dari setiap bucket
+      Object.values(hueBuckets).forEach(bucket => {
+        if (bucket.length > 0) {
+          const bestInBucket = bucket.sort((a, b) => b.score - a.score)[0];
+          palette.push(bestInBucket.hex);
+        }
+      });
 
-      // Jika palet kosong, berikan warna dasar foto daripada pelangi brutal
-      if (sortedColors.length < 2) return resolve(['#FFFFFF', '#C0C0C0', '#FFD700']);
-      resolve(sortedColors);
+      // Tambahkan warna netral cerah (seperti baju putih/perak) jika belum ada
+      palette.push('#FFFFFF', '#F5F5F5', '#E0E0E0');
+
+      // Sortir hasil akhir agar warna paling cerah (vibrant) muncul di depan
+      const finalPalette = [...new Set(palette)]
+        .sort((a, b) => {
+          const hslA = hexToHsl(a);
+          const hslB = hexToHsl(b);
+          return (hslB.s + hslB.l) - (hslA.s + hslA.l);
+        })
+        .slice(0, 12);
+
+      resolve(finalPalette.length > 0 ? finalPalette : ['#FFFFFF', '#FFD700']);
     };
     img.onerror = () => resolve(['#FFFFFF', '#FFD700']);
   });

@@ -38,7 +38,6 @@ export default function ThemePage() {
         primaryColor: primary,
         palette: palette
       });
-      // UPDATE STATE TANPA OVERWRITE
       setThemeColorSecondary(recommendation.secondaryColor);
     } catch (e) {
       setThemeColorSecondary(getRecommendedSecondary(primary));
@@ -60,9 +59,10 @@ export default function ThemePage() {
           const palette = await utils.extractPaletteFromImage(profile.avatarUrl!);
           setExtractedPalette(palette);
           
-          // OTOMATIS SARANKAN WARNA JIKA PERTAMA KALI ATAU BELUM ADA TEMA
+          // OTOMATIS SARANKAN WARNA JIKA BELUM ADA TEMA
           if (!profile.themeColor) {
              triggerAIRecommendation(palette[0], palette);
+             setThemeColor(palette[0]);
           }
         });
       }
@@ -72,7 +72,6 @@ export default function ThemePage() {
   const handleColorSelect = async (color: string) => {
     if (isAiLoading) return;
     setThemeColor(color);
-    // Jalankan AI untuk memilih pasangan warna
     await triggerAIRecommendation(color, extractedPalette);
   };
 
@@ -87,7 +86,7 @@ export default function ThemePage() {
       });
       toast({ title: "VISUAL TERAPKAN", description: "Warna kustom Anda telah aktif." });
     } catch (e: any) {
-      // Toast handles itself via the 1-toast policy in the hook
+      // toast auto handled
     } finally {
       setIsSaving(false);
     }
@@ -143,7 +142,7 @@ export default function ThemePage() {
                     {themeColor === color && !isAiLoading && <div className="w-2 h-2 bg-white rounded-full" />}
                   </button>
                 )) : (
-                  <div className="col-span-4 py-8 text-center text-[9px] font-black uppercase opacity-20 tracking-widest border border-dashed border-white/10 rounded-2xl">Unggah foto untuk palet warna</div>
+                  <div className="col-span-4 py-8 text-center text-[9px] font-black uppercase opacity-20 tracking-widest border border-dashed border-white/10 rounded-2xl">Ekstraksi warna...</div>
                 )}
               </div>
             </div>

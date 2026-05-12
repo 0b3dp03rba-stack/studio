@@ -38,7 +38,7 @@ export default function LandingPage() {
         const statsRef = doc(db, 'appConfig', 'globalStats');
         await setDoc(statsRef, { landingPageViews: increment(1) }, { merge: true });
       } catch (e) {
-        // Silent catch to prevent console clutter
+        // Silent catch
       }
     };
     trackLandingVisit();
@@ -124,7 +124,7 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* Reviews Section - REMOVED TIME AGO TO PREVENT HYDRATION ERROR */}
+        {/* Reviews Section */}
         <section className="space-y-12 py-12 animate-in" style={{ animationDelay: '0.4s' }}>
           <div className="space-y-4">
              <div className="space-y-1">
@@ -138,7 +138,7 @@ export default function LandingPage() {
                     <span className="text-5xl font-black text-white tracking-tighter">{stats.average}</span>
                     <div className="text-left">
                       <StaticStarRating rating={stats.average} size={24} />
-                      <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mt-1">Rating dari {stats.total} User</p>
+                      <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mt-1">Rating Komunitas</p>
                     </div>
                   </div>
                </div>
@@ -162,14 +162,6 @@ export default function LandingPage() {
                 <p className="text-sm text-white/70 italic font-medium leading-relaxed">"{review.comment}"</p>
               </div>
             ))}
-            
-            {stats.total > 3 && (
-              <div className="pt-4">
-                <Button variant="ghost" asChild className="text-[10px] font-black uppercase tracking-[0.2em] text-primary hover:bg-primary/10 rounded-xl px-8">
-                  <Link href="/reviews">Lihat Semua Rating <ArrowRight size={14} className="ml-2" /></Link>
-                </Button>
-              </div>
-            )}
           </div>
         </section>
 
