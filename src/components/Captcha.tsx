@@ -10,9 +10,10 @@ interface CaptchaProps {
   onVerify: (isValid: boolean) => void;
 }
 
-// Daftar 22 ID Gambar Picsum pilihan yang HD dan kontras
-const CAPTCHA_IMAGES = [
-  10, 15, 20, 26, 28, 29, 30, 42, 49, 54, 58, 63, 75, 103, 111, 119, 122, 133, 152, 160, 180, 193
+// Daftar keyword anime aesthetic untuk Unsplash
+const ANIME_SEEDS = [
+  'anime-girl', 'waifu', 'manga-art', 'cyberpunk-anime', 'vocaloid', 
+  'anime-style', 'kawaii-aesthetic', 'j-pop-aesthetic', 'anime-portrait'
 ];
 
 const PIECE_SIZE = 60; // Ukuran kotak puzzle
@@ -24,25 +25,35 @@ export default function Captcha({ onVerify }: CaptchaProps) {
   const [mounted, setMounted] = useState(false);
   
   // Captcha Logic States
-  const [currentPos, setCurrentPos] = useState({ x: 10, y: CONTAINER_SIZE - PIECE_SIZE - 10 });
+  const [currentPos, setCurrentPos] = useState({ x: 0, y: 0 });
   const [targetPos, setTargetPos] = useState({ x: 0, y: 0 });
-  const [currentImageId, setCurrentImageId] = useState(10);
+  const [currentSeed, setCurrentSeed] = useState('');
   const [isError, setIsError] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   
   const containerRef = useRef<HTMLDivElement>(null);
 
   const initCaptcha = () => {
-    const randomId = CAPTCHA_IMAGES[Math.floor(Math.random() * CAPTCHA_IMAGES.length)];
-    setCurrentImageId(randomId);
+    // 1. Pilih Seed Gambar Acak (Waifu Style)
+    const randomSeed = ANIME_SEEDS[Math.floor(Math.random() * ANIME_SEEDS.length)] + '-' + Math.floor(Math.random() * 1000);
+    setCurrentSeed(randomSeed);
 
-    // Tentukan posisi target acak (X dan Y)
-    // Pastikan target tidak terlalu dekat dengan posisi awal
+    // 2. Tentukan posisi target acak (X dan Y)
     const tx = Math.floor(Math.random() * (CONTAINER_SIZE - PIECE_SIZE - 40)) + 20;
     const ty = Math.floor(Math.random() * (CONTAINER_SIZE - PIECE_SIZE - 100)) + 20;
-
     setTargetPos({ x: tx, y: ty });
-    setCurrentPos({ x: 10, y: CONTAINER_SIZE - PIECE_SIZE - 10 });
+
+    // 3. Tentukan posisi AWAL acak (X dan Y) - Harus jauh dari target
+    let sx, sy;
+    let distance = 0;
+    do {
+      sx = Math.floor(Math.random() * (CONTAINER_SIZE - PIECE_SIZE));
+      sy = Math.floor(Math.random() * (CONTAINER_SIZE - PIECE_SIZE));
+      // Hitung jarak Euclidean sederhana
+      distance = Math.sqrt(Math.pow(sx - tx, 2) + Math.pow(sy - ty, 2));
+    } while (distance < 100); // Pastikan jarak minimal 100px agar tidak langsung menang
+
+    setCurrentPos({ x: sx, y: sy });
     setIsError(false);
     setIsVerified(false);
   };
@@ -75,7 +86,7 @@ export default function Captcha({ onVerify }: CaptchaProps) {
     if (!isDragging) return;
     setIsDragging(false);
 
-    const tolerance = 8; // Toleransi pixel X dan Y untuk akurasi manusia
+    const tolerance = 10; // Toleransi pixel X dan Y untuk akurasi manusia
     const diffX = Math.abs(currentPos.x - targetPos.x);
     const diffY = Math.abs(currentPos.y - targetPos.y);
     
@@ -93,7 +104,8 @@ export default function Captcha({ onVerify }: CaptchaProps) {
     }
   };
 
-  const imageUrl = `https://picsum.photos/id/${currentImageId}/600/600`;
+  // Menggunakan Unsplash Source dengan data-ai-hint untuk SEO gambar
+  const imageUrl = `https://images.unsplash.com/featured/600x600?${currentSeed}`;
 
   if (!mounted) return null;
 
@@ -153,7 +165,8 @@ export default function Captcha({ onVerify }: CaptchaProps) {
               <img 
                 src={imageUrl} 
                 className="w-full h-full object-cover opacity-100" 
-                alt="Main"
+                alt="Verification Source"
+                data-ai-hint="anime waifu"
               />
               
               {/* Target Shadow (Hole) - Kotak Siku */}
@@ -177,7 +190,7 @@ export default function Captcha({ onVerify }: CaptchaProps) {
                       left: -targetPos.x,
                       top: -targetPos.y,
                     }}
-                    alt="Hint"
+                    alt="Ghost Hint"
                   />
                 </div>
               </div>
@@ -209,7 +222,7 @@ export default function Captcha({ onVerify }: CaptchaProps) {
                     left: -targetPos.x,
                     top: -targetPos.y,
                   }}
-                  alt="Piece"
+                  alt="Draggable Piece"
                 />
               </div>
             </div>
