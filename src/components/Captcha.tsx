@@ -11,9 +11,13 @@ interface CaptchaProps {
   onVerify: (isValid: boolean) => void;
 }
 
-const IMAGE_URL = "https://picsum.photos/seed/linku-security-v2/600/600";
-const PIECE_SIZE = 64; // Kotak / Square
-const CONTAINER_SIZE = 300; // Ukuran tampilan visual di HP
+// Daftar 22 ID Gambar Picsum yang kontras dan jelas
+const CAPTCHA_IMAGES = [
+  10, 15, 20, 26, 28, 29, 30, 42, 49, 54, 58, 63, 75, 103, 111, 119, 122, 133, 152, 160, 180, 193
+];
+
+const PIECE_SIZE = 64; // Ukuran kotak puzzle
+const CONTAINER_SIZE = 300; // Ukuran bingkai utama
 
 export default function Captcha({ onVerify }: CaptchaProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -24,11 +28,15 @@ export default function Captcha({ onVerify }: CaptchaProps) {
   const [sliderValue, setSliderValue] = useState(0);
   const [targetX, setTargetX] = useState(0);
   const [targetY, setTargetY] = useState(0);
+  const [currentImageId, setCurrentImageId] = useState(10);
   const [isError, setIsError] = useState(false);
 
   const initCaptcha = () => {
+    // Pilih gambar acak dari daftar
+    const randomId = CAPTCHA_IMAGES[Math.floor(Math.random() * CAPTCHA_IMAGES.length)];
+    setCurrentImageId(randomId);
+
     // Tentukan posisi acak untuk lubang target
-    // Pastikan posisi X cukup jauh ke kanan agar tantangan geser terasa nyata
     const maxX = CONTAINER_SIZE - PIECE_SIZE - 20;
     const minX = 140; 
     const maxY = CONTAINER_SIZE - PIECE_SIZE - 20;
@@ -55,12 +63,14 @@ export default function Captcha({ onVerify }: CaptchaProps) {
       setTimeout(() => setIsOpen(false), 800);
     } else {
       setIsError(true);
-      // Reset jika salah setelah jeda singkat
+      // Reset tantangan jika gagal
       setTimeout(() => {
         initCaptcha();
       }, 1000);
     }
   };
+
+  const imageUrl = `https://picsum.photos/id/${currentImageId}/600/600`;
 
   if (!mounted) return null;
 
@@ -112,20 +122,20 @@ export default function Captcha({ onVerify }: CaptchaProps) {
           </div>
 
           <div className="space-y-10">
-            {/* Area Puzzle - Kotak / Square */}
+            {/* Area Puzzle - Kotak Sempurna */}
             <div 
-              className="relative mx-auto bg-black border border-white/10 overflow-hidden shadow-2xl rounded-none"
+              className="relative mx-auto bg-black border border-white/10 overflow-hidden shadow-2xl"
               style={{ width: CONTAINER_SIZE, height: CONTAINER_SIZE }}
             >
               <img 
-                src={IMAGE_URL} 
-                className="w-full h-full object-cover grayscale opacity-30" 
+                src={imageUrl} 
+                className="w-full h-full object-cover opacity-100" 
                 alt="Main Captcha"
               />
               
-              {/* Lubang (Target Hole) - Square / Kotak Siku */}
+              {/* Lubang (Target Hole) - Kotak Siku */}
               <div 
-                className="absolute bg-black/90 border border-white/20 z-10 shadow-inner rounded-none"
+                className="absolute bg-black/60 border border-white/40 z-10 shadow-inner"
                 style={{
                   width: PIECE_SIZE,
                   height: PIECE_SIZE,
@@ -134,10 +144,10 @@ export default function Captcha({ onVerify }: CaptchaProps) {
                 }}
               />
 
-              {/* Kepingan (Sliding Piece) - Square / Kotak Siku */}
+              {/* Kepingan (Sliding Piece) - Kotak Siku */}
               <div 
                 className={cn(
-                  "absolute z-20 border-2 border-primary glow-primary overflow-hidden transition-shadow rounded-none",
+                  "absolute z-20 border-2 border-primary glow-primary overflow-hidden transition-shadow",
                   isError && "border-destructive glow-destructive shadow-[0_0_20px_rgba(255,0,0,0.5)]"
                 )}
                 style={{
@@ -148,8 +158,8 @@ export default function Captcha({ onVerify }: CaptchaProps) {
                 }}
               >
                 <img 
-                  src={IMAGE_URL} 
-                  className="absolute max-w-none grayscale-0" 
+                  src={imageUrl} 
+                  className="absolute max-w-none" 
                   style={{
                     width: CONTAINER_SIZE,
                     height: CONTAINER_SIZE,
@@ -163,7 +173,7 @@ export default function Captcha({ onVerify }: CaptchaProps) {
 
             {/* Slider Track */}
             <div className="space-y-6 px-2">
-              <div className="relative h-14 bg-white/5 rounded-none flex items-center px-4 border border-white/10">
+              <div className="relative h-14 bg-white/5 flex items-center px-4 border border-white/10">
                 <Slider
                   value={[sliderValue]}
                   max={CONTAINER_SIZE - PIECE_SIZE}
@@ -186,7 +196,7 @@ export default function Captcha({ onVerify }: CaptchaProps) {
                   onClick={initCaptcha}
                   className="flex items-center gap-2 text-[8px] font-black uppercase text-white/30 hover:text-white transition-colors"
                  >
-                   <RefreshCw size={12} /> Acak Ulang
+                   <RefreshCw size={12} /> Ganti Gambar
                  </button>
                  {isError && <span className="text-[9px] font-black uppercase text-destructive animate-pulse">Verifikasi Gagal</span>}
               </div>
