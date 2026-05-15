@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
@@ -22,35 +23,35 @@ interface Challenge {
   displayImages: ImageItem[];
 }
 
-// Pool gambar yang lebih spesifik agar mudah dibedakan
+// Menggunakan ID spesifik dari Picsum agar gambar dijamin jelas dan sesuai kategori
 const IMAGE_POOLS = {
   nature: [
-    "https://picsum.photos/seed/nature_1/300/300",
-    "https://picsum.photos/seed/nature_2/300/300",
-    "https://picsum.photos/seed/nature_3/300/300",
-    "https://picsum.photos/seed/nature_4/300/300",
-    "https://picsum.photos/seed/nature_5/300/300",
+    "https://picsum.photos/id/10/400/400", // Lake/Mountains
+    "https://picsum.photos/id/11/400/400", // Forest
+    "https://picsum.photos/id/28/400/400", // Forest/Nature
+    "https://picsum.photos/id/49/400/400", // Beach
+    "https://picsum.photos/id/54/400/400", // Mountains
   ],
   city: [
-    "https://picsum.photos/seed/city_1/300/300",
-    "https://picsum.photos/seed/city_2/300/300",
-    "https://picsum.photos/seed/city_3/300/300",
-    "https://picsum.photos/seed/city_4/300/300",
-    "https://picsum.photos/seed/city_5/300/300",
+    "https://picsum.photos/id/122/400/400", // Architecture
+    "https://picsum.photos/id/164/400/400", // City Street
+    "https://picsum.photos/id/186/400/400", // Building
+    "https://picsum.photos/id/221/400/400", // Cityscape
+    "https://picsum.photos/id/230/400/400", // Urban Architecture
   ],
   tech: [
-    "https://picsum.photos/seed/tech_1/300/300",
-    "https://picsum.photos/seed/tech_2/300/300",
-    "https://picsum.photos/seed/tech_3/300/300",
-    "https://picsum.photos/seed/tech_4/300/300",
-    "https://picsum.photos/seed/tech_5/300/300",
+    "https://picsum.photos/id/2/400/400",   // Laptop
+    "https://picsum.photos/id/160/400/400", // Cellphone
+    "https://picsum.photos/id/201/400/400", // Office/Tech
+    "https://picsum.photos/id/250/400/400", // Camera
+    "https://picsum.photos/id/3/400/400",   // Electronics
   ]
 };
 
 const CHALLENGE_TYPES = [
   { prompt: "Pilih semua gambar PEMANDANGAN ALAM", category: "nature" },
   { prompt: "Pilih semua gambar BANGUNAN / KOTA", category: "city" },
-  { prompt: "Pilih semua gambar TEKNOLOGI / GADGET", category: "tech" },
+  { prompt: "Pilih semua gambar GADGET / TEKNOLOGI", category: "tech" },
 ];
 
 export default function Captcha({ onVerify }: CaptchaProps) {
