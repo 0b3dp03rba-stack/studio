@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +11,7 @@ import Link from 'next/link';
 import { useAuth, useFirestore } from '@/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import Captcha from '@/components/Captcha';
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('');
@@ -19,14 +19,21 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isCaptchaVerified, setIsCaptchaVerified] = useState(false);
+  const [mounted, setMounted] = useState(false);
   
   const auth = useAuth();
   const db = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isCaptchaVerified) return;
     
     const cleanUsername = username.toLowerCase().trim().replace(/[^a-z0-9_]/g, '');
     if (cleanUsername.length < 3) {
@@ -79,10 +86,13 @@ export default function RegisterPage() {
         title: "Pendaftaran Gagal", 
         description: error.message 
       });
+      setIsCaptchaVerified(false);
     } finally {
       setIsLoading(false);
     }
   };
+
+  if (!mounted) return null;
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-[#0a0a0a] bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-primary/20 via-background to-background">
@@ -150,10 +160,13 @@ export default function RegisterPage() {
                 className="bg-white/5 border-white/10 h-14 rounded-2xl focus-visible:ring-primary/30"
               />
             </div>
+
+            <Captcha onVerify={setIsCaptchaVerified} />
+
             <Button 
               type="submit" 
-              disabled={isLoading}
-              className="w-full h-16 neon-gradient text-background font-black text-xl glow-primary mt-4 rounded-2xl active:scale-95 transition-all"
+              disabled={isLoading || !isCaptchaVerified}
+              className="w-full h-16 neon-gradient text-background font-black text-xl glow-primary mt-4 rounded-2xl active:scale-95 transition-all disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed"
             >
               {isLoading ? "MENDAFTAR..." : "DAFTAR SEKARANG"}
             </Button>

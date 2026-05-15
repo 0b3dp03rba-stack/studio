@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -11,24 +10,31 @@ import { Link2, Mail, Lock, Check } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth, useUser } from '@/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
+import Captcha from '@/components/Captcha';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isCaptchaVerified, setIsCaptchaVerified] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
   const auth = useAuth();
   const { user, isUserLoading } = useUser();
   const router = useRouter();
   const { toast } = useToast();
 
   useEffect(() => {
+    setMounted(true);
     if (!isUserLoading && user) {
-      router.push('/');
+      router.push('/dashboard');
     }
   }, [user, isUserLoading, router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isCaptchaVerified) return;
+    
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
@@ -39,16 +45,18 @@ export default function LoginPage() {
         title: "Login Gagal", 
         description: "Email atau password salah."
       });
+      // Reset captcha on failure for extra security
+      setIsCaptchaVerified(false);
     } finally {
       setIsLoading(false);
     }
   };
 
-  if (isUserLoading) return null;
+  if (!mounted || isUserLoading) return null;
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-[#0a0a0a] bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-primary/20 via-background to-background">
-      <Card className="w-full max-w-md glass-card border-white/5 shadow-2xl overflow-hidden">
+      <Card className="w-full max-w-md glass-card border-white/5 shadow-2xl overflow-hidden relative">
         <div className="absolute top-0 left-0 w-full h-1 neon-gradient"></div>
         <CardHeader className="text-center space-y-4 pt-12">
           <div className="mx-auto w-24 h-24 bg-black rounded-[2.5rem] flex items-center justify-center border border-white/10 shadow-2xl relative group">
@@ -94,10 +102,13 @@ export default function LoginPage() {
                 />
               </div>
             </div>
+
+            <Captcha onVerify={setIsCaptchaVerified} />
+
             <Button 
               type="submit" 
-              disabled={isLoading}
-              className="w-full h-16 neon-gradient text-background font-black text-xl glow-primary mt-4 rounded-2xl active:scale-95 transition-all shadow-2xl"
+              disabled={isLoading || !isCaptchaVerified}
+              className="w-full h-16 neon-gradient text-background font-black text-xl glow-primary mt-4 rounded-2xl active:scale-95 transition-all shadow-2xl disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed"
             >
               {isLoading ? "MENGOTENTIKASI..." : "MASUK SEKARANG"}
             </Button>
