@@ -166,7 +166,7 @@ export default function RegisterPage() {
             <Button 
               type="submit" 
               disabled={isLoading || !isCaptchaVerified}
-              className="w-full h-16 neon-gradient text-background font-black text-xl glow-primary mt-4 rounded-2xl active:scale-95 transition-all disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed"
+              className="w-full h-16 neon-gradient text-background font-black rounded-2xl glow-primary mt-4 active:scale-95 transition-all disabled:opacity-50 uppercase text-[10px] tracking-widest"
             >
               {isLoading ? "MENDAFTAR..." : "DAFTAR SEKARANG"}
             </Button>
