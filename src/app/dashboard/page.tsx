@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { MousePointer2, Eye, Star, TrendingUp, Sparkles, LayoutGrid } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, orderBy, setDoc, doc, serverTimestamp, limit, onSnapshot } from 'firebase/firestore';
+import { collection, query, orderBy, setDoc, doc, serverTimestamp, increment, onSnapshot } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Bar, BarChart, XAxis, ResponsiveContainer, Cell, Tooltip } from 'recharts';
 
@@ -22,6 +22,7 @@ export default function DashboardPage() {
   const [allLinks, setAllLinks] = useState<any[]>([]);
   const [mounted, setMounted] = useState(false);
 
+  // Solution 1: useEffect to solve hydration mismatch
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -107,10 +108,11 @@ export default function DashboardPage() {
     }
   };
 
+  // Prevent hydration error by returning null or a loading state until mounted
   if (!mounted) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-4">
-        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-none animate-spin"></div>
         <p className="text-[10px] font-black uppercase tracking-widest text-primary/50">Mempersiapkan Lab...</p>
       </div>
     );
@@ -124,10 +126,10 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <Card className="glass-card border-none rounded-[2rem] p-5 shadow-2xl relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-primary/10 rounded-full -mr-8 -mt-8 blur-2xl group-hover:bg-primary/20 transition-colors" />
+        <Card className="glass-card border-none rounded-none p-5 shadow-2xl relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-primary/10 rounded-none -mr-8 -mt-8 blur-2xl group-hover:bg-primary/20 transition-colors" />
           <CardContent className="p-0 space-y-3 relative z-10">
-            <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary glow-primary">
+            <div className="w-10 h-10 rounded-none bg-primary/20 flex items-center justify-center text-primary glow-primary">
               <MousePointer2 size={20} />
             </div>
             <div>
@@ -136,10 +138,10 @@ export default function DashboardPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="glass-card border-none rounded-[2rem] p-5 shadow-2xl relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-secondary/10 rounded-full -mr-8 -mt-8 blur-2xl group-hover:bg-secondary/20 transition-colors" />
+        <Card className="glass-card border-none rounded-none p-5 shadow-2xl relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-secondary/10 rounded-none -mr-8 -mt-8 blur-2xl group-hover:bg-secondary/20 transition-colors" />
           <CardContent className="p-0 space-y-3 relative z-10">
-            <div className="w-10 h-10 rounded-xl bg-secondary/20 flex items-center justify-center text-secondary">
+            <div className="w-10 h-10 rounded-none bg-secondary/20 flex items-center justify-center text-secondary">
               <Eye size={20} />
             </div>
             <div>
@@ -150,10 +152,10 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <Card className="glass-card border-none rounded-[2.5rem] p-6 shadow-2xl space-y-6">
+      <Card className="glass-card border-none rounded-none p-6 shadow-2xl space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-             <div className="w-8 h-8 rounded-lg neon-gradient flex items-center justify-center text-background">
+             <div className="w-8 h-8 rounded-none neon-gradient flex items-center justify-center text-background">
                <TrendingUp size={16} />
              </div>
              <h3 className="font-black text-xs uppercase tracking-widest">Top Performers (Clicks)</h3>
@@ -175,7 +177,7 @@ export default function DashboardPage() {
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
                       return (
-                        <div className="bg-black/90 border border-white/10 p-2 rounded-lg backdrop-blur-xl">
+                        <div className="bg-black/90 border border-white/10 p-2 rounded-none backdrop-blur-xl">
                           <p className="text-[10px] font-black text-white uppercase">{payload[0].payload.fullTitle}</p>
                           <p className="text-xs font-bold text-primary">{payload[0].value} Klik</p>
                         </div>
@@ -184,7 +186,7 @@ export default function DashboardPage() {
                     return null;
                   }}
                 />
-                <Bar dataKey="clicks" radius={[6, 6, 0, 0]} strokeWidth={1} stroke="rgba(255,255,255,0.1)">
+                <Bar dataKey="clicks" radius={[0, 0, 0, 0]} strokeWidth={1} stroke="rgba(255,255,255,0.1)">
                   {topPerformers.map((entry, index) => (
                     <Cell 
                       key={`cell-${index}`} 
@@ -208,7 +210,7 @@ export default function DashboardPage() {
           <Sparkles size={16} className="text-primary" /> Community Love
         </h3>
         
-        <Card className="glass-card border-none rounded-[2.5rem] p-6 shadow-2xl text-left">
+        <Card className="glass-card border-none rounded-none p-6 shadow-2xl text-left">
           <CardContent className="p-0 space-y-5">
             <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase tracking-widest">
               <Star size={16} />
@@ -225,9 +227,9 @@ export default function DashboardPage() {
               placeholder="Berikan ulasan jujur Anda..." 
               value={comment} 
               onChange={(e) => setComment(e.target.value)}
-              className="bg-white/5 border-white/5 h-28 rounded-2xl p-4 text-xs font-medium leading-relaxed border-none focus-visible:ring-primary/20"
+              className="bg-white/5 border-white/5 h-28 rounded-none p-4 text-xs font-medium leading-relaxed border-none focus-visible:ring-primary/20"
             />
-            <Button onClick={handleSaveRating} disabled={isRatingSaving || rating === 0 || !comment} className="w-full h-14 neon-gradient text-background font-black rounded-2xl glow-primary uppercase text-[10px] tracking-widest">
+            <Button onClick={handleSaveRating} disabled={isRatingSaving || rating === 0 || !comment} className="w-full h-14 neon-gradient text-background font-black rounded-none glow-primary uppercase text-[10px] tracking-widest">
               {isRatingSaving ? "MEMPROSES..." : (userReview ? "PERBARUI ULASAN" : "KIRIM TESTIMONI")}
             </Button>
           </CardContent>
