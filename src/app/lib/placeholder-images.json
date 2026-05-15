@@ -1,0 +1,29 @@
+
+{
+  "placeholderImages": [
+    {
+      "id": "waifu-1",
+      "description": "Anime Aesthetic Girl 1",
+      "imageUrl": "https://picsum.photos/seed/waifu1/600/600",
+      "imageHint": "anime girl"
+    },
+    {
+      "id": "waifu-2",
+      "description": "Anime Aesthetic Girl 2",
+      "imageUrl": "https://picsum.photos/seed/waifu2/600/600",
+      "imageHint": "anime waifu"
+    },
+    {
+      "id": "waifu-3",
+      "description": "Anime Aesthetic Girl 3",
+      "imageUrl": "https://picsum.photos/seed/waifu3/600/600",
+      "imageHint": "manga style"
+    },
+    {
+      "id": "waifu-4",
+      "description": "Anime Aesthetic Girl 4",
+      "imageUrl": "https://picsum.photos/seed/waifu4/600/600",
+      "imageHint": "cyberpunk anime"
+    }
+  ]
+}

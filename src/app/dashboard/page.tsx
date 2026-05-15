@@ -22,7 +22,7 @@ export default function DashboardPage() {
   const [allLinks, setAllLinks] = useState<any[]>([]);
   const [mounted, setMounted] = useState(false);
 
-  // Solution 1: useEffect to solve hydration mismatch
+  // Solusi Hydration: useEffect memastikan render di client baru menampilkan data dinamis
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -108,12 +108,11 @@ export default function DashboardPage() {
     }
   };
 
-  // Prevent hydration error by returning null or a loading state until mounted
   if (!mounted) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-4">
         <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-none animate-spin"></div>
-        <p className="text-[10px] font-black uppercase tracking-widest text-primary/50">Mempersiapkan Lab...</p>
+        <p className="text-[10px] font-black uppercase tracking-widest text-primary/50">Sinkronisasi Hub...</p>
       </div>
     );
   }

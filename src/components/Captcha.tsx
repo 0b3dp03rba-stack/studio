@@ -10,12 +10,6 @@ interface CaptchaProps {
   onVerify: (isValid: boolean) => void;
 }
 
-// Daftar keyword anime aesthetic untuk Unsplash
-const ANIME_SEEDS = [
-  'anime-girl', 'waifu', 'manga-art', 'cyberpunk-anime', 'vocaloid', 
-  'anime-style', 'kawaii-aesthetic', 'j-pop-aesthetic', 'anime-portrait'
-];
-
 const PIECE_SIZE = 60; // Ukuran kotak puzzle
 const CONTAINER_SIZE = 280; // Ukuran bingkai utama
 
@@ -24,19 +18,19 @@ export default function Captcha({ onVerify }: CaptchaProps) {
   const [isVerified, setIsVerified] = useState(false);
   const [mounted, setMounted] = useState(false);
   
-  // Captcha Logic States
   const [currentPos, setCurrentPos] = useState({ x: 0, y: 0 });
   const [targetPos, setTargetPos] = useState({ x: 0, y: 0 });
-  const [currentSeed, setCurrentSeed] = useState('');
+  const [currentImageId, setCurrentImageId] = useState(1);
   const [isError, setIsError] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   
   const containerRef = useRef<HTMLDivElement>(null);
 
   const initCaptcha = () => {
-    // 1. Pilih Seed Gambar Acak (Waifu Style)
-    const randomSeed = ANIME_SEEDS[Math.floor(Math.random() * ANIME_SEEDS.length)] + '-' + Math.floor(Math.random() * 1000);
-    setCurrentSeed(randomSeed);
+    // 1. Pilih ID Gambar Acak (Picsum ID yang cerah)
+    const validIds = [10, 11, 28, 49, 54, 103, 111, 133, 145, 152, 160, 180, 200, 211, 237, 250, 260, 280, 300, 350];
+    const randomId = validIds[Math.floor(Math.random() * validIds.length)];
+    setCurrentImageId(randomId);
 
     // 2. Tentukan posisi target acak (X dan Y)
     const tx = Math.floor(Math.random() * (CONTAINER_SIZE - PIECE_SIZE - 40)) + 20;
@@ -49,9 +43,8 @@ export default function Captcha({ onVerify }: CaptchaProps) {
     do {
       sx = Math.floor(Math.random() * (CONTAINER_SIZE - PIECE_SIZE));
       sy = Math.floor(Math.random() * (CONTAINER_SIZE - PIECE_SIZE));
-      // Hitung jarak Euclidean sederhana
       distance = Math.sqrt(Math.pow(sx - tx, 2) + Math.pow(sy - ty, 2));
-    } while (distance < 100); // Pastikan jarak minimal 100px agar tidak langsung menang
+    } while (distance < 120); // Jarak minimal 120px
 
     setCurrentPos({ x: sx, y: sy });
     setIsError(false);
@@ -75,7 +68,6 @@ export default function Captcha({ onVerify }: CaptchaProps) {
     let x = e.clientX - rect.left - PIECE_SIZE / 2;
     let y = e.clientY - rect.top - PIECE_SIZE / 2;
 
-    // Boundary constraints
     x = Math.max(0, Math.min(x, CONTAINER_SIZE - PIECE_SIZE));
     y = Math.max(0, Math.min(y, CONTAINER_SIZE - PIECE_SIZE));
 
@@ -86,12 +78,11 @@ export default function Captcha({ onVerify }: CaptchaProps) {
     if (!isDragging) return;
     setIsDragging(false);
 
-    const tolerance = 10; // Toleransi pixel X dan Y untuk akurasi manusia
+    const tolerance = 12; // Toleransi pixel X dan Y
     const diffX = Math.abs(currentPos.x - targetPos.x);
     const diffY = Math.abs(currentPos.y - targetPos.y);
     
     if (diffX < tolerance && diffY < tolerance) {
-      // Snap to target
       setCurrentPos(targetPos);
       setIsVerified(true);
       onVerify(true);
@@ -104,8 +95,8 @@ export default function Captcha({ onVerify }: CaptchaProps) {
     }
   };
 
-  // Menggunakan Unsplash Source dengan data-ai-hint untuk SEO gambar
-  const imageUrl = `https://images.unsplash.com/featured/600x600?${currentSeed}`;
+  // Menggunakan URL Picsum yang sangat stabil
+  const imageUrl = `https://picsum.photos/id/${currentImageId}/600/600`;
 
   if (!mounted) return null;
 
@@ -159,19 +150,19 @@ export default function Captcha({ onVerify }: CaptchaProps) {
           <div className="space-y-8">
             <div 
               ref={containerRef}
-              className="relative mx-auto bg-black border border-white/10 overflow-hidden shadow-2xl cursor-crosshair select-none"
+              className="relative mx-auto bg-black border border-white/10 overflow-hidden shadow-2xl cursor-crosshair select-none rounded-none"
               style={{ width: CONTAINER_SIZE, height: CONTAINER_SIZE }}
             >
               <img 
                 src={imageUrl} 
-                className="w-full h-full object-cover opacity-100" 
+                className="w-full h-full object-cover opacity-100 rounded-none" 
                 alt="Verification Source"
-                data-ai-hint="anime waifu"
+                data-ai-hint="waifu anime"
               />
               
               {/* Target Shadow (Hole) - Kotak Siku */}
               <div 
-                className="absolute bg-black/60 border border-white/30 z-10"
+                className="absolute bg-black/70 border border-white/40 z-10 rounded-none"
                 style={{
                   width: PIECE_SIZE,
                   height: PIECE_SIZE,
@@ -179,11 +170,10 @@ export default function Captcha({ onVerify }: CaptchaProps) {
                   top: targetPos.y,
                 }}
               >
-                {/* Preview pudar di dalam lubang sebagai petunjuk */}
-                <div className="w-full h-full overflow-hidden opacity-20">
+                <div className="w-full h-full overflow-hidden opacity-30">
                   <img 
                     src={imageUrl} 
-                    className="absolute max-w-none" 
+                    className="absolute max-w-none rounded-none" 
                     style={{
                       width: CONTAINER_SIZE,
                       height: CONTAINER_SIZE,
@@ -201,7 +191,7 @@ export default function Captcha({ onVerify }: CaptchaProps) {
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
                 className={cn(
-                  "absolute z-30 border-2 border-primary glow-primary overflow-hidden transition-shadow touch-none cursor-grab active:cursor-grabbing",
+                  "absolute z-30 border-2 border-primary glow-primary overflow-hidden transition-shadow touch-none cursor-grab active:cursor-grabbing rounded-none",
                   isDragging && "scale-105 shadow-[0_0_30px_rgba(255,0,0,0.6)]",
                   isError && "border-destructive glow-destructive",
                   isVerified && "border-green-500 glow-none"
@@ -215,7 +205,7 @@ export default function Captcha({ onVerify }: CaptchaProps) {
               >
                 <img 
                   src={imageUrl} 
-                  className="absolute max-w-none pointer-events-none" 
+                  className="absolute max-w-none pointer-events-none rounded-none" 
                   style={{
                     width: CONTAINER_SIZE,
                     height: CONTAINER_SIZE,

@@ -45,7 +45,7 @@ let memoryState: State = { toasts: [] }
 export const reducer = (state: State, action: Action): State => {
   switch (action.type) {
     case "ADD_TOAST":
-      // ATURAN MUTLAK: HANYA IZINKAN 1 TOAST DI LAYAR (Mencegah Spam)
+      // ATURAN MUTLAK: HANYA IZINKAN 1 TOAST DI LAYAR (Mencegah Spam & Hydration Spam)
       return {
         ...state,
         toasts: [action.toast],
@@ -82,7 +82,7 @@ function dispatch(action: Action) {
 }
 
 function toast({ title, description, ...props }: Omit<ToasterToast, "id">) {
-  // Jika sudah ada toast yang terbuka, abaikan permintaan baru
+  // Jika sudah ada toast yang terbuka, abaikan permintaan baru untuk mencegah banjir notifikasi
   const isAnyToastOpen = memoryState.toasts.some(t => t.open === true)
   if (isAnyToastOpen) {
     return { id: "busy", dismiss: () => {}, update: () => {} }
