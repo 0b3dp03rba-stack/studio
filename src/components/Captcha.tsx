@@ -23,28 +23,28 @@ interface Challenge {
   displayImages: ImageItem[];
 }
 
-// Menggunakan ID spesifik dari Picsum agar gambar dijamin jelas dan sesuai kategori
+// Koleksi ID Picsum yang sudah diverifikasi isinya per kategori
 const IMAGE_POOLS = {
   nature: [
     "https://picsum.photos/id/10/400/400", // Lake/Mountains
     "https://picsum.photos/id/11/400/400", // Forest
-    "https://picsum.photos/id/28/400/400", // Forest/Nature
+    "https://picsum.photos/id/28/400/400", // Forest Path
     "https://picsum.photos/id/49/400/400", // Beach
     "https://picsum.photos/id/54/400/400", // Mountains
   ],
   city: [
-    "https://picsum.photos/id/122/400/400", // Architecture
+    "https://picsum.photos/id/122/400/400", // Modern Building
     "https://picsum.photos/id/164/400/400", // City Street
-    "https://picsum.photos/id/186/400/400", // Building
-    "https://picsum.photos/id/221/400/400", // Cityscape
+    "https://picsum.photos/id/186/400/400", // Building Facade
+    "https://picsum.photos/id/221/400/400", // City Skyline
     "https://picsum.photos/id/230/400/400", // Urban Architecture
   ],
   tech: [
     "https://picsum.photos/id/2/400/400",   // Laptop
-    "https://picsum.photos/id/160/400/400", // Cellphone
-    "https://picsum.photos/id/201/400/400", // Office/Tech
+    "https://picsum.photos/id/3/400/400",   // Electronics/Keys
+    "https://picsum.photos/id/160/400/400", // Smartphone
+    "https://picsum.photos/id/201/400/400", // Office Setup
     "https://picsum.photos/id/250/400/400", // Camera
-    "https://picsum.photos/id/3/400/400",   // Electronics
   ]
 };
 
@@ -108,10 +108,12 @@ export default function Captcha({ onVerify }: CaptchaProps) {
   const handleVerify = () => {
     if (!challenge) return;
     
+    // Cari index mana saja yang seharusnya benar
     const correctIndices = challenge.displayImages
       .map((img, idx) => img.isMatch ? idx : -1)
       .filter(idx => idx !== -1);
     
+    // Cek apakah pilihan user sama persis dengan index yang benar
     const isCorrect = 
       selectedIndices.length === correctIndices.length && 
       selectedIndices.every(idx => correctIndices.includes(idx));
@@ -121,6 +123,7 @@ export default function Captcha({ onVerify }: CaptchaProps) {
       onVerify(true);
       setIsOpen(false);
     } else {
+      // Jika salah, acak ulang segera
       generateChallenge();
       setSelectedIndices([]);
     }
@@ -139,12 +142,12 @@ export default function Captcha({ onVerify }: CaptchaProps) {
              {isVerified ? <Check size={24} strokeWidth={3} /> : <ShieldCheck size={24} />}
            </div>
            <div className="text-left">
-              <p className="text-[10px] font-black uppercase tracking-widest text-white/40 leading-none mb-1">Keamanan Sesi</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-white/40 leading-none mb-1">Keamanan Linku</p>
               <p className={cn(
                 "text-xs font-black uppercase tracking-tighter",
                 isVerified ? "text-green-500" : "text-white"
               )}>
-                {isVerified ? "Identitas Terverifikasi" : "Verifikasi Manusia Wajib"}
+                {isVerified ? "Manusia Terverifikasi" : "Verifikasi Gambar Wajib"}
               </p>
            </div>
         </div>
@@ -159,7 +162,7 @@ export default function Captcha({ onVerify }: CaptchaProps) {
           </Button>
         ) : (
           <div className="text-[8px] font-black uppercase text-green-500/50 tracking-[0.3em]">
-             Sesi Aman & Terlindungi
+             Sesi Terlindungi dari Bot
           </div>
         )}
       </div>
@@ -213,7 +216,7 @@ export default function Captcha({ onVerify }: CaptchaProps) {
                onClick={generateChallenge}
                className="text-[9px] font-black uppercase tracking-widest text-white/30 hover:text-white"
              >
-               <RefreshCw size={12} className="mr-2" /> Segarkan Gambar
+               <RefreshCw size={12} className="mr-2" /> Ganti Gambar
              </Button>
           </DialogFooter>
         </DialogContent>
