@@ -22,27 +22,28 @@ interface Challenge {
   displayImages: ImageItem[];
 }
 
+// Pool gambar yang lebih spesifik agar mudah dibedakan
 const IMAGE_POOLS = {
   nature: [
-    "https://picsum.photos/seed/nat1/150/150",
-    "https://picsum.photos/seed/nat2/150/150",
-    "https://picsum.photos/seed/nat3/150/150",
-    "https://picsum.photos/seed/nat4/150/150",
-    "https://picsum.photos/seed/nat5/150/150",
+    "https://picsum.photos/seed/nature_1/300/300",
+    "https://picsum.photos/seed/nature_2/300/300",
+    "https://picsum.photos/seed/nature_3/300/300",
+    "https://picsum.photos/seed/nature_4/300/300",
+    "https://picsum.photos/seed/nature_5/300/300",
   ],
   city: [
-    "https://picsum.photos/seed/cit1/150/150",
-    "https://picsum.photos/seed/cit2/150/150",
-    "https://picsum.photos/seed/cit3/150/150",
-    "https://picsum.photos/seed/cit4/150/150",
-    "https://picsum.photos/seed/cit5/150/150",
+    "https://picsum.photos/seed/city_1/300/300",
+    "https://picsum.photos/seed/city_2/300/300",
+    "https://picsum.photos/seed/city_3/300/300",
+    "https://picsum.photos/seed/city_4/300/300",
+    "https://picsum.photos/seed/city_5/300/300",
   ],
   tech: [
-    "https://picsum.photos/seed/tec1/150/150",
-    "https://picsum.photos/seed/tec2/150/150",
-    "https://picsum.photos/seed/tec3/150/150",
-    "https://picsum.photos/seed/tec4/150/150",
-    "https://picsum.photos/seed/tec5/150/150",
+    "https://picsum.photos/seed/tech_1/300/300",
+    "https://picsum.photos/seed/tech_2/300/300",
+    "https://picsum.photos/seed/tech_3/300/300",
+    "https://picsum.photos/seed/tech_4/300/300",
+    "https://picsum.photos/seed/tech_5/300/300",
   ]
 };
 
@@ -67,7 +68,7 @@ export default function Captcha({ onVerify }: CaptchaProps) {
     const correctPool = [...IMAGE_POOLS[type.category as keyof typeof IMAGE_POOLS]]
       .sort(() => Math.random() - 0.5)
       .slice(0, 3)
-      .map((url, i) => ({ url, isMatch: true, id: `correct-${i}` }));
+      .map((url, i) => ({ url, isMatch: true, id: `correct-${i}-${Date.now()}` }));
 
     // 3. Ambil tepat 6 gambar salah dari pool kategori lain
     const otherCategories = Object.keys(IMAGE_POOLS).filter(c => c !== type.category);
@@ -79,7 +80,7 @@ export default function Captcha({ onVerify }: CaptchaProps) {
     const incorrectPool = incorrectPoolRaw
       .sort(() => Math.random() - 0.5)
       .slice(0, 6)
-      .map((url, i) => ({ url, isMatch: false, id: `incorrect-${i}` }));
+      .map((url, i) => ({ url, isMatch: false, id: `incorrect-${i}-${Date.now()}` }));
 
     // 4. Gabungkan dan kocok (Shuffle)
     const displayImages = [...correctPool, ...incorrectPool].sort(() => Math.random() - 0.5);
@@ -120,7 +121,6 @@ export default function Captcha({ onVerify }: CaptchaProps) {
       setIsOpen(false);
     } else {
       generateChallenge();
-      // Reset seleksi karena salah
       setSelectedIndices([]);
     }
   };
@@ -184,7 +184,7 @@ export default function Captcha({ onVerify }: CaptchaProps) {
                 onClick={() => toggleSelection(idx)}
                 className={cn(
                   "aspect-square rounded-xl overflow-hidden border-4 transition-all relative group",
-                  selectedIndices.includes(idx) ? "border-primary scale-95" : "border-transparent"
+                  selectedIndices.includes(idx) ? "border-primary scale-95 shadow-[0_0_15px_rgba(255,0,0,0.5)]" : "border-transparent"
                 )}
               >
                 <img src={img.url} className="w-full h-full object-cover" alt="Challenge item" />
