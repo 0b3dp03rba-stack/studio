@@ -22,27 +22,31 @@ export default function Captcha({ onVerify }: CaptchaProps) {
   const [currentPos, setCurrentPos] = useState({ x: 0, y: 0 });
   const [targetPos, setTargetPos] = useState({ x: 0, y: 0 });
   const [currentImageUrl, setCurrentImageUrl] = useState('');
+  const [currentImageHint, setCurrentImageHint] = useState('');
   const [isError, setIsError] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   
   const containerRef = useRef<HTMLDivElement>(null);
 
   const initCaptcha = () => {
-    // 1. Pilih Gambar Waifu dari Koleksi Terverifikasi
+    // 1. Pilih Gambar Waifu dari Koleksi Terverifikasi (Daftar 20 Waifu)
     const waifus = PlaceHolderImages.length > 0 
       ? PlaceHolderImages 
-      : [{ imageUrl: 'https://picsum.photos/id/1027/600/600' }];
+      : [{ id: 'fallback', description: 'Anime Girl', imageUrl: 'https://picsum.photos/seed/anime/600/600', imageHint: 'anime girl' }];
+    
     const randomWaifu = waifus[Math.floor(Math.random() * waifus.length)];
     setCurrentImageUrl(randomWaifu.imageUrl);
+    setCurrentImageHint(randomWaifu.imageHint);
 
     // 2. Tentukan posisi target acak (X dan Y)
     const tx = Math.floor(Math.random() * (CONTAINER_SIZE - PIECE_SIZE - 40)) + 20;
     const ty = Math.floor(Math.random() * (CONTAINER_SIZE - PIECE_SIZE - 100)) + 20;
     setTargetPos({ x: tx, y: ty });
 
-    // 3. Tentukan posisi AWAL acak (X dan Y) - Harus jauh dari target
+    // 3. Tentukan posisi AWAL acak (X dan Y) - Tantangan 2D Drag (Saran Tripodencok)
     let sx, sy;
     let distance = 0;
+    // Mencari posisi awal yang cukup jauh dari target agar tidak terlalu mudah
     do {
       sx = Math.floor(Math.random() * (CONTAINER_SIZE - PIECE_SIZE));
       sy = Math.floor(Math.random() * (CONTAINER_SIZE - PIECE_SIZE));
@@ -71,7 +75,7 @@ export default function Captcha({ onVerify }: CaptchaProps) {
     let x = e.clientX - rect.left - PIECE_SIZE / 2;
     let y = e.clientY - rect.top - PIECE_SIZE / 2;
 
-    // Batasan agar kepingan tidak keluar dari bingkai
+    // Batasan agar kepingan tidak keluar dari bingkai (Square Design)
     x = Math.max(0, Math.min(x, CONTAINER_SIZE - PIECE_SIZE));
     y = Math.max(0, Math.min(y, CONTAINER_SIZE - PIECE_SIZE));
 
@@ -82,7 +86,8 @@ export default function Captcha({ onVerify }: CaptchaProps) {
     if (!isDragging) return;
     setIsDragging(false);
 
-    const tolerance = 12; // Toleransi pixel X dan Y untuk tingkat keamanan tinggi
+    // Toleransi pixel X dan Y untuk verifikasi 2D (Tingkat keamanan tinggi)
+    const tolerance = 12; 
     const diffX = Math.abs(currentPos.x - targetPos.x);
     const diffY = Math.abs(currentPos.y - targetPos.y);
     
@@ -93,6 +98,7 @@ export default function Captcha({ onVerify }: CaptchaProps) {
       setTimeout(() => setIsOpen(false), 800);
     } else {
       setIsError(true);
+      // Reset tantangan jika gagal untuk mencegah bot mencoba-coba
       setTimeout(() => {
         initCaptcha();
       }, 1000);
@@ -158,7 +164,7 @@ export default function Captcha({ onVerify }: CaptchaProps) {
                 src={currentImageUrl} 
                 className="w-full h-full object-cover opacity-100 rounded-none" 
                 alt="Verification Source"
-                data-ai-hint="waifu anime"
+                data-ai-hint={currentImageHint}
               />
               
               {/* Target Shadow (Hole) - Kotak Siku */}
@@ -182,6 +188,7 @@ export default function Captcha({ onVerify }: CaptchaProps) {
                       top: -targetPos.y,
                     }}
                     alt="Ghost Hint"
+                    data-ai-hint={currentImageHint}
                   />
                 </div>
               </div>
@@ -214,6 +221,7 @@ export default function Captcha({ onVerify }: CaptchaProps) {
                     top: -targetPos.y,
                   }}
                   alt="Draggable Piece"
+                  data-ai-hint={currentImageHint}
                 />
               </div>
             </div>

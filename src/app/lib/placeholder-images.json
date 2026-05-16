@@ -1,47 +1,25 @@
 
 {
   "placeholderImages": [
-    {
-      "id": "waifu-1",
-      "description": "Anime Waifu 1",
-      "imageUrl": "https://picsum.photos/id/1027/600/600",
-      "imageHint": "anime waifu"
-    },
-    {
-      "id": "waifu-2",
-      "description": "Anime Waifu 2",
-      "imageUrl": "https://picsum.photos/id/1025/600/600",
-      "imageHint": "anime girl"
-    },
-    {
-      "id": "waifu-3",
-      "description": "Anime Waifu 3",
-      "imageUrl": "https://picsum.photos/id/1035/600/600",
-      "imageHint": "waifu aesthetic"
-    },
-    {
-      "id": "waifu-4",
-      "description": "Anime Waifu 4",
-      "imageUrl": "https://picsum.photos/id/1042/600/600",
-      "imageHint": "anime character"
-    },
-    {
-      "id": "waifu-5",
-      "description": "Anime Waifu 5",
-      "imageUrl": "https://picsum.photos/id/1062/600/600",
-      "imageHint": "manga waifu"
-    },
-    {
-      "id": "waifu-6",
-      "description": "Anime Waifu 6",
-      "imageUrl": "https://picsum.photos/id/1074/600/600",
-      "imageHint": "cyberpunk anime"
-    },
-    {
-      "id": "waifu-7",
-      "description": "Anime Waifu 7",
-      "imageUrl": "https://picsum.photos/id/1084/600/600",
-      "imageHint": "anime portrait"
-    }
+    { "id": "w1", "description": "Nakano Miku", "imageUrl": "https://picsum.photos/seed/miku/600/600", "imageHint": "nakano miku" },
+    { "id": "w2", "description": "Alya", "imageUrl": "https://picsum.photos/seed/alya/600/600", "imageHint": "alya anime" },
+    { "id": "w3", "description": "Hoshino Ai", "imageUrl": "https://picsum.photos/seed/hoshino/600/600", "imageHint": "hoshino ai" },
+    { "id": "w4", "description": "Rem ReZero", "imageUrl": "https://picsum.photos/seed/rem/600/600", "imageHint": "rem rezero" },
+    { "id": "w5", "description": "Emilia ReZero", "imageUrl": "https://picsum.photos/seed/emilia/600/600", "imageHint": "emilia anime" },
+    { "id": "w6", "description": "Zero Two", "imageUrl": "https://picsum.photos/seed/zerotwo/600/600", "imageHint": "zero two" },
+    { "id": "w7", "description": "Megumin", "imageUrl": "https://picsum.photos/seed/megumin/600/600", "imageHint": "megumin anime" },
+    { "id": "w8", "description": "Aqua Konosuba", "imageUrl": "https://picsum.photos/seed/aqua/600/600", "imageHint": "aqua anime" },
+    { "id": "w9", "description": "Makima", "imageUrl": "https://picsum.photos/seed/makima/600/600", "imageHint": "makima anime" },
+    { "id": "w10", "description": "Power Chainsaw", "imageUrl": "https://picsum.photos/seed/power/600/600", "imageHint": "power anime" },
+    { "id": "w11", "description": "Kaguya Shinomiya", "imageUrl": "https://picsum.photos/seed/kaguya/600/600", "imageHint": "kaguya anime" },
+    { "id": "w12", "description": "Chika Fujiwara", "imageUrl": "https://picsum.photos/seed/chika/600/600", "imageHint": "chika fujiwara" },
+    { "id": "w13", "description": "Marin Kitagawa", "imageUrl": "https://picsum.photos/seed/marin/600/600", "imageHint": "marin kitagawa" },
+    { "id": "w14", "description": "Yor Forger", "imageUrl": "https://picsum.photos/seed/yor/600/600", "imageHint": "yor forger" },
+    { "id": "w15", "description": "Anya Forger", "imageUrl": "https://picsum.photos/seed/anya/600/600", "imageHint": "anya anime" },
+    { "id": "w16", "description": "Mikasa Ackerman", "imageUrl": "https://picsum.photos/seed/mikasa/600/600", "imageHint": "mikasa anime" },
+    { "id": "w17", "description": "Violet Evergarden", "imageUrl": "https://picsum.photos/seed/violet/600/600", "imageHint": "violet evergarden" },
+    { "id": "w18", "description": "Raphtalia", "imageUrl": "https://picsum.photos/seed/raphtalia/600/600", "imageHint": "raphtalia anime" },
+    { "id": "w19", "description": "Nezuko Kamado", "imageUrl": "https://picsum.photos/seed/nezuko/600/600", "imageHint": "nezuko anime" },
+    { "id": "w20", "description": "Asuna Yuuki", "imageUrl": "https://picsum.photos/seed/asuna/600/600", "imageHint": "asuna anime" }
   ]
 }
