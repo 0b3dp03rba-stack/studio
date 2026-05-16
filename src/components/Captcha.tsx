@@ -32,7 +32,7 @@ export default function Captcha({ onVerify }: CaptchaProps) {
     // 1. Pilih Gambar Waifu Anime HD
     const waifus = PlaceHolderImages.length > 0 
       ? PlaceHolderImages 
-      : [{ id: 'fallback', description: 'Anime Girl', imageUrl: 'https://picsum.photos/seed/anime-girl/600/600', imageHint: 'anime girl' }];
+      : [{ id: 'fallback', description: 'Anime Girl', imageUrl: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=600&h=600&fit=crop', imageHint: 'anime girl' }];
     
     const randomWaifu = waifus[Math.floor(Math.random() * waifus.length)];
     setCurrentImageUrl(randomWaifu.imageUrl);
