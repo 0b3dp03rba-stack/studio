@@ -112,7 +112,7 @@ export default function DashboardPage() {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-4">
         <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-none animate-spin"></div>
-        <p className="text-[10px] font-black uppercase tracking-widest text-primary/50">Sinkronisasi Hub...</p>
+        <p className="text-[10px] font-black uppercase tracking-widest text-primary/50">Syncing Hub...</p>
       </div>
     );
   }
@@ -121,7 +121,7 @@ export default function DashboardPage() {
     <div className="space-y-8 animate-in pb-12">
       <div className="space-y-1">
         <h1 className="text-4xl font-black tracking-tighter text-white uppercase">Overview</h1>
-        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/70">Ringkasan Performa Real-time</p>
+        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/70">Real-time Performance</p>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -133,7 +133,7 @@ export default function DashboardPage() {
             </div>
             <div>
               <p className="text-3xl font-black tracking-tighter">{totalClicks}</p>
-              <p className="text-[8px] font-black uppercase text-white/40 tracking-widest">Total Klik Link</p>
+              <p className="text-[8px] font-black uppercase text-white/40 tracking-widest">Total Link Clicks</p>
             </div>
           </CardContent>
         </Card>
@@ -145,7 +145,7 @@ export default function DashboardPage() {
             </div>
             <div>
               <p className="text-3xl font-black tracking-tighter">{profile?.views || 0}</p>
-              <p className="text-[8px] font-black uppercase text-white/40 tracking-widest">Kunjungan Profil</p>
+              <p className="text-[8px] font-black uppercase text-white/40 tracking-widest">Profile Views</p>
             </div>
           </CardContent>
         </Card>
@@ -178,7 +178,7 @@ export default function DashboardPage() {
                       return (
                         <div className="bg-black/90 border border-white/10 p-2 rounded-none backdrop-blur-xl">
                           <p className="text-[10px] font-black text-white uppercase">{payload[0].payload.fullTitle}</p>
-                          <p className="text-xs font-bold text-primary">{payload[0].value} Klik</p>
+                          <p className="text-xs font-bold text-primary">{payload[0].value} Clicks</p>
                         </div>
                       );
                     }
@@ -199,7 +199,7 @@ export default function DashboardPage() {
         ) : (
           <div className="py-12 text-center opacity-20 font-black uppercase text-[10px] tracking-widest flex flex-col items-center gap-4">
             <LayoutGrid size={40} />
-            <span>Belum ada data interaksi.</span>
+            <span>No interaction data yet.</span>
           </div>
         )}
       </Card>
@@ -213,7 +213,7 @@ export default function DashboardPage() {
           <CardContent className="p-0 space-y-5">
             <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase tracking-widest">
               <Star size={16} />
-              <span>Bagaimana pengalaman Anda?</span>
+              <span>How was your experience?</span>
             </div>
             <div className="flex justify-center gap-3 py-2">
               {[1, 2, 3, 4, 5].map((s) => (
@@ -223,13 +223,13 @@ export default function DashboardPage() {
               ))}
             </div>
             <Textarea 
-              placeholder="Berikan ulasan jujur Anda..." 
+              placeholder="Your honest review..." 
               value={comment} 
               onChange={(e) => setComment(e.target.value)}
               className="bg-white/5 border-white/5 h-28 rounded-none p-4 text-xs font-medium leading-relaxed border-none focus-visible:ring-primary/20"
             />
             <Button onClick={handleSaveRating} disabled={isRatingSaving || rating === 0 || !comment} className="w-full h-14 neon-gradient text-background font-black rounded-none glow-primary uppercase text-[10px] tracking-widest">
-              {isRatingSaving ? "MEMPROSES..." : (userReview ? "PERBARUI ULASAN" : "KIRIM TESTIMONI")}
+              {isRatingSaving ? "PROCESSING..." : (userReview ? "UPDATE REVIEW" : "SEND TESTIMONIAL")}
             </Button>
           </CardContent>
         </Card>
