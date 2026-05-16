@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from 'react';
 import { ShieldCheck, Check, RefreshCw, Move } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 interface CaptchaProps {
   onVerify: (isValid: boolean) => void;
@@ -20,17 +21,19 @@ export default function Captcha({ onVerify }: CaptchaProps) {
   
   const [currentPos, setCurrentPos] = useState({ x: 0, y: 0 });
   const [targetPos, setTargetPos] = useState({ x: 0, y: 0 });
-  const [currentImageId, setCurrentImageId] = useState(1);
+  const [currentImageUrl, setCurrentImageUrl] = useState('');
   const [isError, setIsError] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   
   const containerRef = useRef<HTMLDivElement>(null);
 
   const initCaptcha = () => {
-    // 1. Pilih ID Gambar Acak (Picsum ID yang cerah)
-    const validIds = [10, 11, 28, 49, 54, 103, 111, 133, 145, 152, 160, 180, 200, 211, 237, 250, 260, 280, 300, 350];
-    const randomId = validIds[Math.floor(Math.random() * validIds.length)];
-    setCurrentImageId(randomId);
+    // 1. Pilih Gambar Waifu dari Koleksi Terverifikasi
+    const waifus = PlaceHolderImages.length > 0 
+      ? PlaceHolderImages 
+      : [{ imageUrl: 'https://picsum.photos/id/1027/600/600' }];
+    const randomWaifu = waifus[Math.floor(Math.random() * waifus.length)];
+    setCurrentImageUrl(randomWaifu.imageUrl);
 
     // 2. Tentukan posisi target acak (X dan Y)
     const tx = Math.floor(Math.random() * (CONTAINER_SIZE - PIECE_SIZE - 40)) + 20;
@@ -68,6 +71,7 @@ export default function Captcha({ onVerify }: CaptchaProps) {
     let x = e.clientX - rect.left - PIECE_SIZE / 2;
     let y = e.clientY - rect.top - PIECE_SIZE / 2;
 
+    // Batasan agar kepingan tidak keluar dari bingkai
     x = Math.max(0, Math.min(x, CONTAINER_SIZE - PIECE_SIZE));
     y = Math.max(0, Math.min(y, CONTAINER_SIZE - PIECE_SIZE));
 
@@ -78,7 +82,7 @@ export default function Captcha({ onVerify }: CaptchaProps) {
     if (!isDragging) return;
     setIsDragging(false);
 
-    const tolerance = 12; // Toleransi pixel X dan Y
+    const tolerance = 12; // Toleransi pixel X dan Y untuk tingkat keamanan tinggi
     const diffX = Math.abs(currentPos.x - targetPos.x);
     const diffY = Math.abs(currentPos.y - targetPos.y);
     
@@ -94,9 +98,6 @@ export default function Captcha({ onVerify }: CaptchaProps) {
       }, 1000);
     }
   };
-
-  // Menggunakan URL Picsum yang sangat stabil
-  const imageUrl = `https://picsum.photos/id/${currentImageId}/600/600`;
 
   if (!mounted) return null;
 
@@ -154,7 +155,7 @@ export default function Captcha({ onVerify }: CaptchaProps) {
               style={{ width: CONTAINER_SIZE, height: CONTAINER_SIZE }}
             >
               <img 
-                src={imageUrl} 
+                src={currentImageUrl} 
                 className="w-full h-full object-cover opacity-100 rounded-none" 
                 alt="Verification Source"
                 data-ai-hint="waifu anime"
@@ -172,7 +173,7 @@ export default function Captcha({ onVerify }: CaptchaProps) {
               >
                 <div className="w-full h-full overflow-hidden opacity-30">
                   <img 
-                    src={imageUrl} 
+                    src={currentImageUrl} 
                     className="absolute max-w-none rounded-none" 
                     style={{
                       width: CONTAINER_SIZE,
@@ -204,7 +205,7 @@ export default function Captcha({ onVerify }: CaptchaProps) {
                 }}
               >
                 <img 
-                  src={imageUrl} 
+                  src={currentImageUrl} 
                   className="absolute max-w-none pointer-events-none rounded-none" 
                   style={{
                     width: CONTAINER_SIZE,
