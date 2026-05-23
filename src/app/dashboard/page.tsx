@@ -5,11 +5,12 @@ import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { MousePointer2, Eye, Star, TrendingUp, Sparkles, LayoutGrid } from 'lucide-react';
+import { MousePointer2, Eye, Star, TrendingUp, Sparkles, LayoutGrid, ArrowRight } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, orderBy, setDoc, doc, serverTimestamp, increment, onSnapshot } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Bar, BarChart, XAxis, ResponsiveContainer, Cell, Tooltip } from 'recharts';
+import Link from 'next/link';
 
 export default function DashboardPage() {
   const { user } = useUser();
@@ -157,8 +158,11 @@ export default function DashboardPage() {
              <div className="w-8 h-8 rounded-none neon-gradient flex items-center justify-center text-background">
                <TrendingUp size={16} />
              </div>
-             <h3 className="font-black text-xs uppercase tracking-widest">Top Performers (Clicks)</h3>
+             <h3 className="font-black text-xs uppercase tracking-widest">Top Performers</h3>
           </div>
+          <Button variant="ghost" asChild className="text-[9px] font-black uppercase text-primary tracking-widest h-8 px-2 hover:bg-primary/10">
+            <Link href="/dashboard/manage">Lihat Semua <ArrowRight size={10} className="ml-1" /></Link>
+          </Button>
         </div>
 
         {allLinks.length > 0 ? (
@@ -205,9 +209,14 @@ export default function DashboardPage() {
       </Card>
 
       <div className="space-y-4">
-        <h3 className="font-black text-[10px] uppercase tracking-[0.3em] text-white/50 flex items-center gap-2 px-1">
-          <Sparkles size={16} className="text-primary" /> Community Love
-        </h3>
+        <div className="flex items-center justify-between px-1">
+          <h3 className="font-black text-[10px] uppercase tracking-[0.3em] text-white/50 flex items-center gap-2">
+            <Sparkles size={16} className="text-primary" /> Community Love
+          </h3>
+          <Button variant="ghost" asChild className="text-[9px] font-black uppercase text-white/30 tracking-widest h-8 px-2 hover:text-white">
+            <Link href="/reviews">Lihat Semua <ArrowRight size={10} className="ml-1" /></Link>
+          </Button>
+        </div>
         
         <Card className="glass-card border-none rounded-none p-6 shadow-2xl text-left">
           <CardContent className="p-0 space-y-5">
