@@ -10,7 +10,6 @@ import { useRouter } from 'next/navigation';
 import { collection, query, orderBy, doc, increment, setDoc } from 'firebase/firestore';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
-// Komponen rating statis sederhana untuk landing page
 const StaticStarRating = ({ rating, size = 16 }: { rating: number, size?: number }) => {
   return (
     <div className="flex items-center gap-0.5">
@@ -127,7 +126,7 @@ export default function LandingPage() {
         {/* Reviews Section */}
         <section className="space-y-12 py-12 animate-in" style={{ animationDelay: '0.4s' }}>
           <div className="space-y-4">
-             <div className="space-y-1">
+             <div className="space-y-1 text-center">
                 <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Wall of Love</h2>
                 <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/70">Apa kata mereka tentang Linku</p>
              </div>
@@ -162,25 +161,33 @@ export default function LandingPage() {
                 <p className="text-sm text-white/70 italic font-medium leading-relaxed">"{review.comment}"</p>
               </div>
             ))}
+            
+            <div className="pt-8 text-center">
+              <Button asChild variant="ghost" className="text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-primary transition-all gap-2 group">
+                <Link href="/reviews">
+                  Lihat Semua Ulasan <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
+                </Link>
+              </Button>
+            </div>
           </div>
         </section>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in" style={{ animationDelay: '0.5s' }}>
-          <div className="glass-card p-6 rounded-[2rem] space-y-4">
+          <div className="glass-card p-6 rounded-[2rem] space-y-4 text-left">
             <div className="w-12 h-12 bg-primary/20 rounded-2xl flex items-center justify-center text-primary">
               <LayoutGrid size={24} />
             </div>
             <h3 className="font-black text-white uppercase text-sm tracking-tight">Sistem Kelompok</h3>
             <p className="text-xs text-white/40 leading-relaxed font-medium">Atur tautan Anda dalam folder yang rapi dengan navigasi sub-halaman yang elegan.</p>
           </div>
-          <div className="glass-card p-6 rounded-[2rem] space-y-4">
+          <div className="glass-card p-6 rounded-[2rem] space-y-4 text-left">
             <div className="w-12 h-12 bg-secondary/20 rounded-2xl flex items-center justify-center text-secondary">
               <Palette size={24} />
             </div>
             <h3 className="font-black text-white uppercase text-sm tracking-tight">Warna Dinamis</h3>
             <p className="text-xs text-white/40 leading-relaxed font-medium">Warna visual profil Anda akan otomatis menyesuaikan dengan foto profil yang Anda unggah.</p>
           </div>
-          <div className="glass-card p-6 rounded-[2rem] space-y-4">
+          <div className="glass-card p-6 rounded-[2rem] space-y-4 text-left">
             <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center text-white">
               <Link2 size={24} />
             </div>

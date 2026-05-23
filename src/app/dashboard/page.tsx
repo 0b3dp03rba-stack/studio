@@ -5,12 +5,27 @@ import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { MousePointer2, Eye, Star, TrendingUp, Sparkles, LayoutGrid, ArrowRight } from 'lucide-react';
+import { MousePointer2, Eye, Star, TrendingUp, Sparkles, LayoutGrid, ArrowRight, X, Link as LinkIcon } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, orderBy, setDoc, doc, serverTimestamp, increment, onSnapshot } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Bar, BarChart, XAxis, ResponsiveContainer, Cell, Tooltip } from 'recharts';
 import Link from 'next/link';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+
+const StaticStarRating = ({ rating, size = 16 }: { rating: number, size?: number }) => {
+  return (
+    <div className="flex items-center gap-0.5">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <Star 
+          key={i} 
+          size={size} 
+          className={i <= Math.round(rating) ? "text-primary fill-primary" : "text-white/10"} 
+        />
+      ))}
+    </div>
+  );
+};
 
 export default function DashboardPage() {
   const { user } = useUser();
@@ -22,8 +37,8 @@ export default function DashboardPage() {
   const [isRatingSaving, setIsRatingSaving] = useState(false);
   const [allLinks, setAllLinks] = useState<any[]>([]);
   const [mounted, setMounted] = useState(false);
+  const [showAllClicksModal, setShowAllClicksModal] = useState(false);
 
-  // Solusi Hydration: useEffect memastikan render di client baru menampilkan data dinamis
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -48,7 +63,8 @@ export default function DashboardPage() {
       const standalone = snap.docs.map(d => ({ ...d.data(), id: d.id, isStandalone: true }));
       setAllLinks(prev => {
         const others = prev.filter(l => !l.isStandalone);
-        return [...others, ...standalone];
+        const unique = [...others, ...standalone];
+        return unique.sort((a, b) => (b.clicks || 0) - (a.clicks || 0));
       });
     });
 
@@ -58,7 +74,8 @@ export default function DashboardPage() {
           const grouped = linkSnap.docs.map(d => ({ ...d.data(), id: d.id, isStandalone: false, groupId: groupDoc.id }));
           setAllLinks(prev => {
             const others = prev.filter(l => l.groupId !== groupDoc.id);
-            return [...others, ...grouped];
+            const unique = [...others, ...grouped];
+            return unique.sort((a, b) => (b.clicks || 0) - (a.clicks || 0));
           });
         });
       });
@@ -128,24 +145,24 @@ export default function DashboardPage() {
       <div className="grid grid-cols-2 gap-4">
         <Card className="glass-card border-none rounded-none p-5 shadow-2xl relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-24 h-24 bg-primary/10 rounded-none -mr-8 -mt-8 blur-2xl group-hover:bg-primary/20 transition-colors" />
-          <CardContent className="p-0 space-y-3 relative z-10">
+          <CardContent className="p-0 space-y-3 relative z-10 text-left">
             <div className="w-10 h-10 rounded-none bg-primary/20 flex items-center justify-center text-primary glow-primary">
               <MousePointer2 size={20} />
             </div>
             <div>
-              <p className="text-3xl font-black tracking-tighter">{totalClicks}</p>
+              <p className="text-3xl font-black tracking-tighter text-white">{totalClicks}</p>
               <p className="text-[8px] font-black uppercase text-white/40 tracking-widest">Total Link Clicks</p>
             </div>
           </CardContent>
         </Card>
         <Card className="glass-card border-none rounded-none p-5 shadow-2xl relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-24 h-24 bg-secondary/10 rounded-none -mr-8 -mt-8 blur-2xl group-hover:bg-secondary/20 transition-colors" />
-          <CardContent className="p-0 space-y-3 relative z-10">
+          <CardContent className="p-0 space-y-3 relative z-10 text-left">
             <div className="w-10 h-10 rounded-none bg-secondary/20 flex items-center justify-center text-secondary">
               <Eye size={20} />
             </div>
             <div>
-              <p className="text-3xl font-black tracking-tighter">{profile?.views || 0}</p>
+              <p className="text-3xl font-black tracking-tighter text-white">{profile?.views || 0}</p>
               <p className="text-[8px] font-black uppercase text-white/40 tracking-widest">Profile Views</p>
             </div>
           </CardContent>
@@ -158,10 +175,14 @@ export default function DashboardPage() {
              <div className="w-8 h-8 rounded-none neon-gradient flex items-center justify-center text-background">
                <TrendingUp size={16} />
              </div>
-             <h3 className="font-black text-xs uppercase tracking-widest">Top Performers</h3>
+             <h3 className="font-black text-xs uppercase tracking-widest text-white">Top Performers</h3>
           </div>
-          <Button variant="ghost" asChild className="text-[9px] font-black uppercase text-primary tracking-widest h-8 px-2 hover:bg-primary/10">
-            <Link href="/dashboard/manage">Lihat Semua <ArrowRight size={10} className="ml-1" /></Link>
+          <Button 
+            variant="ghost" 
+            onClick={() => setShowAllClicksModal(true)} 
+            className="text-[9px] font-black uppercase text-primary tracking-widest h-8 px-2 hover:bg-primary/10"
+          >
+            Lihat Semua <ArrowRight size={10} className="ml-1" />
           </Button>
         </div>
 
@@ -235,7 +256,7 @@ export default function DashboardPage() {
               placeholder="Your honest review..." 
               value={comment} 
               onChange={(e) => setComment(e.target.value)}
-              className="bg-white/5 border-white/5 h-28 rounded-none p-4 text-xs font-medium leading-relaxed border-none focus-visible:ring-primary/20"
+              className="bg-white/5 border-white/5 h-28 rounded-none p-4 text-xs font-medium leading-relaxed border-none focus-visible:ring-primary/20 text-white"
             />
             <Button onClick={handleSaveRating} disabled={isRatingSaving || rating === 0 || !comment} className="w-full h-14 neon-gradient text-background font-black rounded-none glow-primary uppercase text-[10px] tracking-widest">
               {isRatingSaving ? "PROCESSING..." : (userReview ? "UPDATE REVIEW" : "SEND TESTIMONIAL")}
@@ -243,6 +264,45 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* MODAL LIHAT SEMUA KLIK */}
+      <Dialog open={showAllClicksModal} onOpenChange={setShowAllClicksModal}>
+        <DialogContent className="glass-card border-none rounded-[2.5rem] bg-background/95 backdrop-blur-3xl p-8 shadow-2xl max-w-[95%] sm:max-w-md mx-auto max-h-[80vh] overflow-y-auto">
+          <DialogHeader className="mb-6">
+            <DialogTitle className="text-xl font-black uppercase tracking-tighter text-white flex items-center gap-2">
+              <TrendingUp size={20} className="text-primary" /> Statistik Seluruh Klik
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {allLinks.length === 0 ? (
+              <p className="text-center py-20 text-[10px] font-black uppercase text-white/20 tracking-widest">Belum ada data tautan.</p>
+            ) : (
+              allLinks.map((link) => (
+                <div key={link.id} className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/5 group hover:bg-white/10 transition-colors">
+                  <div className="w-12 h-12 rounded-xl bg-black flex items-center justify-center overflow-hidden border border-white/10 shadow-lg shrink-0">
+                    {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <LinkIcon size={18} className="text-primary/50" />}
+                  </div>
+                  <div className="flex-1 min-w-0 text-left">
+                    <p className="text-sm font-black text-white uppercase truncate tracking-tight">{link.title}</p>
+                    <p className="text-[9px] text-white/30 truncate font-mono">{link.url}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-lg font-black text-primary tracking-tighter leading-none">{link.clicks || 0}</p>
+                    <p className="text-[8px] font-bold text-white/20 uppercase tracking-widest">CLICKS</p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          <Button 
+            onClick={() => setShowAllClicksModal(false)} 
+            variant="ghost" 
+            className="w-full mt-6 h-12 text-[10px] font-black uppercase text-white/40 hover:text-white"
+          >
+            Tutup Panel
+          </Button>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
