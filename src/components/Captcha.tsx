@@ -29,21 +29,20 @@ export default function Captcha({ onVerify }: CaptchaProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const initCaptcha = () => {
-    // 1. Pilih Gambar Waifu Anime HD
-    const waifus = PlaceHolderImages.length > 0 
-      ? PlaceHolderImages 
-      : [{ id: 'fallback', description: 'Anime Girl', imageUrl: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=600&h=600&fit=crop', imageHint: 'anime girl' }];
-    
-    const randomWaifu = waifus[Math.floor(Math.random() * waifus.length)];
-    setCurrentImageUrl(randomWaifu.imageUrl);
-    setCurrentImageHint(randomWaifu.imageHint);
+    // 1. Pick a random image from the collection
+    const collection = PlaceHolderImages.length > 0 ? PlaceHolderImages : [
+      { id: '1', description: 'Sample', imageUrl: 'https://images.unsplash.com/photo-1519608487953-e999c86e7455?w=600&h=600&fit=crop', imageHint: 'city neon' }
+    ];
+    const randomImg = collection[Math.floor(Math.random() * collection.length)];
+    setCurrentImageUrl(randomImg.imageUrl);
+    setCurrentImageHint(randomImg.imageHint);
 
-    // 2. Tentukan posisi target acak (X dan Y)
+    // 2. Randomize Target Position (X & Y)
     const tx = Math.floor(Math.random() * (CONTAINER_SIZE - PIECE_SIZE - 40)) + 20;
-    const ty = Math.floor(Math.random() * (CONTAINER_SIZE - PIECE_SIZE - 100)) + 20;
+    const ty = Math.floor(Math.random() * (CONTAINER_SIZE - PIECE_SIZE - 40)) + 20;
     setTargetPos({ x: tx, y: ty });
 
-    // 3. Tentukan posisi AWAL acak (X dan Y) - Anti-DDoS 2D Drag
+    // 3. Randomize Start Position (X & Y) - Far from target
     let sx, sy;
     let distance = 0;
     do {
@@ -84,7 +83,7 @@ export default function Captcha({ onVerify }: CaptchaProps) {
     if (!isDragging) return;
     setIsDragging(false);
 
-    // Verifikasi koordinat X dan Y secara presisi
+    // Precision check
     const tolerance = 15; 
     const diffX = Math.abs(currentPos.x - targetPos.x);
     const diffY = Math.abs(currentPos.y - targetPos.y);
@@ -148,7 +147,7 @@ export default function Captcha({ onVerify }: CaptchaProps) {
             <DialogTitle className="text-xl font-black uppercase tracking-tighter text-white">
               Cocokkan Puzzle
             </DialogTitle>
-            <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.3em]">Seret kepingan waifu ke bayangan yang tepat</p>
+            <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.3em]">Seret kepingan ke bayangan yang tepat</p>
           </div>
 
           <div className="space-y-8">
@@ -160,11 +159,11 @@ export default function Captcha({ onVerify }: CaptchaProps) {
               <img 
                 src={currentImageUrl} 
                 className="w-full h-full object-cover opacity-100 rounded-none" 
-                alt="Verification Source"
+                alt="Source"
                 data-ai-hint={currentImageHint}
               />
               
-              {/* Target Shadow (Ghost Hint) */}
+              {/* Target Shadow */}
               <div 
                 className="absolute bg-black/70 border border-white/40 z-10 rounded-none overflow-hidden"
                 style={{
@@ -184,8 +183,7 @@ export default function Captcha({ onVerify }: CaptchaProps) {
                       left: -targetPos.x,
                       top: -targetPos.y,
                     }}
-                    alt="Ghost Hint"
-                    data-ai-hint={currentImageHint}
+                    alt="Hint"
                   />
                 </div>
               </div>
@@ -217,8 +215,7 @@ export default function Captcha({ onVerify }: CaptchaProps) {
                     left: -targetPos.x,
                     top: -targetPos.y,
                   }}
-                  alt="Draggable Piece"
-                  data-ai-hint={currentImageHint}
+                  alt="Piece"
                 />
               </div>
             </div>

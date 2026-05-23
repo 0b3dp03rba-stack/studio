@@ -59,23 +59,23 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!user || !mounted) return;
 
+    // Standalone Links
     const unsubStandalone = onSnapshot(collection(db, 'userProfiles', user.uid, 'links'), (snap) => {
       const standalone = snap.docs.map(d => ({ ...d.data(), id: d.id, isStandalone: true }));
       setAllLinks(prev => {
         const others = prev.filter(l => !l.isStandalone);
-        const unique = [...others, ...standalone];
-        return unique.sort((a, b) => (b.clicks || 0) - (a.clicks || 0));
+        return [...others, ...standalone].sort((a, b) => (b.clicks || 0) - (a.clicks || 0));
       });
     });
 
+    // Grouped Links
     const unsubGroups = onSnapshot(collection(db, 'userProfiles', user.uid, 'linkGroups'), (snap) => {
       snap.docs.forEach(groupDoc => {
         onSnapshot(collection(db, 'userProfiles', user!.uid, 'linkGroups', groupDoc.id, 'links'), (linkSnap) => {
           const grouped = linkSnap.docs.map(d => ({ ...d.data(), id: d.id, isStandalone: false, groupId: groupDoc.id }));
           setAllLinks(prev => {
             const others = prev.filter(l => l.groupId !== groupDoc.id);
-            const unique = [...others, ...grouped];
-            return unique.sort((a, b) => (b.clicks || 0) - (a.clicks || 0));
+            return [...others, ...grouped].sort((a, b) => (b.clicks || 0) - (a.clicks || 0));
           });
         });
       });
@@ -265,39 +265,40 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* MODAL LIHAT SEMUA KLIK */}
       <Dialog open={showAllClicksModal} onOpenChange={setShowAllClicksModal}>
-        <DialogContent className="glass-card border-none rounded-[2.5rem] bg-background/95 backdrop-blur-3xl p-8 shadow-2xl max-w-[95%] sm:max-w-md mx-auto max-h-[80vh] overflow-y-auto">
-          <DialogHeader className="mb-6">
+        <DialogContent className="glass-card border-none rounded-none bg-background/95 backdrop-blur-3xl p-6 shadow-2xl max-w-[95%] sm:max-w-md mx-auto max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader className="mb-4 shrink-0">
             <DialogTitle className="text-xl font-black uppercase tracking-tighter text-white flex items-center gap-2">
-              <TrendingUp size={20} className="text-primary" /> Statistik Seluruh Klik
+              <TrendingUp size={20} className="text-primary" /> Statistik Klik
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          
+          <div className="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-hide">
             {allLinks.length === 0 ? (
               <p className="text-center py-20 text-[10px] font-black uppercase text-white/20 tracking-widest">Belum ada data tautan.</p>
             ) : (
               allLinks.map((link) => (
-                <div key={link.id} className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/5 group hover:bg-white/10 transition-colors">
-                  <div className="w-12 h-12 rounded-xl bg-black flex items-center justify-center overflow-hidden border border-white/10 shadow-lg shrink-0">
+                <div key={link.id} className="flex items-center gap-3 p-4 bg-white/5 rounded-none border border-white/10 group hover:bg-white/10 transition-colors">
+                  <div className="w-10 h-10 rounded-none bg-black flex items-center justify-center overflow-hidden border border-white/10 shrink-0">
                     {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <LinkIcon size={18} className="text-primary/50" />}
                   </div>
                   <div className="flex-1 min-w-0 text-left">
-                    <p className="text-sm font-black text-white uppercase truncate tracking-tight">{link.title}</p>
-                    <p className="text-[9px] text-white/30 truncate font-mono">{link.url}</p>
+                    <p className="text-xs font-black text-white uppercase truncate tracking-tight">{link.title}</p>
+                    <p className="text-[8px] text-white/30 truncate font-mono">{link.url}</p>
                   </div>
                   <div className="text-right shrink-0">
                     <p className="text-lg font-black text-primary tracking-tighter leading-none">{link.clicks || 0}</p>
-                    <p className="text-[8px] font-bold text-white/20 uppercase tracking-widest">CLICKS</p>
+                    <p className="text-[7px] font-bold text-white/20 uppercase tracking-widest">CLICKS</p>
                   </div>
                 </div>
               ))
             )}
           </div>
+          
           <Button 
             onClick={() => setShowAllClicksModal(false)} 
             variant="ghost" 
-            className="w-full mt-6 h-12 text-[10px] font-black uppercase text-white/40 hover:text-white"
+            className="w-full mt-4 h-12 text-[10px] font-black uppercase text-white/40 hover:text-white shrink-0"
           >
             Tutup Panel
           </Button>
