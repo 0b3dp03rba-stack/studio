@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Mail, Send, ArrowLeft, RefreshCw, ShieldCheck, Search } from 'lucide-react';
+import { Mail, Send, ArrowLeft, RefreshCw, ShieldCheck, Search, AlertCircle } from 'lucide-react';
 import { useAuth, useUser } from '@/firebase';
 import { sendEmailVerification, signOut } from 'firebase/auth';
 
@@ -80,23 +80,28 @@ export default function VerifyEmailPage() {
               Kami telah mengirimkan link verifikasi ke <span className="text-white font-black">{user?.email}</span>. 
             </p>
             
-            <div className="p-4 bg-white/5 rounded-2xl border border-white/10 flex flex-col gap-3 text-left">
+            <div className="p-5 bg-white/5 rounded-2xl border border-white/10 flex flex-col gap-3 text-left">
                <div className="flex items-center gap-2 text-primary">
                  <Search size={16} />
-                 <p className="text-[10px] font-black uppercase tracking-widest">Cari di Kotak Masuk:</p>
+                 <p className="text-[10px] font-black uppercase tracking-widest">Cara Menemukan Email:</p>
                </div>
-               <p className="text-xs font-bold text-white/90">
-                 Pengirim: <span className="text-primary">auth@linku.biz.id</span>
-               </p>
-               <p className="text-[9px] font-medium text-white/40 leading-relaxed uppercase">
-                 Jika tidak ada di Inbox, harap periksa folder <span className="text-white/60">Spam</span> atau <span className="text-white/60">Promosi</span>.
-               </p>
+               <div className="space-y-2">
+                 <p className="text-xs font-bold text-white/90">
+                   Pengirim: <span className="text-primary">auth@linku.biz.id</span>
+                 </p>
+                 <div className="flex items-start gap-2 bg-primary/5 p-2 rounded-lg border border-primary/10">
+                   <AlertCircle size={14} className="text-primary shrink-0 mt-0.5" />
+                   <p className="text-[9px] font-bold text-primary/80 leading-relaxed uppercase">
+                     PENTING: Periksa folder SPAM atau PROMOSI jika email tidak muncul di Inbox Utama dalam 1 menit.
+                   </p>
+                 </div>
+               </div>
             </div>
 
             <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10 flex items-start gap-3 text-left">
                <ShieldCheck size={18} className="text-primary shrink-0 mt-0.5" />
                <p className="text-[9px] font-black uppercase text-primary/60 leading-normal tracking-wider">
-                 Setelah mengklik link verifikasi, harap muat ulang halaman ini untuk masuk ke Dashboard.
+                 Setelah mengklik link verifikasi, harap muat ulang halaman ini untuk masuk ke Dashboard Linku.
                </p>
             </div>
           </div>
@@ -121,7 +126,7 @@ export default function VerifyEmailPage() {
           </div>
         </CardContent>
         <div className="absolute bottom-6 left-0 right-0 text-center">
-           <p className="text-[8px] font-black text-white/10 uppercase tracking-[0.5em]">Linku Verification Engine</p>
+           <p className="text-[8px] font-black text-white/10 uppercase tracking-[0.5em]">Linku Engine &bull; Identity Protection</p>
         </div>
       </Card>
     </div>
