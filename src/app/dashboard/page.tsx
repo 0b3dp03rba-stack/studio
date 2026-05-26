@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
@@ -12,20 +11,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Bar, BarChart, XAxis, ResponsiveContainer, Cell, Tooltip } from 'recharts';
 import Link from 'next/link';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-
-const StaticStarRating = ({ rating, size = 16 }: { rating: number, size?: number }) => {
-  return (
-    <div className="flex items-center gap-0.5">
-      {[1, 2, 3, 4, 5].map((i) => (
-        <Star 
-          key={i} 
-          size={size} 
-          className={i <= Math.round(rating) ? "text-primary fill-primary" : "text-white/10"} 
-        />
-      ))}
-    </div>
-  );
-};
 
 export default function DashboardPage() {
   const { user } = useUser();
@@ -131,7 +116,7 @@ export default function DashboardPage() {
   if (!mounted) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-4">
-        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-none animate-spin"></div>
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
         <p className="text-[10px] font-black uppercase tracking-widest text-primary/50">Mempersiapkan Hub...</p>
       </div>
     );
@@ -145,10 +130,10 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <Card className="glass-card border-none rounded-none p-5 shadow-2xl relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-primary/10 rounded-none -mr-8 -mt-8 blur-2xl group-hover:bg-primary/20 transition-colors" />
+        <Card className="glass-card border-none rounded-[2rem] p-5 shadow-2xl relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-primary/10 rounded-full -mr-8 -mt-8 blur-2xl group-hover:bg-primary/20 transition-colors" />
           <CardContent className="p-0 space-y-3 relative z-10 text-left">
-            <div className="w-10 h-10 rounded-none bg-primary/20 flex items-center justify-center text-primary glow-primary">
+            <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary glow-primary">
               <MousePointer2 size={20} />
             </div>
             <div>
@@ -157,10 +142,10 @@ export default function DashboardPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="glass-card border-none rounded-none p-5 shadow-2xl relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-secondary/10 rounded-none -mr-8 -mt-8 blur-2xl group-hover:bg-secondary/20 transition-colors" />
+        <Card className="glass-card border-none rounded-[2rem] p-5 shadow-2xl relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-secondary/10 rounded-full -mr-8 -mt-8 blur-2xl group-hover:bg-secondary/20 transition-colors" />
           <CardContent className="p-0 space-y-3 relative z-10 text-left">
-            <div className="w-10 h-10 rounded-none bg-secondary/20 flex items-center justify-center text-secondary">
+            <div className="w-10 h-10 rounded-xl bg-secondary/20 flex items-center justify-center text-secondary">
               <Eye size={20} />
             </div>
             <div>
@@ -171,10 +156,10 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <Card className="glass-card border-none rounded-none p-6 shadow-2xl space-y-6">
+      <Card className="glass-card border-none rounded-[2rem] p-6 shadow-2xl space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-             <div className="w-8 h-8 rounded-none neon-gradient flex items-center justify-center text-background">
+             <div className="w-8 h-8 rounded-lg neon-gradient flex items-center justify-center text-background">
                <TrendingUp size={16} />
              </div>
              <h3 className="font-black text-xs uppercase tracking-widest text-white">Top Performers</h3>
@@ -203,7 +188,7 @@ export default function DashboardPage() {
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
                       return (
-                        <div className="bg-black/90 border border-white/10 p-2 rounded-none backdrop-blur-xl">
+                        <div className="bg-black/90 border border-white/10 p-2 rounded-xl backdrop-blur-xl">
                           <p className="text-[10px] font-black text-white uppercase">{payload[0].payload.fullTitle}</p>
                           <p className="text-xs font-bold text-primary">{payload[0].value} Klik</p>
                         </div>
@@ -212,7 +197,7 @@ export default function DashboardPage() {
                     return null;
                   }}
                 />
-                <Bar dataKey="clicks" radius={[0, 0, 0, 0]} strokeWidth={1} stroke="rgba(255,255,255,0.1)">
+                <Bar dataKey="clicks" radius={[4, 4, 0, 0]} strokeWidth={1} stroke="rgba(255,255,255,0.1)">
                   {topPerformers.map((entry, index) => (
                     <Cell 
                       key={`cell-${index}`} 
@@ -241,7 +226,7 @@ export default function DashboardPage() {
           </Button>
         </div>
         
-        <Card className="glass-card border-none rounded-none p-6 shadow-2xl text-left">
+        <Card className="glass-card border-none rounded-[2.5rem] p-6 shadow-2xl text-left">
           <CardContent className="p-0 space-y-5">
             <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase tracking-widest">
               <Star size={16} />
@@ -258,9 +243,9 @@ export default function DashboardPage() {
               placeholder="Berikan ulasan jujur Anda..." 
               value={comment} 
               onChange={(e) => setComment(e.target.value)}
-              className="bg-white/5 border-white/5 h-28 rounded-none p-4 text-xs font-medium leading-relaxed border-none focus-visible:ring-primary/20 text-white"
+              className="bg-white/5 border-white/5 h-28 rounded-2xl p-4 text-xs font-medium leading-relaxed border-none focus-visible:ring-primary/20 text-white"
             />
-            <Button onClick={handleSaveRating} disabled={isRatingSaving || rating === 0 || !comment} className="w-full h-14 neon-gradient text-background font-black rounded-none glow-primary uppercase text-[10px] tracking-widest">
+            <Button onClick={handleSaveRating} disabled={isRatingSaving || rating === 0 || !comment} className="w-full h-14 neon-gradient text-background font-black rounded-2xl glow-primary uppercase text-[10px] tracking-widest">
               {isRatingSaving ? "MEMPROSES..." : (userReview ? "UPDATE ULASAN" : "KIRIM TESTIMONI")}
             </Button>
           </CardContent>
@@ -268,7 +253,7 @@ export default function DashboardPage() {
       </div>
 
       <Dialog open={showAllClicksModal} onOpenChange={setShowAllClicksModal}>
-        <DialogContent className="glass-card border-none rounded-none bg-black/95 backdrop-blur-3xl p-6 shadow-2xl max-w-[95%] sm:max-w-md mx-auto max-h-[85vh] overflow-hidden flex flex-col">
+        <DialogContent className="glass-card border-none rounded-[2.5rem] bg-black/95 backdrop-blur-3xl p-6 shadow-2xl max-w-[95%] sm:max-w-md mx-auto max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader className="mb-4 shrink-0">
             <DialogTitle className="text-xl font-black uppercase tracking-tighter text-white flex items-center gap-2">
               <TrendingUp size={20} className="text-primary" /> Statistik Klik
@@ -280,8 +265,8 @@ export default function DashboardPage() {
               <p className="text-center py-20 text-[10px] font-black uppercase text-white/20 tracking-widest">Belum ada data tautan.</p>
             ) : (
               allLinks.map((link) => (
-                <div key={link.id} className="flex items-center gap-3 p-4 bg-white/5 rounded-none border border-white/10 group hover:bg-white/10 transition-colors">
-                  <div className="w-10 h-10 rounded-none bg-black flex items-center justify-center overflow-hidden border border-white/10 shrink-0">
+                <div key={link.id} className="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/10 group hover:bg-white/10 transition-colors">
+                  <div className="w-10 h-10 rounded-xl bg-black flex items-center justify-center overflow-hidden border border-white/10 shrink-0">
                     {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <LinkIcon size={18} className="text-primary/50" />}
                   </div>
                   <div className="flex-1 min-w-0 text-left">

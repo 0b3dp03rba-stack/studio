@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -108,10 +107,10 @@ export default function Captcha({ onVerify }: CaptchaProps) {
 
   return (
     <div className="space-y-4">
-      <div className="p-5 bg-white/5 rounded-none border border-white/10 flex flex-col items-center gap-4 text-center">
+      <div className="p-5 bg-white/5 rounded-2xl border border-white/10 flex flex-col items-center gap-4 text-center">
         <div className="flex items-center gap-3">
           <div className={cn(
-            "w-12 h-12 rounded-none flex items-center justify-center transition-all shadow-xl",
+            "w-12 h-12 rounded-xl flex items-center justify-center transition-all shadow-xl",
             isVerified ? "bg-green-500/20 text-green-500 border border-green-500/30" : "bg-primary/20 text-primary border border-primary/30"
           )}>
             {isVerified ? <Check size={24} strokeWidth={3} /> : <ShieldCheck size={24} />}
@@ -131,7 +130,7 @@ export default function Captcha({ onVerify }: CaptchaProps) {
           <button 
             type="button" 
             onClick={() => { initCaptcha(); setIsOpen(true); }}
-            className="w-full h-12 bg-white/5 hover:bg-white/10 text-white font-black rounded-none border border-white/10 text-[10px] uppercase tracking-widest transition-colors"
+            className="w-full h-12 bg-white/5 hover:bg-white/10 text-white font-black rounded-xl border border-white/10 text-[10px] uppercase tracking-widest transition-colors"
           >
             Start Verification
           </button>
@@ -143,7 +142,7 @@ export default function Captcha({ onVerify }: CaptchaProps) {
       </div>
 
       <Dialog open={isOpen} onOpenChange={(open) => !isVerified && !isDragging && setIsOpen(open)}>
-        <DialogContent className="glass-card border-none rounded-none bg-background/95 backdrop-blur-3xl p-8 shadow-2xl max-w-[95%] sm:max-w-md mx-auto overflow-hidden">
+        <DialogContent className="glass-card border-none rounded-[2.5rem] bg-background/95 backdrop-blur-3xl p-8 shadow-2xl max-w-[95%] sm:max-w-md mx-auto overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1.5 neon-gradient" />
           
           <div className="text-center space-y-4 mb-8">
