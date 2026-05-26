@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -6,10 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Mail, Lock, User, Link2, Check, AtSign } from 'lucide-react';
+import { Mail, Lock, User, Link2, Check, AtSign, Send } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth, useFirestore } from '@/firebase';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import Captcha from '@/components/Captcha';
 
@@ -78,8 +79,15 @@ export default function RegisterPage() {
         createdAt: serverTimestamp()
       });
 
-      toast({ title: "Berhasil", description: "Akun Linku Anda telah aktif!" });
-      router.push('/dashboard');
+      // TRIGGER EMAIL VERIFICATION
+      await sendEmailVerification(firebaseUser);
+
+      toast({ 
+        title: "Pendaftaran Berhasil", 
+        description: "Email verifikasi telah dikirim. Harap periksa kotak masuk Anda." 
+      });
+      
+      router.push('/verify-email');
     } catch (error: any) {
       toast({ 
         variant: "destructive", 
@@ -109,7 +117,7 @@ export default function RegisterPage() {
           </div>
           <div className="space-y-1">
             <CardTitle className="text-5xl font-black tracking-tighter text-white">Linku</CardTitle>
-            <CardDescription className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Neon Link Hub</CardDescription>
+            <CardDescription className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Join the Neon Hub</CardDescription>
           </div>
         </CardHeader>
         <CardContent className="px-8 pb-12 pt-4">
@@ -166,7 +174,7 @@ export default function RegisterPage() {
             <Button 
               type="submit" 
               disabled={isLoading || !isCaptchaVerified}
-              className="w-full h-16 neon-gradient text-background font-black rounded-2xl glow-primary mt-4 active:scale-95 transition-all disabled:opacity-50 uppercase text-[10px] tracking-widest"
+              className="w-full h-16 neon-gradient text-background font-black rounded-2xl glow-primary mt-4 active:scale-95 transition-all disabled:opacity-50 uppercase text-[10px] tracking-widest shadow-2xl"
             >
               {isLoading ? "MENDAFTAR..." : "DAFTAR SEKARANG"}
             </Button>

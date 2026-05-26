@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -6,10 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Link2, Mail, Lock, Check } from 'lucide-react';
+import { Link2, Mail, Lock, Check, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth, useUser } from '@/firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import Captcha from '@/components/Captcha';
 
 export default function LoginPage() {
@@ -27,7 +28,11 @@ export default function LoginPage() {
   useEffect(() => {
     setMounted(true);
     if (!isUserLoading && user) {
-      router.push('/dashboard');
+      if (user.emailVerified) {
+        router.push('/dashboard');
+      } else {
+        router.push('/verify-email');
+      }
     }
   }, [user, isUserLoading, router]);
 
@@ -37,15 +42,28 @@ export default function LoginPage() {
     
     setIsLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      
+      if (!user.emailVerified) {
+        toast({ 
+          variant: "destructive", 
+          title: "Verifikasi Diperlukan", 
+          description: "Harap verifikasi email Anda sebelum masuk."
+        });
+        router.push('/verify-email');
+        setIsLoading(false);
+        return;
+      }
+
       toast({ title: "Login Berhasil", description: "Selamat datang kembali di Linku!" });
+      router.push('/dashboard');
     } catch (error: any) {
       toast({ 
         variant: "destructive", 
         title: "Login Gagal", 
         description: "Email atau password salah."
       });
-      // Reset captcha on failure for extra security
       setIsCaptchaVerified(false);
     } finally {
       setIsLoading(false);

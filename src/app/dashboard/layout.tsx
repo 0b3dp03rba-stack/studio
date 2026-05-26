@@ -26,6 +26,12 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
       router.push('/login');
       return;
     }
+
+    // MANDATORY EMAIL VERIFICATION CHECK
+    if (!user.emailVerified) {
+      router.push('/verify-email');
+      return;
+    }
   }, [user, isUserLoading, profile, isProfileLoading, router]);
 
   if (isUserLoading || (user && isProfileLoading)) {
@@ -39,7 +45,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
     );
   }
 
-  if (!user) return null;
+  if (!user || !user.emailVerified) return null;
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
