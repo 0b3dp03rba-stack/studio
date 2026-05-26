@@ -1,95 +1,144 @@
-
 "use client";
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { User, Mail, Trash2, ArrowLeft, Loader2, AlertCircle, Eye } from 'lucide-react';
+import { User, Mail, Trash2, ArrowLeft, Loader2, AlertCircle, Edit3, Search, X, ShieldCheck, Key, Save, AtSign, Info } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
-import { collection, query, limit, doc, deleteDoc } from 'firebase/firestore';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc, useAuth } from '@/firebase';
+import { collection, query, limit, doc, deleteDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { sendPasswordResetEmail } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function AdminUsersPage() {
   const { user: adminUser } = useUser();
+  const auth = useAuth();
   const db = useFirestore();
   const { toast } = useToast();
+  
+  const [searchQuery, setSearchQuery] = useState('');
   const [userToDelete, setUserToDelete] = useState<any>(null);
+  const [editingUser, setEditingUser] = useState<any>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
+  // Validasi Status Admin
   const profileRef = useMemoFirebase(() => adminUser ? doc(db, 'userProfiles', adminUser.uid) : null, [db, adminUser]);
   const { data: profile } = useDoc(profileRef);
   const isAdmin = profile?.role === 'Admin' || adminUser?.email === 'creeppermoment@gmail.com';
 
-  const { data: users, isLoading } = useCollection(useMemoFirebase(() => 
-    isAdmin ? query(collection(db, 'userProfiles'), limit(200)) : null, 
+  const { data: rawUsers, isLoading } = useCollection(useMemoFirebase(() => 
+    isAdmin ? query(collection(db, 'userProfiles'), limit(500)) : null, 
     [db, isAdmin]
   ));
 
+  const filteredUsers = useMemo(() => {
+    if (!rawUsers) return [];
+    return rawUsers.filter(u => 
+      u.email?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      u.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      u.displayName?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [rawUsers, searchQuery]);
+
   const handleDeleteUser = async () => {
     if (!userToDelete || isDeleting) return;
-    
     setIsDeleting(true);
-    const targetUsername = userToDelete.username || 'unknown';
-    const targetId = userToDelete.id;
-
     try {
-      // 1. Hapus username mapping
       if (userToDelete.username) {
         await deleteDoc(doc(db, 'usernames', userToDelete.username.toLowerCase()));
       }
-      // 2. Hapus profile
-      await deleteDoc(doc(db, 'userProfiles', targetId));
-      
-      // Reset state first before notification to prevent spam
-      setUserToDelete(null);
-      setIsDeleting(false);
-
-      toast({ 
-        title: "USER DIHAPUS", 
-        description: `Akun @${targetUsername.toUpperCase()} telah berhasil dihapus dari sistem.` 
-      });
+      await deleteDoc(doc(db, 'userProfiles', userToDelete.id));
+      toast({ title: "AKUN DIHAPUS", description: `@${userToDelete.username} telah dihapus selamanya.` });
     } catch (e) {
+      toast({ variant: "destructive", title: "GAGAL", description: "Kesalahan akses database." });
+    } finally {
       setIsDeleting(false);
-      toast({ 
-        variant: "destructive", 
-        title: "GAGAL MENGHAPUS", 
-        description: "Terjadi kesalahan saat mengakses database." 
+      setUserToDelete(null);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingUser || isSaving) return;
+    setIsSaving(true);
+    try {
+      const userRef = doc(db, 'userProfiles', editingUser.id);
+      await updateDoc(userRef, {
+        displayName: editingUser.displayName,
+        username: editingUser.username.toLowerCase().trim(),
+        role: editingUser.role,
+        bio: editingUser.bio || '',
+        updatedAt: serverTimestamp()
       });
+      toast({ title: "PROFIL DIPERBARUI", description: "Data pengguna telah berhasil disimpan." });
+      setEditingUser(null);
+    } catch (e) {
+      toast({ variant: "destructive", title: "GAGAL", description: "Gagal memperbarui data." });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSendResetEmail = async (email: string) => {
+    try {
+      await sendPasswordResetEmail(auth, email);
+      toast({ title: "EMAIL TERKIRIM", description: `Instruksi reset sandi telah dikirim ke ${email}.` });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "GAGAL", description: e.message });
     }
   };
 
   if (isLoading) return (
     <div className="p-20 text-center flex flex-col items-center gap-4">
       <Loader2 className="animate-spin text-primary" size={32} />
-      <p className="font-black uppercase text-[10px] tracking-widest text-primary/50">Memindai Database User...</p>
+      <p className="font-black uppercase text-[10px] tracking-widest text-primary/50">Memindai Arsip User...</p>
     </div>
   );
 
   if (!isAdmin) return null;
 
   return (
-    <div className="space-y-6 animate-in">
-      <div className="flex items-center justify-between">
-        <div className="space-y-2">
-          <Button variant="ghost" asChild className="p-0 h-auto hover:bg-transparent -ml-1 text-white/40 hover:text-white transition-colors">
-            <Link href="/admin" className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest">
-              <ArrowLeft size={14} /> Kembali ke Panel
-            </Link>
-          </Button>
-          <h1 className="text-3xl font-black tracking-tight text-white uppercase">User Database</h1>
-          <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-[0.2em] opacity-70">Total terdaftar: {users?.length || 0} akun.</p>
+    <div className="space-y-8 animate-in pb-20">
+      <div className="flex flex-col gap-4">
+        <Button variant="ghost" asChild className="w-fit p-0 h-auto hover:bg-transparent text-white/40 hover:text-white transition-colors">
+          <Link href="/admin" className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest">
+            <ArrowLeft size={14} /> Kembali ke Panel
+          </Link>
+        </Button>
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+          <div>
+            <h1 className="text-4xl font-black tracking-tighter text-white uppercase">User Control</h1>
+            <p className="text-primary/70 text-[10px] font-black uppercase tracking-[0.4em]">Database & Manajemen Akses</p>
+          </div>
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/20" size={16} />
+            <Input 
+              placeholder="Cari email/user..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="bg-white/5 border-white/10 h-10 pl-10 rounded-xl text-xs font-bold focus-visible:ring-primary/30"
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/20 hover:text-white">
+                <X size={14} />
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
       <div className="space-y-3">
-        {(users || []).map((u) => (
-          <Card key={u.id} className="glass-card border-none rounded-[1.5rem] overflow-hidden group shadow-xl hover:bg-white/[0.05] transition-all">
+        {filteredUsers.map((u) => (
+          <Card key={u.id} className="glass-card border-none rounded-[1.8rem] overflow-hidden group shadow-xl hover:bg-white/[0.05] transition-all">
             <CardContent className="p-4 flex items-center gap-4">
-              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all shrink-0 ${u.role === 'Admin' ? 'neon-gradient text-background glow-primary' : 'bg-white/5 text-muted-foreground'}`}>
-                <User size={28} />
+              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all shrink-0 ${u.role === 'Admin' ? 'neon-gradient text-background glow-primary' : 'bg-white/5 text-muted-foreground border border-white/5'}`}>
+                {u.role === 'Admin' ? <ShieldCheck size={28} /> : <User size={28} />}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
@@ -98,51 +147,112 @@ export default function AdminUsersPage() {
                     {u.role}
                   </Badge>
                 </div>
-                <div className="flex flex-col gap-1">
-                  <p className="text-[10px] text-white/40 truncate flex items-center gap-1 font-bold uppercase tracking-tight">
-                    <Mail size={10} /> {u.email}
-                  </p>
-                  <div className="flex gap-4 mt-1">
-                    <div className="flex items-center gap-1 text-[10px] text-primary font-black uppercase">
-                      <Eye size={10} /> {u.views || 0} Profil Views
-                    </div>
-                  </div>
-                </div>
+                <p className="text-[10px] text-white/40 truncate flex items-center gap-1 font-bold uppercase tracking-tight">
+                  <Mail size={10} /> {u.email}
+                </p>
               </div>
               
-              {u.id !== adminUser?.uid && (
+              <div className="flex items-center gap-2">
                 <Button 
                   size="icon" 
                   variant="ghost" 
-                  onClick={() => setUserToDelete(u)}
-                  className="h-12 w-12 rounded-2xl text-white/20 hover:text-destructive hover:bg-destructive/10 transition-all shadow-xl active:scale-95"
+                  onClick={() => setEditingUser(u)}
+                  className="h-11 w-11 rounded-xl text-white/20 hover:text-primary hover:bg-primary/10 transition-all active:scale-95"
                 >
-                  <Trash2 size={20} />
+                  <Edit3 size={18} />
                 </Button>
-              )}
+                {u.id !== adminUser?.uid && (
+                  <Button 
+                    size="icon" 
+                    variant="ghost" 
+                    onClick={() => setUserToDelete(u)}
+                    className="h-11 w-11 rounded-xl text-white/20 hover:text-destructive hover:bg-destructive/10 transition-all active:scale-95"
+                  >
+                    <Trash2 size={18} />
+                  </Button>
+                )}
+              </div>
             </CardContent>
           </Card>
         ))}
 
-        {users?.length === 0 && (
-          <div className="text-center py-24 opacity-20 font-black uppercase text-[10px] tracking-widest border border-dashed border-white/10 rounded-[2.5rem]">
-            Database Kosong
+        {filteredUsers.length === 0 && (
+          <div className="text-center py-24 glass-card border-dashed border-white/10 rounded-[2.5rem]">
+            <p className="font-black uppercase text-[10px] tracking-widest text-white/10">Data tidak ditemukan</p>
           </div>
         )}
       </div>
 
-      <div className="p-6 bg-primary/5 rounded-[2rem] border border-primary/10 flex gap-4 items-start">
-         <AlertCircle size={20} className="text-primary shrink-0 mt-0.5" />
-         <p className="text-[10px] font-black uppercase leading-relaxed text-primary/70">Peringatan: Menghapus pengguna akan menghilangkan profil publik dan seluruh tautan mereka secara permanen.</p>
-      </div>
+      <Dialog open={!!editingUser} onOpenChange={(open) => !open && !isSaving && setEditingUser(null)}>
+        <DialogContent className="glass-card border-none rounded-[2.5rem] bg-background/95 backdrop-blur-3xl p-8 shadow-2xl max-w-[95%] sm:max-w-md mx-auto">
+          <div className="absolute top-0 left-0 w-full h-1.5 neon-gradient" />
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-white">Kelola Akun</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-5 py-4 text-left">
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Nama Tampilan</label>
+                <Input value={editingUser?.displayName || ''} onChange={(e) => setEditingUser({...editingUser, displayName: e.target.value})} className="bg-white/5 border-none h-12 rounded-xl font-bold" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Username Unik</label>
+                <div className="relative">
+                  <AtSign className="absolute left-4 top-1/2 -translate-y-1/2 text-primary" size={14} />
+                  <Input value={editingUser?.username || ''} onChange={(e) => setEditingUser({...editingUser, username: e.target.value})} className="bg-white/5 border-none h-12 rounded-xl pl-10 font-bold" />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Role Platform</label>
+                <Select value={editingUser?.role} onValueChange={(v) => setEditingUser({...editingUser, role: v})}>
+                  <SelectTrigger className="bg-white/5 border-none h-12 rounded-xl font-black uppercase text-[10px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="glass-card border-none rounded-xl">
+                    <SelectItem value="User" className="text-xs font-bold">USER PLATFORM</SelectItem>
+                    <SelectItem value="Admin" className="text-xs font-bold">ADMINISTRATOR</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-      <AlertDialog open={!!userToDelete} onOpenChange={(open) => { if(!open && !isDeleting) setUserToDelete(null); }}>
+              <div className="pt-4 border-t border-white/10 space-y-4">
+                <div className="flex items-center gap-2 text-primary">
+                  <Key size={16} />
+                  <span className="text-[10px] font-black uppercase tracking-widest">Akses Keamanan</span>
+                </div>
+                <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10 flex gap-3 items-start">
+                  <Info size={16} className="text-primary shrink-0 mt-0.5" />
+                  <p className="text-[9px] font-bold text-primary/70 leading-relaxed uppercase">
+                    Sandi asli terenkripsi. Gunakan tombol di bawah untuk mengirim link ganti sandi ke email user jika mereka lupa.
+                  </p>
+                </div>
+                <Button 
+                  onClick={() => handleSendResetEmail(editingUser.email)}
+                  className="w-full h-12 bg-white/5 hover:bg-white/10 text-white font-black rounded-xl text-[10px] uppercase tracking-widest border border-white/5"
+                >
+                  KIRIM RESET PASSWORD KE EMAIL
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="mt-6">
+            <Button variant="ghost" onClick={() => setEditingUser(null)} className="rounded-xl font-black uppercase text-[10px]">Batal</Button>
+            <Button onClick={handleSaveEdit} disabled={isSaving} className="neon-gradient text-background font-black rounded-xl glow-primary px-8 uppercase text-[10px]">
+              {isSaving ? <Loader2 className="animate-spin" size={16} /> : "SIMPAN PERUBAHAN"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!userToDelete} onOpenChange={(open) => !open && !isDeleting && setUserToDelete(null)}>
         <AlertDialogContent className="glass-card border-none rounded-[2.5rem] bg-background/95 backdrop-blur-3xl p-8 shadow-2xl max-w-[90%] sm:max-w-md mx-auto">
           <div className="absolute top-0 left-0 w-full h-1.5 bg-destructive" />
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-2xl font-black uppercase tracking-tighter text-white">Eliminasi User?</AlertDialogTitle>
+            <AlertDialogTitle className="text-2xl font-black uppercase tracking-tighter text-white">Hapus Akun?</AlertDialogTitle>
             <AlertDialogDescription className="text-white/60 font-medium leading-relaxed">
-              Konfirmasi penghapusan data untuk <strong className="text-white">@{userToDelete?.username}</strong>. Tindakan ini tidak bisa dibatalkan.
+              Konfirmasi penghapusan data untuk <strong className="text-white">@{userToDelete?.username}</strong>. Seluruh profil dan link mereka akan hilang permanen.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-8 flex gap-3">
