@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -5,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Mail, Send, ArrowLeft, RefreshCw, ShieldCheck, Search, AlertCircle } from 'lucide-react';
+import { Mail, Send, ArrowLeft, RefreshCw, ShieldCheck, Search, AlertCircle, Inbox, BellRing } from 'lucide-react';
 import { useAuth, useUser } from '@/firebase';
 import { sendEmailVerification, signOut } from 'firebase/auth';
 
@@ -75,33 +76,45 @@ export default function VerifyEmailPage() {
           </div>
         </CardHeader>
         <CardContent className="px-8 pb-12 space-y-8">
-          <div className="space-y-4">
+          <div className="space-y-6">
             <p className="text-sm text-white/70 font-medium leading-relaxed">
               Kami telah mengirimkan link verifikasi ke <span className="text-white font-black">{user?.email}</span>. 
             </p>
             
-            <div className="p-5 bg-white/5 rounded-2xl border border-white/10 flex flex-col gap-3 text-left">
-               <div className="flex items-center gap-2 text-primary">
-                 <Search size={16} />
-                 <p className="text-[10px] font-black uppercase tracking-widest">Cara Menemukan Email:</p>
+            <div className="p-5 bg-primary/10 rounded-[2rem] border-2 border-primary/30 flex flex-col gap-4 text-left relative overflow-hidden group">
+               <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+                 <AlertCircle size={60} className="text-primary" />
                </div>
-               <div className="space-y-2">
-                 <p className="text-xs font-bold text-white/90">
-                   Pengirim: <span className="text-primary">auth@linku.biz.id</span>
-                 </p>
-                 <div className="flex items-start gap-2 bg-primary/5 p-2 rounded-lg border border-primary/10">
-                   <AlertCircle size={14} className="text-primary shrink-0 mt-0.5" />
-                   <p className="text-[9px] font-bold text-primary/80 leading-relaxed uppercase">
-                     PENTING: Periksa folder SPAM atau PROMOSI jika email tidak muncul di Inbox Utama dalam 1 menit.
+               <div className="flex items-center gap-2 text-primary relative z-10">
+                 <Search size={18} />
+                 <p className="text-[11px] font-black uppercase tracking-widest">Email Tidak Muncul?</p>
+               </div>
+               <div className="space-y-3 relative z-10">
+                 <div className="flex items-start gap-3">
+                   <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center shrink-0 mt-0.5"><span className="text-[10px] font-black">1</span></div>
+                   <p className="text-[10px] font-bold text-white/90 leading-snug uppercase">
+                     Buka folder <span className="text-primary underline underline-offset-2">SPAM</span> atau <span className="text-primary underline underline-offset-2">PROMOSI</span> di Gmail Anda.
+                   </p>
+                 </div>
+                 <div className="flex items-start gap-3">
+                   <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center shrink-0 mt-0.5"><span className="text-[10px] font-black">2</span></div>
+                   <p className="text-[10px] font-bold text-white/90 leading-snug uppercase">
+                     Jika ada di folder Spam, klik tombol <span className="text-primary">"Bukan Spam"</span> agar pengirim <span className="text-primary">auth@linku.biz.id</span> masuk ke Inbox Utama kedepannya.
+                   </p>
+                 </div>
+                 <div className="flex items-start gap-3">
+                   <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center shrink-0 mt-0.5"><span className="text-[10px] font-black">3</span></div>
+                   <p className="text-[10px] font-bold text-white/90 leading-snug uppercase">
+                     Refresh halaman ini <span className="text-primary">SETELAH</span> Anda mengklik link verifikasi di email tersebut.
                    </p>
                  </div>
                </div>
             </div>
 
-            <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10 flex items-start gap-3 text-left">
-               <ShieldCheck size={18} className="text-primary shrink-0 mt-0.5" />
-               <p className="text-[9px] font-black uppercase text-primary/60 leading-normal tracking-wider">
-                 Setelah mengklik link verifikasi, harap muat ulang halaman ini untuk masuk ke Dashboard Linku.
+            <div className="p-4 bg-white/5 rounded-2xl border border-white/10 flex items-center gap-3 text-left">
+               <ShieldCheck size={18} className="text-primary shrink-0" />
+               <p className="text-[9px] font-black uppercase text-white/40 tracking-wider">
+                 Identity Protection by Linku Engine
                </p>
             </div>
           </div>
@@ -126,7 +139,7 @@ export default function VerifyEmailPage() {
           </div>
         </CardContent>
         <div className="absolute bottom-6 left-0 right-0 text-center">
-           <p className="text-[8px] font-black text-white/10 uppercase tracking-[0.5em]">Linku Engine &bull; Identity Protection</p>
+           <p className="text-[8px] font-black text-white/10 uppercase tracking-[0.5em]">Secure Auth &bull; linku.biz.id</p>
         </div>
       </Card>
     </div>
