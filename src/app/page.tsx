@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
@@ -44,7 +43,7 @@ export default function LandingPage() {
   }, [db]);
 
   useEffect(() => {
-    if (user && !isUserLoading) {
+    if (user && !isUserLoading && user.emailVerified) {
       router.push('/dashboard');
     }
   }, [user, isUserLoading, router]);
@@ -67,14 +66,6 @@ export default function LandingPage() {
 
   if (!mounted) {
     return <div className="min-h-screen bg-black" />;
-  }
-
-  if (isUserLoading || user) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-2xl animate-spin"></div>
-      </div>
-    );
   }
 
   return (
@@ -137,7 +128,7 @@ export default function LandingPage() {
                     <span className="text-5xl font-black text-white tracking-tighter">{stats.average}</span>
                     <div className="text-left">
                       <StaticStarRating rating={stats.average} size={24} />
-                      <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mt-1">Rating Komunitas</p>
+                      <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mt-1">Total {stats.total} Ulasan</p>
                     </div>
                   </div>
                </div>
@@ -163,9 +154,9 @@ export default function LandingPage() {
             ))}
             
             <div className="pt-8 text-center">
-              <Button asChild variant="ghost" className="text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-primary transition-all gap-2 group">
+              <Button asChild variant="ghost" className="h-14 px-10 glass-card rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] text-white hover:text-primary transition-all gap-2 group">
                 <Link href="/reviews">
-                  Lihat Semua Ulasan <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
+                  Lihat Semua Ulasan <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
                 </Link>
               </Button>
             </div>

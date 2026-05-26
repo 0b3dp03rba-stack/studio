@@ -2,11 +2,10 @@
 
 import { useState, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { User, Mail, Trash2, ArrowLeft, Loader2, AlertCircle, Edit3, Search, X, ShieldCheck, Key, Save, AtSign, Info } from 'lucide-react';
+import { User, Mail, Trash2, ArrowLeft, Loader2, Edit3, Search, X, ShieldCheck, Key, AtSign, Info, Lock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc, useAuth } from '@/firebase';
 import { collection, query, limit, doc, deleteDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { sendPasswordResetEmail } from 'firebase/auth';
@@ -88,7 +87,7 @@ export default function AdminUsersPage() {
   const handleSendResetEmail = async (email: string) => {
     try {
       await sendPasswordResetEmail(auth, email);
-      toast({ title: "EMAIL TERKIRIM", description: `Instruksi reset sandi telah dikirim ke ${email}.` });
+      toast({ title: "EMAIL TERKIRIM", description: `Instruksi reset sandi telah dikirim ke ${email} dari verifikasi@linku.biz.id.` });
     } catch (e: any) {
       toast({ variant: "destructive", title: "GAGAL", description: e.message });
     }
@@ -224,14 +223,14 @@ export default function AdminUsersPage() {
                 <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10 flex gap-3 items-start">
                   <Info size={16} className="text-primary shrink-0 mt-0.5" />
                   <p className="text-[9px] font-bold text-primary/70 leading-relaxed uppercase">
-                    Sandi asli terenkripsi. Gunakan tombol di bawah untuk mengirim link ganti sandi ke email user jika mereka lupa.
+                    Sandi asli terenkripsi secara otomatis oleh Firebase. Gunakan tombol di bawah untuk memicu email reset sandi resmi.
                   </p>
                 </div>
                 <Button 
                   onClick={() => handleSendResetEmail(editingUser.email)}
-                  className="w-full h-12 bg-white/5 hover:bg-white/10 text-white font-black rounded-xl text-[10px] uppercase tracking-widest border border-white/5"
+                  className="w-full h-14 bg-primary/10 hover:bg-primary/20 text-primary font-black rounded-xl text-[10px] uppercase tracking-[0.2em] border border-primary/20"
                 >
-                  KIRIM RESET PASSWORD KE EMAIL
+                  <Lock size={14} className="mr-2" /> KIRIM EMAIL RESET PASSWORD
                 </Button>
               </div>
             </div>

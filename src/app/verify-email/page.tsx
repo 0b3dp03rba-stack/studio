@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -6,8 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Link2, Mail, Send, ArrowLeft, RefreshCw, ShieldCheck } from 'lucide-react';
-import Link from 'next/link';
+import { Mail, Send, ArrowLeft, RefreshCw, ShieldCheck, Search } from 'lucide-react';
 import { useAuth, useUser } from '@/firebase';
 import { sendEmailVerification, signOut } from 'firebase/auth';
 
@@ -80,12 +78,25 @@ export default function VerifyEmailPage() {
           <div className="space-y-4">
             <p className="text-sm text-white/70 font-medium leading-relaxed">
               Kami telah mengirimkan link verifikasi ke <span className="text-white font-black">{user?.email}</span>. 
-              Harap klik link tersebut untuk mengaktifkan akun Linku Anda.
             </p>
+            
+            <div className="p-4 bg-white/5 rounded-2xl border border-white/10 flex flex-col gap-3 text-left">
+               <div className="flex items-center gap-2 text-primary">
+                 <Search size={16} />
+                 <p className="text-[10px] font-black uppercase tracking-widest">Cari di Kotak Masuk:</p>
+               </div>
+               <p className="text-xs font-bold text-white/90">
+                 Pengirim: <span className="text-primary">verifikasi@linku.biz.id</span>
+               </p>
+               <p className="text-[9px] font-medium text-white/40 leading-relaxed uppercase">
+                 Jika tidak ada di Inbox, harap periksa folder <span className="text-white/60">Spam</span> atau <span className="text-white/60">Promosi</span>.
+               </p>
+            </div>
+
             <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10 flex items-start gap-3 text-left">
                <ShieldCheck size={18} className="text-primary shrink-0 mt-0.5" />
                <p className="text-[9px] font-black uppercase text-primary/60 leading-normal tracking-wider">
-                 Setelah verifikasi, harap muat ulang halaman atau login kembali untuk mengakses Dashboard.
+                 Setelah mengklik link verifikasi, harap muat ulang halaman ini untuk masuk ke Dashboard.
                </p>
             </div>
           </div>

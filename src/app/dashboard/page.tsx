@@ -221,9 +221,6 @@ export default function DashboardPage() {
           <h3 className="font-black text-[10px] uppercase tracking-[0.3em] text-white/50 flex items-center gap-2">
             <Sparkles size={16} className="text-primary" /> Community Love
           </h3>
-          <Button variant="ghost" asChild className="text-[9px] font-black uppercase text-white/30 tracking-widest h-8 px-2 hover:text-white">
-            <Link href="/reviews">Lihat Semua <ArrowRight size={10} className="ml-1" /></Link>
-          </Button>
         </div>
         
         <Card className="glass-card border-none rounded-[2.5rem] p-6 shadow-2xl text-left">
