@@ -87,7 +87,7 @@ export default function AdminUsersPage() {
   const handleSendResetEmail = async (email: string) => {
     try {
       await sendPasswordResetEmail(auth, email);
-      toast({ title: "EMAIL TERKIRIM", description: `Instruksi reset sandi telah dikirim ke ${email} dari verifikasi@linku.biz.id.` });
+      toast({ title: "EMAIL TERKIRIM", description: `Instruksi reset sandi telah dikirim ke ${email} dari auth@linku.biz.id.` });
     } catch (e: any) {
       toast({ variant: "destructive", title: "GAGAL", description: e.message });
     }

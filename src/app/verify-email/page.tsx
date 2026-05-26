@@ -86,7 +86,7 @@ export default function VerifyEmailPage() {
                  <p className="text-[10px] font-black uppercase tracking-widest">Cari di Kotak Masuk:</p>
                </div>
                <p className="text-xs font-bold text-white/90">
-                 Pengirim: <span className="text-primary">verifikasi@linku.biz.id</span>
+                 Pengirim: <span className="text-primary">auth@linku.biz.id</span>
                </p>
                <p className="text-[9px] font-medium text-white/40 leading-relaxed uppercase">
                  Jika tidak ada di Inbox, harap periksa folder <span className="text-white/60">Spam</span> atau <span className="text-white/60">Promosi</span>.
