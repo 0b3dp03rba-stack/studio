@@ -2,7 +2,6 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Fungsi bantu admin
     function isAdmin() {
       return request.auth != null && (
         request.auth.token.email == 'creeppermoment@gmail.com' || 
@@ -11,17 +10,14 @@ service cloud.firestore {
       );
     }
 
-    // AKSES MUTLAK ADMIN
     match /{allPaths=**} {
       allow read, write: if isAdmin();
     }
 
-    // ATURAN USER & PUBLIK
     match /userProfiles/{userId} {
       allow read: if true;
       allow write: if request.auth != null && request.auth.uid == userId;
       
-      // Izin update klik untuk publik (hanya kolom clicks)
       match /links/{linkId} {
         allow read: if true;
         allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['clicks']) || (request.auth != null && request.auth.uid == userId);
@@ -62,7 +58,6 @@ service cloud.firestore {
        allow update: if request.auth != null && request.auth.uid == resource.data.receiverId;
     }
 
-    // Collection Group Access untuk tracking klik global
     match /{path=**}/links/{linkId} {
       allow read: if true;
       allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['clicks']);

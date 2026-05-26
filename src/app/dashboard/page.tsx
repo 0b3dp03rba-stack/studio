@@ -5,12 +5,11 @@ import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { MousePointer2, Eye, Star, TrendingUp, Sparkles, LayoutGrid, ArrowRight, X, Link as LinkIcon, Loader2 } from 'lucide-react';
+import { MousePointer2, Eye, Star, TrendingUp, Sparkles, LayoutGrid, ArrowRight, Link as LinkIcon, Loader2 } from 'lucide-react';
 import { useUser, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, setDoc, doc, serverTimestamp, onSnapshot, Unsubscribe } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Bar, BarChart, XAxis, ResponsiveContainer, Cell, Tooltip } from 'recharts';
-import Link from 'next/link';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 export default function DashboardPage() {
@@ -97,13 +96,11 @@ export default function DashboardPage() {
   }, [linksMap]);
 
   const topPerformers = useMemo(() => {
-    return allLinks
-      .slice(0, 4)
-      .map(l => ({
-        name: l.title.length > 8 ? l.title.slice(0, 8) + '..' : l.title,
-        clicks: Number(l.clicks || 0),
-        fullTitle: l.title
-      }));
+    return allLinks.slice(0, 4).map(l => ({
+      name: l.title.length > 8 ? l.title.slice(0, 8) + '..' : l.title,
+      clicks: Number(l.clicks || 0),
+      fullTitle: l.title
+    }));
   }, [allLinks]);
 
   const totalClicks = useMemo(() => {
@@ -119,7 +116,7 @@ export default function DashboardPage() {
         username: profile.username,
         displayName: profile.displayName || profile.username,
         avatarUrl: profile.avatarUrl || '',
-        rating: rating,
+        rating,
         comment: comment.trim(),
         createdAt: serverTimestamp()
       }, { merge: true });
@@ -131,11 +128,7 @@ export default function DashboardPage() {
     }
   };
 
-  if (!mounted) return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-      <Loader2 className="animate-spin text-primary" size={32} />
-    </div>
-  );
+  if (!mounted) return <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4"><Loader2 className="animate-spin text-primary" size={32} /></div>;
 
   return (
     <div className="space-y-8 animate-in pb-12">
@@ -148,9 +141,7 @@ export default function DashboardPage() {
         <Card className="glass-card border-none rounded-[2rem] p-5 shadow-2xl relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-24 h-24 bg-primary/10 rounded-full -mr-8 -mt-8 blur-2xl transition-colors" />
           <CardContent className="p-0 space-y-3 relative z-10 text-left">
-            <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary glow-primary">
-              <MousePointer2 size={20} />
-            </div>
+            <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary glow-primary"><MousePointer2 size={20} /></div>
             <div>
               <p className="text-3xl font-black tracking-tighter text-white">{totalClicks}</p>
               <p className="text-[8px] font-black uppercase text-white/40 tracking-widest">Total Klik Tautan</p>
@@ -160,9 +151,7 @@ export default function DashboardPage() {
         <Card className="glass-card border-none rounded-[2rem] p-5 shadow-2xl relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-24 h-24 bg-secondary/10 rounded-full -mr-8 -mt-8 blur-2xl transition-colors" />
           <CardContent className="p-0 space-y-3 relative z-10 text-left">
-            <div className="w-10 h-10 rounded-xl bg-secondary/20 flex items-center justify-center text-secondary">
-              <Eye size={20} />
-            </div>
+            <div className="w-10 h-10 rounded-xl bg-secondary/20 flex items-center justify-center text-secondary"><Eye size={20} /></div>
             <div>
               <p className="text-3xl font-black tracking-tighter text-white">{profile?.views || 0}</p>
               <p className="text-[8px] font-black uppercase text-white/40 tracking-widest">Views Profil</p>
@@ -177,13 +166,7 @@ export default function DashboardPage() {
              <div className="w-8 h-8 rounded-lg neon-gradient flex items-center justify-center text-background"><TrendingUp size={16} /></div>
              <h3 className="font-black text-xs uppercase tracking-widest text-white">Top Performers</h3>
           </div>
-          <Button 
-            variant="ghost" 
-            onClick={() => setShowAllClicksModal(true)} 
-            className="text-[9px] font-black uppercase text-primary tracking-widest h-8 px-2 hover:bg-primary/10"
-          >
-            Lihat Semua <ArrowRight size={10} className="ml-1" />
-          </Button>
+          <Button variant="ghost" onClick={() => setShowAllClicksModal(true)} className="text-[9px] font-black uppercase text-primary tracking-widest h-8 px-2 hover:bg-primary/10">Lihat Semua <ArrowRight size={10} className="ml-1" /></Button>
         </div>
 
         {allLinks.length > 0 ? (
@@ -214,19 +197,13 @@ export default function DashboardPage() {
             </ResponsiveContainer>
           </div>
         ) : (
-          <div className="py-12 text-center opacity-20 font-black uppercase text-[10px] tracking-widest flex flex-col items-center gap-4">
-            <LayoutGrid size={40} />
-            <span>Belum ada interaksi.</span>
-          </div>
+          <div className="py-12 text-center opacity-20 font-black uppercase text-[10px] tracking-widest flex flex-col items-center gap-4"><LayoutGrid size={40} /><span>Belum ada interaksi.</span></div>
         )}
       </Card>
 
       <Card className="glass-card border-none rounded-[2.5rem] p-6 shadow-2xl text-left">
         <CardContent className="p-0 space-y-5">
-          <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase tracking-widest">
-            <Star size={16} />
-            <span>Testimonial Anda</span>
-          </div>
+          <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase tracking-widest"><Star size={16} /><span>Testimonial Anda</span></div>
           <div className="flex justify-center gap-3 py-2">
             {[1, 2, 3, 4, 5].map((s) => (
               <button key={s} onClick={() => setRating(s)} className={`transition-all hover:scale-110 active:scale-95 ${rating >= s ? 'text-primary' : 'text-white/10'}`}>
@@ -234,48 +211,23 @@ export default function DashboardPage() {
               </button>
             ))}
           </div>
-          <Textarea 
-            placeholder="Tulis ulasan tentang Linku..." 
-            value={comment} 
-            onChange={(e) => setComment(e.target.value)}
-            className="bg-white/5 border-white/5 h-28 rounded-2xl p-4 text-xs font-medium border-none focus-visible:ring-primary/20 text-white"
-          />
-          <Button onClick={handleSaveRating} disabled={isRatingSaving || rating === 0 || !comment} className="w-full h-14 neon-gradient text-background font-black rounded-2xl glow-primary uppercase text-[10px] tracking-widest">
-            {isRatingSaving ? "MEMPROSES..." : "SIMPAN ULASAN"}
-          </Button>
+          <Textarea placeholder="Tulis ulasan tentang Linku..." value={comment} onChange={(e) => setComment(e.target.value)} className="bg-white/5 border-white/5 h-28 rounded-2xl p-4 text-xs font-medium border-none focus-visible:ring-primary/20 text-white" />
+          <Button onClick={handleSaveRating} disabled={isRatingSaving || rating === 0 || !comment} className="w-full h-14 neon-gradient text-background font-black rounded-2xl glow-primary uppercase text-[10px] tracking-widest">{isRatingSaving ? "MEMPROSES..." : "SIMPAN ULASAN"}</Button>
         </CardContent>
       </Card>
 
       <Dialog open={showAllClicksModal} onOpenChange={setShowAllClicksModal}>
         <DialogContent className="glass-card border-none rounded-[2.5rem] bg-black/95 backdrop-blur-3xl p-6 shadow-2xl max-w-[95%] sm:max-w-md mx-auto max-h-[80vh] overflow-hidden flex flex-col">
-          <DialogHeader className="mb-4 shrink-0">
-            <DialogTitle className="text-xl font-black uppercase tracking-tighter text-white flex items-center gap-2">
-              <TrendingUp size={20} className="text-primary" /> Statistik Linku
-            </DialogTitle>
-          </DialogHeader>
-          
+          <DialogHeader className="mb-4 shrink-0"><DialogTitle className="text-xl font-black uppercase tracking-tighter text-white flex items-center gap-2"><TrendingUp size={20} className="text-primary" /> Statistik Linku</DialogTitle></DialogHeader>
           <div className="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-hide">
-            {allLinks.length === 0 ? (
-              <p className="text-center py-20 text-[10px] font-black uppercase text-white/20 tracking-widest">Kosong</p>
-            ) : (
-              allLinks.map((link) => (
+            {allLinks.length === 0 ? <p className="text-center py-20 text-[10px] font-black uppercase text-white/20 tracking-widest">Kosong</p> : allLinks.map((link) => (
                 <div key={link.id} className="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/10 group">
-                  <div className="w-10 h-10 rounded-xl bg-black flex items-center justify-center overflow-hidden border border-white/10 shrink-0">
-                    {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <LinkIcon size={18} className="text-primary/50" />}
-                  </div>
-                  <div className="flex-1 min-w-0 text-left">
-                    <p className="text-xs font-black text-white uppercase truncate">{link.title}</p>
-                    <p className="text-[8px] text-white/40 truncate font-mono uppercase tracking-tighter">{link.url}</p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-lg font-black text-primary tracking-tighter leading-none">{link.clicks || 0}</p>
-                    <p className="text-[7px] font-bold text-white/20 uppercase tracking-widest">KLIK</p>
-                  </div>
+                  <div className="w-10 h-10 rounded-xl bg-black flex items-center justify-center overflow-hidden border border-white/10 shrink-0">{link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <LinkIcon size={18} className="text-primary/50" />}</div>
+                  <div className="flex-1 min-w-0 text-left"><p className="text-xs font-black text-white uppercase truncate">{link.title}</p><p className="text-[8px] text-white/40 truncate font-mono uppercase tracking-tighter">{link.url}</p></div>
+                  <div className="text-right shrink-0"><p className="text-lg font-black text-primary tracking-tighter leading-none">{link.clicks || 0}</p><p className="text-[7px] font-bold text-white/20 uppercase tracking-widest">KLIK</p></div>
                 </div>
-              ))
-            )}
+            ))}
           </div>
-          
           <Button onClick={() => setShowAllClicksModal(false)} variant="ghost" className="w-full mt-4 h-12 text-[10px] font-black uppercase text-white/40 hover:text-white shrink-0">Tutup</Button>
         </DialogContent>
       </Dialog>
