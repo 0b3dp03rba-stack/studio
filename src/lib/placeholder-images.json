@@ -1,3 +1,124 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "1",
+      "description": "Neon City",
+      "imageUrl": "https://images.unsplash.com/photo-1515694346937-94d85e41e6f0?w=600&h=600&fit=crop",
+      "imageHint": "cyberpunk city"
+    },
+    {
+      "id": "2",
+      "description": "Mountain Lake",
+      "imageUrl": "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=600&h=600&fit=crop",
+      "imageHint": "mountain lake"
+    },
+    {
+      "id": "3",
+      "description": "Abstract Tech",
+      "imageUrl": "https://images.unsplash.com/photo-1518770660439-4636190af475?w=600&h=600&fit=crop",
+      "imageHint": "technology abstract"
+    },
+    {
+      "id": "4",
+      "description": "Forest Sun",
+      "imageUrl": "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=600&h=600&fit=crop",
+      "imageHint": "forest sun"
+    },
+    {
+      "id": "5",
+      "description": "Ocean Waves",
+      "imageUrl": "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&h=600&fit=crop",
+      "imageHint": "beach waves"
+    },
+    {
+      "id": "6",
+      "description": "Modern Office",
+      "imageUrl": "https://images.unsplash.com/photo-1497366216548-37526070297c?w=600&h=600&fit=crop",
+      "imageHint": "minimalist office"
+    },
+    {
+      "id": "7",
+      "description": "Rainy Night",
+      "imageUrl": "https://images.unsplash.com/photo-1519608487953-e999c86e7455?w=600&h=600&fit=crop",
+      "imageHint": "city rain"
+    },
+    {
+      "id": "8",
+      "description": "Golden Bridge",
+      "imageUrl": "https://images.unsplash.com/photo-1449034446853-66c86144b0ad?w=600&h=600&fit=crop",
+      "imageHint": "bridge sunset"
+    },
+    {
+      "id": "9",
+      "description": "Galaxy Star",
+      "imageUrl": "https://images.unsplash.com/photo-1464802686167-b939a67e0524?w=600&h=600&fit=crop",
+      "imageHint": "galaxy space"
+    },
+    {
+      "id": "10",
+      "description": "Desert Dunes",
+      "imageUrl": "https://images.unsplash.com/photo-1473580044384-7ba9967e16a0?w=600&h=600&fit=crop",
+      "imageHint": "desert sand"
+    },
+    {
+      "id": "11",
+      "description": "Snow Forest",
+      "imageUrl": "https://images.unsplash.com/photo-1483921020237-2ff51e8e4b22?w=600&h=600&fit=crop",
+      "imageHint": "winter tree"
+    },
+    {
+      "id": "12",
+      "description": "Coffee Art",
+      "imageUrl": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=600&h=600&fit=crop",
+      "imageHint": "coffee cup"
+    },
+    {
+      "id": "13",
+      "description": "Tokyo Street",
+      "imageUrl": "https://images.unsplash.com/photo-1563245372-f21724e3856d?w=600&h=600&fit=crop",
+      "imageHint": "neon signs"
+    },
+    {
+      "id": "14",
+      "description": "Vintage Cam",
+      "imageUrl": "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=600&h=600&fit=crop",
+      "imageHint": "camera retro"
+    },
+    {
+      "id": "15",
+      "description": "Autumn Leaf",
+      "imageUrl": "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=600&h=600&fit=crop",
+      "imageHint": "autumn park"
+    },
+    {
+      "id": "16",
+      "description": "Lighthouse",
+      "imageUrl": "https://images.unsplash.com/photo-1504275107627-0c2ba7a43dba?w=600&h=600&fit=crop",
+      "imageHint": "lighthouse sea"
+    },
+    {
+      "id": "17",
+      "description": "City Skyline",
+      "imageUrl": "https://images.unsplash.com/photo-1514565131-fce0801e5785?w=600&h=600&fit=crop",
+      "imageHint": "city skyline"
+    },
+    {
+      "id": "18",
+      "description": "Cyber Tunnel",
+      "imageUrl": "https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?w=600&h=600&fit=crop",
+      "imageHint": "abstract neon"
+    },
+    {
+      "id": "19",
+      "description": "Nature Path",
+      "imageUrl": "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=600&h=600&fit=crop",
+      "imageHint": "foggy forest"
+    },
+    {
+      "id": "20",
+      "description": "Modern Minimal",
+      "imageUrl": "https://images.unsplash.com/photo-1449156003711-8340ce07fce2?w=600&h=600&fit=crop",
+      "imageHint": "architecture clean"
+    }
+  ]
 }
