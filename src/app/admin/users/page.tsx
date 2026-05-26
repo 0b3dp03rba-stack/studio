@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo } from 'react';
@@ -27,7 +28,7 @@ export default function AdminUsersPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Validasi Status Admin
+  // Validasi Status Admin: Memastikan hanya admin yang bisa mengakses data user
   const profileRef = useMemoFirebase(() => adminUser ? doc(db, 'userProfiles', adminUser.uid) : null, [db, adminUser]);
   const { data: profile } = useDoc(profileRef);
   const isAdmin = profile?.role === 'Admin' || adminUser?.email === 'creeppermoment@gmail.com';
@@ -87,7 +88,7 @@ export default function AdminUsersPage() {
   const handleSendResetEmail = async (email: string) => {
     try {
       await sendPasswordResetEmail(auth, email);
-      toast({ title: "EMAIL TERKIRIM", description: `Instruksi reset sandi telah dikirim ke ${email} dari auth@linku.biz.id.` });
+      toast({ title: "EMAIL TERKIRIM", description: `Instruksi reset sandi telah dikirim ke ${email}.` });
     } catch (e: any) {
       toast({ variant: "destructive", title: "GAGAL", description: e.message });
     }
@@ -121,27 +122,22 @@ export default function AdminUsersPage() {
               placeholder="Cari email/user..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-white/5 border-white/10 h-10 pl-10 rounded-xl text-xs font-bold focus-visible:ring-primary/30"
+              className="bg-white/5 border-white/10 h-12 pl-10 rounded-2xl text-xs font-bold focus-visible:ring-primary/30"
             />
-            {searchQuery && (
-              <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/20 hover:text-white">
-                <X size={14} />
-              </button>
-            )}
           </div>
         </div>
       </div>
 
       <div className="space-y-3">
         {filteredUsers.map((u) => (
-          <Card key={u.id} className="glass-card border-none rounded-[1.8rem] overflow-hidden group shadow-xl hover:bg-white/[0.05] transition-all">
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all shrink-0 ${u.role === 'Admin' ? 'neon-gradient text-background glow-primary' : 'bg-white/5 text-muted-foreground border border-white/5'}`}>
+          <Card key={u.id} className="glass-card border-none rounded-[2rem] overflow-hidden group shadow-xl hover:bg-white/[0.05] transition-all">
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all shrink-0 ${u.role === 'Admin' ? 'neon-gradient text-background glow-primary shadow-xl' : 'bg-white/5 text-muted-foreground border border-white/5'}`}>
                 {u.role === 'Admin' ? <ShieldCheck size={28} /> : <User size={28} />}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <p className="text-sm font-black truncate text-white uppercase">@{u.username || 'unknown'}</p>
+                  <p className="text-sm font-black truncate text-white uppercase tracking-tight">@{u.username || 'unknown'}</p>
                   <Badge variant={u.role === 'Admin' ? 'default' : 'outline'} className="text-[8px] h-4 px-1.5 font-black uppercase border-white/10">
                     {u.role}
                   </Badge>
@@ -156,7 +152,7 @@ export default function AdminUsersPage() {
                   size="icon" 
                   variant="ghost" 
                   onClick={() => setEditingUser(u)}
-                  className="h-11 w-11 rounded-xl text-white/20 hover:text-primary hover:bg-primary/10 transition-all active:scale-95"
+                  className="h-12 w-12 rounded-2xl text-white/20 hover:text-primary hover:bg-primary/10 transition-all active:scale-95"
                 >
                   <Edit3 size={18} />
                 </Button>
@@ -165,7 +161,7 @@ export default function AdminUsersPage() {
                     size="icon" 
                     variant="ghost" 
                     onClick={() => setUserToDelete(u)}
-                    className="h-11 w-11 rounded-xl text-white/20 hover:text-destructive hover:bg-destructive/10 transition-all active:scale-95"
+                    className="h-12 w-12 rounded-2xl text-white/20 hover:text-destructive hover:bg-destructive/10 transition-all active:scale-95"
                   >
                     <Trash2 size={18} />
                   </Button>
@@ -174,16 +170,10 @@ export default function AdminUsersPage() {
             </CardContent>
           </Card>
         ))}
-
-        {filteredUsers.length === 0 && (
-          <div className="text-center py-24 glass-card border-dashed border-white/10 rounded-[2.5rem]">
-            <p className="font-black uppercase text-[10px] tracking-widest text-white/10">Data tidak ditemukan</p>
-          </div>
-        )}
       </div>
 
       <Dialog open={!!editingUser} onOpenChange={(open) => !open && !isSaving && setEditingUser(null)}>
-        <DialogContent className="glass-card border-none rounded-[2.5rem] bg-background/95 backdrop-blur-3xl p-8 shadow-2xl max-w-[95%] sm:max-w-md mx-auto">
+        <DialogContent className="glass-card border-none rounded-[2.5rem] bg-background/95 backdrop-blur-3xl p-8 shadow-2xl max-w-[95%] sm:max-w-md mx-auto overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1.5 neon-gradient" />
           <DialogHeader>
             <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-white">Kelola Akun</DialogTitle>
@@ -209,8 +199,8 @@ export default function AdminUsersPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="glass-card border-none rounded-xl">
-                    <SelectItem value="User" className="text-xs font-bold">USER PLATFORM</SelectItem>
-                    <SelectItem value="Admin" className="text-xs font-bold">ADMINISTRATOR</SelectItem>
+                    <SelectItem value="User" className="text-xs font-bold uppercase">User Biasa</SelectItem>
+                    <SelectItem value="Admin" className="text-xs font-bold uppercase">Administrator</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -218,17 +208,17 @@ export default function AdminUsersPage() {
               <div className="pt-4 border-t border-white/10 space-y-4">
                 <div className="flex items-center gap-2 text-primary">
                   <Key size={16} />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Akses Keamanan</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest">Keamanan & Sandi</span>
                 </div>
                 <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10 flex gap-3 items-start">
                   <Info size={16} className="text-primary shrink-0 mt-0.5" />
                   <p className="text-[9px] font-bold text-primary/70 leading-relaxed uppercase">
-                    Sandi asli terenkripsi secara otomatis oleh Firebase. Gunakan tombol di bawah untuk memicu email reset sandi resmi.
+                    Admin tidak bisa melihat sandi user demi privasi. Gunakan tombol di bawah untuk memicu email reset sandi resmi.
                   </p>
                 </div>
                 <Button 
                   onClick={() => handleSendResetEmail(editingUser.email)}
-                  className="w-full h-14 bg-primary/10 hover:bg-primary/20 text-primary font-black rounded-xl text-[10px] uppercase tracking-[0.2em] border border-primary/20"
+                  className="w-full h-14 bg-primary/10 hover:bg-primary/20 text-primary font-black rounded-xl text-[10px] uppercase tracking-[0.2em] border border-primary/20 shadow-xl"
                 >
                   <Lock size={14} className="mr-2" /> KIRIM EMAIL RESET PASSWORD
                 </Button>
@@ -236,10 +226,10 @@ export default function AdminUsersPage() {
             </div>
           </div>
 
-          <DialogFooter className="mt-6">
-            <Button variant="ghost" onClick={() => setEditingUser(null)} className="rounded-xl font-black uppercase text-[10px]">Batal</Button>
-            <Button onClick={handleSaveEdit} disabled={isSaving} className="neon-gradient text-background font-black rounded-xl glow-primary px-8 uppercase text-[10px]">
-              {isSaving ? <Loader2 className="animate-spin" size={16} /> : "SIMPAN PERUBAHAN"}
+          <DialogFooter className="mt-6 gap-3">
+            <Button variant="ghost" onClick={() => setEditingUser(null)} className="rounded-xl font-black uppercase text-[10px] flex-1">Batal</Button>
+            <Button onClick={handleSaveEdit} disabled={isSaving} className="neon-gradient text-background font-black rounded-xl glow-primary px-8 uppercase text-[10px] flex-1">
+              {isSaving ? <Loader2 className="animate-spin" size={16} /> : "Simpan Perubahan"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -249,9 +239,9 @@ export default function AdminUsersPage() {
         <AlertDialogContent className="glass-card border-none rounded-[2.5rem] bg-background/95 backdrop-blur-3xl p-8 shadow-2xl max-w-[90%] sm:max-w-md mx-auto">
           <div className="absolute top-0 left-0 w-full h-1.5 bg-destructive" />
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-2xl font-black uppercase tracking-tighter text-white">Hapus Akun?</AlertDialogTitle>
+            <AlertDialogTitle className="text-2xl font-black uppercase tracking-tighter text-white">Hapus Permanen?</AlertDialogTitle>
             <AlertDialogDescription className="text-white/60 font-medium leading-relaxed">
-              Konfirmasi penghapusan data untuk <strong className="text-white">@{userToDelete?.username}</strong>. Seluruh profil dan link mereka akan hilang permanen.
+              Konfirmasi penghapusan <strong className="text-white">@{userToDelete?.username}</strong>. Seluruh profil dan link mereka akan hilang selamanya.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-8 flex gap-3">
@@ -261,7 +251,7 @@ export default function AdminUsersPage() {
               disabled={isDeleting}
               className="bg-destructive hover:bg-destructive/80 text-white rounded-xl text-[10px] font-black uppercase h-12 flex-1 shadow-lg shadow-destructive/20"
             >
-              {isDeleting ? <Loader2 className="animate-spin" size={16} /> : "HAPUS PERMANEN"}
+              {isDeleting ? <Loader2 className="animate-spin" size={16} /> : "HAPUS SEKARANG"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
