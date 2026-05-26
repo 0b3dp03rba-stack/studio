@@ -42,13 +42,11 @@ export default function DashboardPage() {
     }
   }, [userReview]);
 
-  // Real-time Agregator Tautan (Standalone + Grouped)
   useEffect(() => {
     if (!user || !mounted) return;
 
     const groupUnsubs: Record<string, Unsubscribe> = {};
 
-    // 1. Listen Standalone Links
     const unsubStandalone = onSnapshot(collection(db, 'userProfiles', user.uid, 'links'), (snap) => {
       const standaloneData: Record<string, any> = {};
       snap.docs.forEach(d => {
@@ -56,17 +54,13 @@ export default function DashboardPage() {
       });
       setLinksMap(prev => {
         const cleaned = { ...prev };
-        // Hapus data standalone lama agar tersinkron
         Object.keys(cleaned).forEach(key => { if(cleaned[key].isStandalone) delete cleaned[key]; });
         return { ...cleaned, ...standaloneData };
       });
     });
 
-    // 2. Listen Groups & their Inner Links
     const unsubGroupsMaster = onSnapshot(collection(db, 'userProfiles', user.uid, 'linkGroups'), (groupsSnap) => {
       const currentGroupIds = groupsSnap.docs.map(d => d.id);
-      
-      // Unsubscribe group yang sudah dihapus
       Object.keys(groupUnsubs).forEach(gid => {
         if (!currentGroupIds.includes(gid)) {
           groupUnsubs[gid]();
@@ -74,7 +68,6 @@ export default function DashboardPage() {
         }
       });
 
-      // Buat listener untuk setiap group
       groupsSnap.docs.forEach(groupDoc => {
         if (!groupUnsubs[groupDoc.id]) {
           groupUnsubs[groupDoc.id] = onSnapshot(collection(db, 'userProfiles', user!.uid, 'linkGroups', groupDoc.id, 'links'), (linkSnap) => {
@@ -84,7 +77,6 @@ export default function DashboardPage() {
             });
             setLinksMap(prev => {
               const cleaned = { ...prev };
-              // Hapus data group ini yang lama
               Object.keys(cleaned).forEach(key => { if(cleaned[key].groupId === groupDoc.id) delete cleaned[key]; });
               return { ...cleaned, ...groupedData };
             });

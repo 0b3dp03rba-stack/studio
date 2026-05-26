@@ -77,19 +77,19 @@ export default function LoginPage() {
     setIsGoogleLoading(true);
     try {
       const provider = new GoogleAuthProvider();
+      // Mengatur parameter agar Google selalu menanyakan akun
+      provider.setCustomParameters({ prompt: 'select_account' });
+      
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
-      // Check if profile exists
       const profileRef = doc(db, 'userProfiles', user.uid);
       const profileSnap = await getDoc(profileRef);
 
       if (!profileSnap.exists()) {
-        // Create initial profile for Google user
         const baseUsername = (user.email?.split('@')[0] || 'user').toLowerCase().replace(/[^a-z0-9_]/g, '');
         let finalUsername = baseUsername;
         
-        // Ensure username uniqueness
         const userCheckRef = doc(db, 'usernames', finalUsername);
         const userCheckSnap = await getDoc(userCheckRef);
         if (userCheckSnap.exists()) {
@@ -117,7 +117,16 @@ export default function LoginPage() {
       toast({ title: "Berhasil Masuk", description: "Otentikasi Google berhasil." });
       router.push('/dashboard');
     } catch (error: any) {
-      toast({ variant: "destructive", title: "Google Gagal", description: "Gagal menghubungkan ke Google." });
+      console.error("Google Auth Error:", error);
+      let desc = "Gagal menghubungkan ke Google.";
+      if (error.code === 'auth/operation-not-allowed') desc = "Metode Google belum aktif di Firebase Console.";
+      if (error.code === 'auth/unauthorized-domain') desc = "Domain ini belum terdaftar di Authorized Domains Firebase.";
+      
+      toast({ 
+        variant: "destructive", 
+        title: "Google Gagal", 
+        description: desc 
+      });
     } finally {
       setIsGoogleLoading(false);
     }
