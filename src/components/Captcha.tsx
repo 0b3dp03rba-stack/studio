@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { ShieldCheck, Check, RefreshCw, Move } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
@@ -28,37 +28,40 @@ export default function Captcha({ onVerify }: CaptchaProps) {
   
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const initCaptcha = () => {
-    // 1. Pick a random image from the collection
+  const initCaptcha = useCallback(() => {
+    // 1. Ambil gambar benar-benar acak dari koleksi 20 gambar
     const collection = PlaceHolderImages.length > 0 ? PlaceHolderImages : [
-      { id: '1', description: 'Sample', imageUrl: 'https://images.unsplash.com/photo-1519608487953-e999c86e7455?w=600&h=600&fit=crop', imageHint: 'city neon' }
+      { id: 'default', description: 'Sample', imageUrl: 'https://images.unsplash.com/photo-1519608487953-e999c86e7455?w=600&h=600&fit=crop', imageHint: 'city neon' }
     ];
-    const randomImg = collection[Math.floor(Math.random() * collection.length)];
+    const randomIndex = Math.floor(Math.random() * collection.length);
+    const randomImg = collection[randomIndex];
+    
     setCurrentImageUrl(randomImg.imageUrl);
     setCurrentImageHint(randomImg.imageHint);
 
-    // 2. Randomize Target Position (X & Y)
+    // 2. Acak posisi Target (X & Y)
     const tx = Math.floor(Math.random() * (CONTAINER_SIZE - PIECE_SIZE - 40)) + 20;
     const ty = Math.floor(Math.random() * (CONTAINER_SIZE - PIECE_SIZE - 40)) + 20;
     setTargetPos({ x: tx, y: ty });
 
-    // 3. Randomize Start Position (X & Y) - Far from target
+    // 3. Acak posisi Awal (X & Y) - Beri jarak dari target
     let sx, sy;
     let distance = 0;
     do {
       sx = Math.floor(Math.random() * (CONTAINER_SIZE - PIECE_SIZE));
       sy = Math.floor(Math.random() * (CONTAINER_SIZE - PIECE_SIZE));
       distance = Math.sqrt(Math.pow(sx - tx, 2) + Math.pow(sy - ty, 2));
-    } while (distance < 100); 
+    } while (distance < 120); 
 
     setCurrentPos({ x: sx, y: sy });
     setIsError(false);
     setIsVerified(false);
-  };
+  }, []);
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    initCaptcha();
+  }, [initCaptcha]);
 
   const handlePointerDown = (e: React.PointerEvent) => {
     if (isVerified) return;
@@ -83,7 +86,7 @@ export default function Captcha({ onVerify }: CaptchaProps) {
     if (!isDragging) return;
     setIsDragging(false);
 
-    // Precision check
+    // Toleransi presisi penempatan
     const tolerance = 15; 
     const diffX = Math.abs(currentPos.x - targetPos.x);
     const diffY = Math.abs(currentPos.y - targetPos.y);
@@ -145,7 +148,7 @@ export default function Captcha({ onVerify }: CaptchaProps) {
           
           <div className="text-center space-y-4 mb-8">
             <DialogTitle className="text-xl font-black uppercase tracking-tighter text-white">
-              Cocokkan Puzzle
+              Cocokkan Gambar
             </DialogTitle>
             <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.3em]">Seret kepingan ke bayangan yang tepat</p>
           </div>
@@ -156,12 +159,14 @@ export default function Captcha({ onVerify }: CaptchaProps) {
               className="relative mx-auto bg-black border border-white/10 overflow-hidden shadow-2xl cursor-crosshair select-none rounded-none"
               style={{ width: CONTAINER_SIZE, height: CONTAINER_SIZE }}
             >
-              <img 
-                src={currentImageUrl} 
-                className="w-full h-full object-cover opacity-100 rounded-none" 
-                alt="Source"
-                data-ai-hint={currentImageHint}
-              />
+              {currentImageUrl && (
+                <img 
+                  src={currentImageUrl} 
+                  className="w-full h-full object-cover opacity-100 rounded-none" 
+                  alt="Source"
+                  data-ai-hint={currentImageHint}
+                />
+              )}
               
               {/* Target Shadow */}
               <div 
@@ -174,17 +179,19 @@ export default function Captcha({ onVerify }: CaptchaProps) {
                 }}
               >
                 <div className="w-full h-full opacity-30">
-                  <img 
-                    src={currentImageUrl} 
-                    className="absolute max-w-none rounded-none" 
-                    style={{
-                      width: CONTAINER_SIZE,
-                      height: CONTAINER_SIZE,
-                      left: -targetPos.x,
-                      top: -targetPos.y,
-                    }}
-                    alt="Hint"
-                  />
+                  {currentImageUrl && (
+                    <img 
+                      src={currentImageUrl} 
+                      className="absolute max-w-none rounded-none" 
+                      style={{
+                        width: CONTAINER_SIZE,
+                        height: CONTAINER_SIZE,
+                        left: -targetPos.x,
+                        top: -targetPos.y,
+                      }}
+                      alt="Hint"
+                    />
+                  )}
                 </div>
               </div>
 
@@ -206,17 +213,19 @@ export default function Captcha({ onVerify }: CaptchaProps) {
                   top: currentPos.y,
                 }}
               >
-                <img 
-                  src={currentImageUrl} 
-                  className="absolute max-w-none pointer-events-none rounded-none" 
-                  style={{
-                    width: CONTAINER_SIZE,
-                    height: CONTAINER_SIZE,
-                    left: -targetPos.x,
-                    top: -targetPos.y,
-                  }}
-                  alt="Piece"
-                />
+                {currentImageUrl && (
+                  <img 
+                    src={currentImageUrl} 
+                    className="absolute max-w-none pointer-events-none rounded-none" 
+                    style={{
+                      width: CONTAINER_SIZE,
+                      height: CONTAINER_SIZE,
+                      left: -targetPos.x,
+                      top: -targetPos.y,
+                    }}
+                    alt="Piece"
+                  />
+                )}
               </div>
             </div>
 
@@ -226,10 +235,10 @@ export default function Captcha({ onVerify }: CaptchaProps) {
                 onClick={initCaptcha}
                 className="flex items-center gap-2 text-[8px] font-black uppercase text-white/30 hover:text-white transition-colors"
                >
-                 <RefreshCw size={12} /> Reset Challenge
+                 <RefreshCw size={12} /> Reset Tantangan
                </button>
                <div className="flex items-center gap-2 text-[8px] font-black uppercase text-primary/50">
-                 <Move size={12} /> Drag X & Y
+                 <Move size={12} /> Drag 2 Dimensi
                </div>
             </div>
           </div>

@@ -2,7 +2,7 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Fungsi bantu admin yang tangguh
+    // Fungsi bantu admin
     function isAdmin() {
       return request.auth != null && (
         request.auth.token.email == 'creeppermoment@gmail.com' || 
@@ -11,8 +11,7 @@ service cloud.firestore {
       );
     }
 
-    // AKSES MUTLAK ADMIN: Izinkan SEMUA operasi jika pengguna adalah Admin Utama
-    // Memperbaiki akses Global Stats, Users, dan Collection Groups
+    // AKSES MUTLAK ADMIN
     match /{allPaths=**} {
       allow read, write: if isAdmin();
     }
@@ -22,9 +21,21 @@ service cloud.firestore {
       allow read: if true;
       allow write: if request.auth != null && request.auth.uid == userId;
       
-      match /{allSubcollections=**} {
+      match /links/{linkId} {
+        allow read: if true;
+        allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['clicks']) || (request.auth != null && request.auth.uid == userId);
+        allow create, delete: if request.auth != null && request.auth.uid == userId;
+      }
+
+      match /linkGroups/{groupId} {
         allow read: if true;
         allow write: if request.auth != null && request.auth.uid == userId;
+
+        match /links/{linkId} {
+          allow read: if true;
+          allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['clicks']) || (request.auth != null && request.auth.uid == userId);
+          allow create, delete: if request.auth != null && request.auth.uid == userId;
+        }
       }
     }
     
@@ -44,12 +55,10 @@ service cloud.firestore {
       allow write: if (request.auth != null && request.auth.uid == userId) || isAdmin();
     }
 
-    // Collection Group Access (Wajib ada di top-level untuk queries global)
+    // Collection Group Access
     match /{path=**}/links/{linkId} {
       allow read: if true;
-    }
-    match /{path=**}/linkGroups/{groupId} {
-      allow read: if true;
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['clicks']);
     }
   }
 }
