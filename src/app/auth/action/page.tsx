@@ -1,6 +1,11 @@
 
 "use client";
 
+/**
+ * @fileOverview Firebase Auth Action Handler
+ * Menangani verifikasi email dan reset password dengan tema Linku Neon.
+ */
+
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { applyActionCode, confirmPasswordReset, verifyPasswordResetCode } from 'firebase/auth';
@@ -43,11 +48,11 @@ function ActionHandler() {
           setStatus('reset-form');
         } else {
           setStatus('error');
-          setMessage('Mode aksi tidak didukung oleh sistem saat ini.');
+          setMessage('Mode aksi tidak didukung.');
         }
       } catch (error: any) {
         setStatus('error');
-        setMessage(error.message || 'Gagal memproses permintaan. Silakan coba lagi nanti.');
+        setMessage(error.message || 'Gagal memproses permintaan.');
       }
     };
 
@@ -65,7 +70,7 @@ function ActionHandler() {
     try {
       await confirmPasswordReset(auth, oobCode!, newPassword);
       setStatus('success');
-      setMessage('Kata sandi Anda telah berhasil diperbarui. Silakan masuk menggunakan sandi baru Anda.');
+      setMessage('Kata sandi Anda telah berhasil diperbarui. Silakan masuk kembali.');
     } catch (error: any) {
       setStatus('error');
       setMessage('Gagal memperbarui sandi: ' + error.message);
@@ -82,14 +87,7 @@ function ActionHandler() {
         <CardHeader className="space-y-6 pt-12">
           <div className="mx-auto w-24 h-24 bg-black rounded-[2rem] flex items-center justify-center border border-white/10 shadow-2xl relative">
              {status === 'loading' && <Loader2 size={48} className="text-primary animate-spin" />}
-             {status === 'success' && (
-               <div className="relative flex items-center justify-center">
-                 <ShieldCheck size={56} className="text-green-500 animate-in zoom-in" />
-                 <div className="absolute -bottom-2 -right-2 bg-green-500 rounded-full p-1">
-                   <Check size={16} className="text-black" strokeWidth={4} />
-                 </div>
-               </div>
-             )}
+             {status === 'success' && <ShieldCheck size={56} className="text-green-500 animate-in zoom-in" />}
              {status === 'reset-form' && <Lock size={48} className="text-primary animate-pulse" />}
              {status === 'error' && <XCircle size={56} className="text-destructive animate-in bounce-in" />}
           </div>
@@ -102,7 +100,7 @@ function ActionHandler() {
               {status === 'error' && 'Gagal'}
             </CardTitle>
             <CardDescription className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">
-              Security Protocol Handler
+              Security Protocol
             </CardDescription>
           </div>
         </CardHeader>
@@ -110,24 +108,15 @@ function ActionHandler() {
         <CardContent className="px-8 pb-12 space-y-8">
           {status !== 'reset-form' ? (
             <>
-              <p className="text-sm text-white/70 font-medium leading-relaxed">
-                {message}
-              </p>
+              <p className="text-sm text-white/70 font-medium leading-relaxed">{message}</p>
               <div className="pt-4">
-                {status === 'success' ? (
-                  <Button asChild className="w-full h-16 neon-gradient text-background font-black rounded-2xl glow-primary active:scale-95 transition-all shadow-2xl uppercase tracking-widest text-xs">
-                    <Link href="/login">Masuk ke Dashboard <ArrowRight className="ml-2" size={16} /></Link>
-                  </Button>
-                ) : status === 'error' ? (
-                  <Button asChild variant="ghost" className="w-full h-14 bg-white/5 hover:bg-white/10 text-white font-black rounded-xl border border-white/5 uppercase text-[10px] tracking-widest">
-                    <Link href="/login">Kembali ke Login</Link>
-                  </Button>
-                ) : null}
+                <Button asChild className="w-full h-16 neon-gradient text-background font-black rounded-2xl glow-primary active:scale-95 transition-all shadow-2xl uppercase tracking-widest text-xs">
+                  <Link href="/login">Kembali ke Login <ArrowRight className="ml-2" size={16} /></Link>
+                </Button>
               </div>
             </>
           ) : (
             <form onSubmit={handleResetPassword} className="space-y-6 text-left">
-               <p className="text-[10px] text-white/40 uppercase font-black tracking-widest text-center">Masukkan kata sandi baru Anda di bawah.</p>
                <div className="space-y-2">
                  <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Sandi Baru</label>
                  <div className="relative">
@@ -140,17 +129,13 @@ function ActionHandler() {
                      placeholder="Minimal 6 karakter"
                      required
                    />
-                   <button 
-                     type="button" 
-                     onClick={() => setShowPassword(!showPassword)}
-                     className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white"
-                   >
+                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white">
                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                    </button>
                  </div>
                </div>
-               <Button type="submit" disabled={isProcessing} className="w-full h-16 neon-gradient text-background font-black rounded-2xl glow-primary uppercase text-xs tracking-widest shadow-2xl">
-                 {isProcessing ? "MEMPERBARUI..." : "SIMPAN KATA SANDI"}
+               <Button type="submit" disabled={isProcessing} className="w-full h-16 neon-gradient text-background font-black rounded-2xl glow-primary uppercase text-xs tracking-widest">
+                 {isProcessing ? "MEMPROSES..." : "SIMPAN SANDI"}
                </Button>
             </form>
           )}
@@ -166,11 +151,7 @@ function ActionHandler() {
 
 export default function AuthActionPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <Loader2 className="text-primary animate-spin" size={48} />
-      </div>
-    }>
+    <Suspense fallback={<div className="min-h-screen bg-black flex items-center justify-center"><Loader2 className="text-primary animate-spin" size={48} /></div>}>
       <ActionHandler />
     </Suspense>
   );
