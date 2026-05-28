@@ -3,18 +3,17 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 /**
- * @fileOverview Middleware Universal untuk Multi-Subdomain & Auto-Redirect.
- * Menangani:
- * 1. Internal Rewrite: user.linku.biz.id -> /user (tanpa ubah URL)
- * 2. Auto Redirect: linku.biz.id/user -> user.linku.biz.id (memaksa format subdomain)
+ * @fileOverview Middleware Universal Linku
+ * Menangani Redirect Otomatis: linku.biz.id/user -> user.linku.biz.id
+ * Menangani Internal Rewrite: user.linku.biz.id -> path /user secara gaib
  */
 
 export function middleware(req: NextRequest) {
   const url = req.nextUrl.clone();
-  const hostname = req.headers.get('host') || '';
+  const host = req.headers.get('host') || '';
   const pathname = url.pathname;
 
-  // 1. Abaikan file statis, aset Next.js, favicon, dan API
+  // 1. Abaikan file statis, aset Next.js, dan folder sistem internal
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api') ||
@@ -25,7 +24,7 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // 2. Daftar path sistem yang tidak boleh dianggap sebagai username
+  // 2. Daftar path yang TIDAK boleh dianggap sebagai username
   const reservedPaths = [
     '/dashboard', 
     '/login', 
@@ -35,45 +34,49 @@ export function middleware(req: NextRequest) {
     '/forgot-password', 
     '/auth', 
     '/reviews',
-    '/u' // Fallback path untuk profile
+    '/u'
   ];
   
   const isReserved = reservedPaths.some(path => pathname.startsWith(path));
 
-  // 3. DETEKSI SUBDOMAIN
+  // 3. IDENTIFIKASI LINGKUNGAN (Produksi vs Localhost)
+  const isLocalhost = host.includes('localhost');
+  const isProduction = host.includes('linku.biz.id');
+
+  // 4. LOGIKA SUBDOMAIN (Deteksi apakah user sedang di subdomain)
   let subdomain = '';
-  if (hostname.includes('localhost')) {
-    const parts = hostname.split('.');
+  if (isLocalhost) {
+    const parts = host.split('.');
     if (parts.length > 1 && !parts[0].includes('localhost')) {
       subdomain = parts[0];
     }
-  } else if (hostname.includes('.linku.biz.id')) {
-    // Deteksi subdomain di domain produksi
-    const part = hostname.split('.linku.biz.id')[0];
+  } else if (isProduction) {
+    // Jika host adalah user.linku.biz.id, maka subdomain adalah 'user'
+    const part = host.split('.linku.biz.id')[0];
     if (part && part !== 'www' && part !== 'linku') {
       subdomain = part;
     }
   }
 
-  // 4. LOGIKA REDIRECT (Path -> Subdomain)
-  // Hanya jalankan redirect jika user mengakses domain utama tanpa subdomain
+  // 5. LOGIKA REDIRECT (linku.biz.id/budi -> budi.linku.biz.id)
+  // Hanya jalan di domain utama tanpa subdomain
   if (!subdomain && !isReserved && pathname !== '/') {
     const segments = pathname.split('/').filter(Boolean);
     if (segments.length === 1) {
       const username = segments[0].toLowerCase();
       const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
       
-      // Jika di produksi atau localhost, paksa pindah ke subdomain
-      if (hostname.includes('linku.biz.id') || hostname.includes('localhost')) {
-        const baseHost = hostname.includes('localhost') ? 'localhost:9002' : 'linku.biz.id';
+      if (isProduction || isLocalhost) {
+        const baseHost = isLocalhost ? 'localhost:9002' : 'linku.biz.id';
         return NextResponse.redirect(new URL(`${protocol}://${username}.${baseHost}/`), 301);
       }
     }
   }
 
-  // 5. LOGIKA REWRITE (Subdomain -> Internal Page)
+  // 6. LOGIKA REWRITE (Subdomain -> Internal Page)
   if (subdomain) {
-    // Arahkan gunxmodz.linku.biz.id/apapun ke /gunxmodz/apapun secara internal
+    // Secara internal arahkan user.linku.biz.id ke linku.biz.id/[username]
+    // User tetap melihat subdomain di address bar mereka
     url.pathname = `/${subdomain}${pathname}`;
     return NextResponse.rewrite(url);
   }
@@ -83,6 +86,13 @@ export function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!api|_next|static|[\\w-]+\\.\\w+).*)',
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     */
+    '/((?!api|_next/static|_next/image|favicon.ico).*)',
   ],
 };

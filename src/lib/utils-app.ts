@@ -36,7 +36,7 @@ export function getSmartSocialUrl(platform: string, handle: string): string {
 
 /**
  * Membangun URL publik pengguna secara ADAPTIF.
- * Menggunakan Subdomain untuk linku.biz.id dan localhost.
+ * Mendukung Subdomain untuk domain utama dan fallback path untuk lingkungan development.
  */
 export function getPublicUrl(username: string): string {
   if (typeof window === 'undefined') return '';
@@ -44,20 +44,20 @@ export function getPublicUrl(username: string): string {
   const hostname = window.location.hostname;
   const protocol = window.location.protocol;
   const port = window.location.port ? `:${window.location.port}` : '';
-
   const cleanUsername = username.toLowerCase();
 
-  // 1. Lingkungan Produksi -> Subdomain
+  // 1. DOMAIN UTAMA (linku.biz.id) -> Gunakan Subdomain
   if (hostname.includes('linku.biz.id')) {
     return `${protocol}//${cleanUsername}.linku.biz.id`;
   }
 
-  // 2. Localhost -> Subdomain
+  // 2. LOCALHOST -> Gunakan Subdomain (didukung browser modern)
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
     return `${protocol}//${cleanUsername}.localhost${port}`;
   }
 
-  // 3. Workstation / Vercel Preview -> Tetap Path (Hindari SSL Error)
+  // 3. WORKSTATION / VERCEL PREVIEW -> Gunakan Path (Hindari SSL Error)
+  // Karena workstation tidak punya Wildcard SSL untuk nested subdomain
   return `${protocol}//${hostname}${port}/${cleanUsername}`;
 }
 
