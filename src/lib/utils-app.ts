@@ -36,6 +36,7 @@ export function getSmartSocialUrl(platform: string, handle: string): string {
 
 /**
  * Membangun URL publik pengguna secara ADAPTIF sesuai lingkungan hosting.
+ * Menghindari error SSL pada Cloud Workstations dengan beralih ke Path-based.
  */
 export function getPublicUrl(username: string): string {
   if (typeof window === 'undefined') return '';
@@ -44,35 +45,20 @@ export function getPublicUrl(username: string): string {
   const protocol = window.location.protocol;
   const port = window.location.port ? `:${window.location.port}` : '';
 
-  // 1. Localhost
+  // 1. Lingkungan Produksi (linku.biz.id)
+  if (hostname.includes('linku.biz.id')) {
+    return `${protocol}//${username}.linku.biz.id${port}`;
+  }
+
+  // 2. Localhost
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
     return `${protocol}//${username}.localhost${port}`;
   }
 
-  // 2. Lingkungan dengan Subdomain (linku.biz.id, vercel.app, workstation)
-  // Kami mendeteksi jika hostname saat ini sudah memiliki subdomain
-  const parts = hostname.split('.');
-  
-  // Jika di Cloud Workstations (port-id.region.cloudworkstations.dev)
-  if (hostname.includes('cloudworkstations.dev')) {
-    return `${protocol}//${username}.${hostname}${port}`;
-  }
-
-  // Jika di domain utama linku.biz.id
-  if (hostname === 'linku.biz.id' || hostname === 'www.linku.biz.id') {
-    return `${protocol}//${username}.linku.biz.id${port}`;
-  }
-
-  // Jika di Vercel atau domain lain, pasang username sebagai prefix paling depan
-  // Pastikan kita tidak menumpuk subdomain jika user sedang melihat dari subdomain
-  const cleanHostname = parts.length > 2 && rootDomainsList.some(d => hostname.endsWith(d))
-    ? hostname.split('.').slice(-2).join('.') // Ambil root domain saja
-    : hostname;
-
-  return `${protocol}//${username}.${hostname}${port}`;
+  // 3. Lingkungan Development (Workstation/Vercel) - Gunakan Path untuk hindari Error SSL
+  // Kita kembalikan ke format: hostname.com/username
+  return `${protocol}//${hostname}${port}/${username}`;
 }
-
-const rootDomainsList = ['linku.biz.id', 'vercel.app', 'cloudworkstations.dev'];
 
 export const PRESTIGE_SECONDARIES = [
   '#FFFFFF', '#FFD700', '#00FFFF', '#FFFF00', '#FF00FF', '#00FF00', '#FF0000', '#7B00FF', 

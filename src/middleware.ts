@@ -3,8 +3,9 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 /**
- * @fileOverview Middleware Universal untuk Multi-Subdomain.
- * Mendukung: linku.biz.id, *.vercel.app, *.cloudworkstations.dev, dan localhost.
+ * @fileOverview Middleware Universal untuk Multi-Subdomain & Path Fallback.
+ * Cerdas membedakan kapan harus menggunakan subdomain (Produksi/Localhost) 
+ * dan kapan harus menggunakan path (Development/Workstation) untuk menghindari error SSL.
  */
 
 export function middleware(req: NextRequest) {
@@ -37,54 +38,35 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // 3. Deteksi Subdomain secara Dinamis
+  // 3. Logika Deteksi Subdomain Terbatas
+  // Kami hanya mengaktifkan rewrite subdomain pada domain yang mendukung Wildcard SSL
   let subdomain = '';
 
   if (hostname.includes('localhost')) {
-    // Localhost: user.localhost:9002 -> subdomain: user
     const parts = hostname.split('.');
     if (parts.length > 1 && !parts[0].includes('localhost')) {
       subdomain = parts[0];
     }
-  } else {
-    // Domain Publik (linku.biz.id, vercel.app, cloudworkstations.dev)
-    const rootDomains = ['linku.biz.id', 'vercel.app', 'cloudworkstations.dev'];
-    
-    for (const root of rootDomains) {
-      if (hostname.endsWith(`.${root}`)) {
-        // Ambil teks sebelum root domain
-        const prefix = hostname.replace(`.${root}`, '');
-        const parts = prefix.split('.');
-        
-        // Kasus linku.biz.id: budi.linku.biz.id (parts: ["budi"])
-        if (root === 'linku.biz.id' && parts.length === 1) {
-          subdomain = parts[0];
-        } 
-        // Kasus Vercel/Workstation: budi.my-app.vercel.app (parts: ["budi", "my-app"])
-        else if (parts.length > 1) {
-          subdomain = parts[0];
-        }
-        break;
-      }
+  } else if (hostname === 'linku.biz.id' || hostname.endsWith('.linku.biz.id')) {
+    // Hanya proses jika ini adalah subdomain murni dari linku.biz.id
+    const parts = hostname.replace('.linku.biz.id', '').split('.');
+    if (parts.length === 1 && parts[0] !== 'www' && parts[0] !== 'linku') {
+      subdomain = parts[0];
     }
   }
 
-  // 4. Proses Rewrite jika subdomain valid (bukan www, admin, dll)
-  const systemSubdomains = ['www', 'api', 'admin', 'mail', 'auth', 'support'];
-  if (subdomain && !systemSubdomains.includes(subdomain.toLowerCase())) {
-    // Secara internal arahkan ke halaman profile /[username]
+  // 4. Proses Rewrite jika subdomain valid
+  if (subdomain) {
     url.pathname = `/${subdomain}${url.pathname}`;
     return NextResponse.rewrite(url);
   }
 
+  // Jika bukan subdomain, biarkan Next.js menangani rute normal (termasuk /[username])
   return NextResponse.next();
 }
 
 export const config = {
   matcher: [
-    /*
-     * Jalankan middleware pada semua path kecuali yang dikecualikan di atas
-     */
     '/((?!api|_next|static|[\\w-]+\\.\\w+).*)',
   ],
 };
