@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/request';
+import type { NextRequest } from 'next/server';
 
 /**
- * @fileOverview Middleware Linku Engine v10.0 (Universal Subdomain & Auto-Redirect)
- * Menangani routing cerdas untuk subdomain dan memaksa redirect linku.biz.id/user ke user.linku.biz.id
+ * @fileOverview Middleware Linku Engine v11.0 (Universal Subdomain & Auto-Redirect)
+ * Menangani routing cerdas:
+ * 1. Rewrite: subdomain.domain.com -> /subdomain (User Profile)
+ * 2. Redirect: domain.com/user -> user.domain.com (Branding)
  */
 
 export function middleware(req: NextRequest) {
@@ -22,7 +24,7 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // 2. DAFTAR PATH SISTEM (Tidak boleh jadi subdomain)
+  // 2. DAFTAR PATH SISTEM (Tidak boleh dianggap sebagai username)
   const reservedPaths = [
     'dashboard', 'login', 'register', 'admin', 
     'verify-email', 'forgot-password', 'auth', 'reviews', 'u'
@@ -32,19 +34,20 @@ export function middleware(req: NextRequest) {
   const isProduction = host.includes('linku.biz.id');
   const protocol = req.headers.get('x-forwarded-proto') || (isLocalhost ? 'http' : 'https');
 
-  // Hanya jalankan fitur Subdomain di Localhost atau Domain Produksi (Kustom Domain)
-  // Untuk Workstation/Vercel App, gunakan path-based routing untuk menghindari SSL error
+  // Fitur Subdomain hanya aktif di Localhost dan Domain Produksi (Kustom)
+  // Lingkungan Workstation/Vercel-Preview akan tetap pakai path-based untuk hindari SSL Error
   const supportsSubdomain = isLocalhost || isProduction;
 
   let subdomain = '';
   const hostParts = host.split('.');
 
   if (isLocalhost) {
+    // user.localhost:9002 -> parts: ['user', 'localhost:9002']
     if (hostParts.length > 1 && !hostParts[0].includes('localhost')) {
       subdomain = hostParts[0];
     }
   } else if (isProduction) {
-    // gunxmodz.linku.biz.id -> parts = [gunxmodz, linku, biz, id] (length 4)
+    // user.linku.biz.id -> parts: ['user', 'linku', 'biz', 'id'] (length 4)
     if (hostParts.length >= 4) {
       subdomain = hostParts[0];
     }
@@ -52,34 +55,38 @@ export function middleware(req: NextRequest) {
 
   const cleanSubdomain = subdomain.toLowerCase();
 
-  // 3. LOGIKA AUTO-REDIRECT: linku.biz.id/user -> user.linku.biz.id
+  // 3. LOGIKA INTERNAL REWRITE (Subdomain -> Profile)
+  // Jika pengunjung datang lewat subdomain (misal: budi.linku.biz.id)
+  if (supportsSubdomain && cleanSubdomain && cleanSubdomain !== 'www') {
+    // Jika mereka mencoba akses path sistem lewat subdomain (misal: budi.linku.biz.id/dashboard)
+    // Kita arahkan balik ke domain utama agar tidak membingungkan
+    const firstSegment = pathname.split('/')[1];
+    if (reservedPaths.includes(firstSegment)) {
+      const mainHost = isLocalhost ? 'localhost:9002' : 'linku.biz.id';
+      return NextResponse.redirect(new URL(`${protocol}://${mainHost}${pathname}`, req.url));
+    }
+
+    // INI DIA: Tampilkan isi folder /[username] tapi URL di browser tetap subdomain
+    url.pathname = `/${cleanSubdomain}${pathname}`;
+    return NextResponse.rewrite(url);
+  }
+
+  // 4. LOGIKA AUTO-REDIRECT (domain.com/user -> user.domain.com)
+  // Jika pengunjung datang lewat domain utama tapi mengetik path username
   if (supportsSubdomain && !cleanSubdomain) {
     const segments = pathname.split('/');
     const firstSegment = segments[1];
 
     if (firstSegment && !reservedPaths.includes(firstSegment)) {
       const remainingPath = segments.slice(2).join('/');
-      const destination = isLocalhost ? 'localhost:9002' : host;
+      const destinationHost = isLocalhost ? 'localhost:9002' : 'linku.biz.id';
       
+      // Redirect permanen ke format subdomain yang mewah
       return NextResponse.redirect(
-        new URL(`${protocol}://${firstSegment.toLowerCase()}.${destination}${remainingPath ? '/' + remainingPath : ''}`, req.url),
+        new URL(`${protocol}://${firstSegment.toLowerCase()}.${destinationHost}${remainingPath ? '/' + remainingPath : ''}`, req.url),
         301
       );
     }
-  }
-
-  // 4. LOGIKA INTERNAL REWRITE: Subdomain -> Folder Profil
-  if (supportsSubdomain && cleanSubdomain && cleanSubdomain !== 'www') {
-    // Cegah akses halaman sistem lewat subdomain
-    const firstSegment = pathname.split('/')[1];
-    if (reservedPaths.includes(firstSegment)) {
-      const mainHost = isLocalhost ? 'localhost:9002' : host.replace(`${subdomain}.`, '');
-      return NextResponse.redirect(new URL(`${protocol}://${mainHost}${pathname}`, req.url));
-    }
-
-    // Arahkan secara internal ke /username/[path]
-    url.pathname = `/${cleanSubdomain}${pathname}`;
-    return NextResponse.rewrite(url);
   }
 
   return NextResponse.next();
