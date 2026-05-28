@@ -35,7 +35,7 @@ export function getSmartSocialUrl(platform: string, handle: string): string {
 
 /**
  * Membangun URL publik pengguna secara ADAPTIF.
- * Mendukung Subdomain di Produksi/Localhost, dan Fallback Path di lingkungan terbatas SSL.
+ * Memberikan link subdomain di produksi/localhost, dan path di workstation/vercel-preview.
  */
 export function getPublicUrl(username: string): string {
   if (typeof window === 'undefined') return '';
@@ -45,19 +45,20 @@ export function getPublicUrl(username: string): string {
   const port = window.location.port ? `:${window.location.port}` : '';
   const cleanUsername = username.toLowerCase();
 
-  // LINGKUNGAN YANG MENDUKUNG SUBDOMAIN (Domain Kustom & Localhost)
+  // 1. Lingkungan Subdomain (linku.biz.id atau localhost)
   if (
+    hostname === 'linku.biz.id' || 
     hostname === 'localhost' || 
-    hostname === '127.0.0.1' || 
-    hostname === 'linku.biz.id' ||
+    hostname === '127.0.0.1' ||
     hostname.endsWith('.linku.biz.id')
   ) {
-    let baseHost = hostname.includes('linku.biz.id') ? 'linku.biz.id' : 'localhost';
-    return `${protocol}//${cleanUsername}.${baseHost}${port}`;
+    // Bersihkan hostname dari subdomain lama jika sedang diakses dari subdomain
+    const baseDomain = hostname.includes('linku.biz.id') ? 'linku.biz.id' : 'localhost';
+    return `${protocol}//${cleanUsername}.${baseDomain}${port}`;
   }
 
-  // LINGKUNGAN TESTING (Workstation / Vercel Preview)
-  // Gunakan format Path agar tidak kena SSL Error (Double Subdomain)
+  // 2. Lingkungan Testing (Workstation / Vercel Preview)
+  // Pakai format path /username agar tidak kena SSL Error
   return `${protocol}//${hostname}${port}/${cleanUsername}`;
 }
 

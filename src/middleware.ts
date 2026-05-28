@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 /**
- * @fileOverview Middleware Universal Linku v6.0 (Final Edition)
- * Menangani Subdomain Wildcard, Auto-Redirect, dan Multi-Environment secara akurat.
+ * @fileOverview Middleware Universal Linku v7.0 (Sistem Subdomain & Auto-Redirect)
+ * Menangani Subdomain Wildcard dan memaksa redirect dari domain.com/user ke user.domain.com
  */
 
 export function middleware(req: NextRequest) {
@@ -22,25 +22,25 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // 2. PATH SISTEM (Tidak boleh jadi subdomain/username)
+  // 2. PATH SISTEM (Tidak boleh jadi subdomain atau memicu redirect)
   const reservedPaths = [
     'dashboard', 'login', 'register', 'admin', 
     'verify-email', 'forgot-password', 'auth', 'reviews', 'u'
   ];
 
-  // 3. LOGIKA EKSTRAKSI SUBDOMAIN
-  let subdomain = '';
   const hostParts = host.split('.');
   const isLocalhost = host.includes('localhost');
   const isProduction = host.includes('linku.biz.id');
 
+  let subdomain = '';
+
+  // 3. LOGIKA EKSTRAKSI SUBDOMAIN
   if (isLocalhost) {
-    // budi.localhost:9002 -> hostParts = ["budi", "localhost:9002"]
     if (hostParts.length > 1 && !hostParts[0].includes('localhost')) {
       subdomain = hostParts[0];
     }
   } else if (isProduction) {
-    // budi.linku.biz.id -> hostParts = ["budi", "linku", "biz", "id"]
+    // gunxmodz.linku.biz.id -> parts = [gunxmodz, linku, biz, id]
     if (hostParts.length >= 4) {
       subdomain = hostParts[0];
     }
@@ -48,8 +48,8 @@ export function middleware(req: NextRequest) {
 
   const cleanSubdomain = subdomain.toLowerCase();
 
-  // 4. LOGIKA REDIRECT: linku.biz.id/user -> user.linku.biz.id
-  // Hanya berlaku jika kita di domain utama TANPA subdomain
+  // 4. LOGIKA AUTO-REDIRECT: linku.biz.id/user -> user.linku.biz.id
+  // Hanya jika kita di domain utama TANPA subdomain
   if (!cleanSubdomain && (isProduction || isLocalhost)) {
     const segments = pathname.split('/');
     const firstSegment = segments[1];
@@ -57,11 +57,11 @@ export function middleware(req: NextRequest) {
     if (firstSegment && !reservedPaths.includes(firstSegment)) {
       const remainingPath = segments.slice(2).join('/');
       const protocol = isLocalhost ? 'http' : 'https';
-      const cleanHost = host.replace(/^www\./, '');
+      // Pastikan membersihkan www jika ada
+      const baseHost = host.replace(/^www\./, '');
       
-      // Redirect permanen ke subdomain
       return NextResponse.redirect(
-        new URL(`${protocol}://${firstSegment.toLowerCase()}.${cleanHost}${remainingPath ? '/' + remainingPath : ''}`, req.url),
+        new URL(`${protocol}://${firstSegment.toLowerCase()}.${baseHost}${remainingPath ? '/' + remainingPath : ''}`, req.url),
         301
       );
     }
@@ -69,7 +69,7 @@ export function middleware(req: NextRequest) {
 
   // 5. LOGIKA REWRITE: Subdomain -> Path Profil internal
   if (cleanSubdomain && cleanSubdomain !== 'www') {
-    // Jika user mencoba akses path sistem lewat subdomain, kembalikan ke domain utama
+    // Cegah akses dashboard/login lewat subdomain (kembalikan ke root domain)
     const firstSegment = pathname.split('/')[1];
     if (reservedPaths.includes(firstSegment)) {
       const mainHost = host.replace(`${subdomain}.`, '');
@@ -77,7 +77,7 @@ export function middleware(req: NextRequest) {
       return NextResponse.redirect(new URL(`${protocol}://${mainHost}${pathname}`, req.url));
     }
 
-    // Secara internal, arahkan ke rute profil /[username]
+    // Secara internal arahkan ke file [username]
     url.pathname = `/${cleanSubdomain}${pathname}`;
     return NextResponse.rewrite(url);
   }
