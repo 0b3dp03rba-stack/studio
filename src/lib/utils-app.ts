@@ -1,4 +1,3 @@
-
 export function formatCurrency(amount: number) {
   return new Intl.NumberFormat('id-ID', {
     style: 'currency',
@@ -18,7 +17,7 @@ export function getSmartSocialUrl(platform: string, handle: string): string {
     case 'Instagram':
       return `https://instagram.com/${cleanHandle.replace('@', '')}`;
     case 'YouTube':
-      return `https://youtube.com/${cleanHandle.startsWith('@') ? cleanHandle : '@' + cleanHandle}`;
+      return `https://youtube.com/${cleanHandle.startsWith('@') ? handle : '@' + cleanHandle}`;
     case 'TikTok':
       return `https://tiktok.com/@${cleanHandle.replace('@', '')}`;
     case 'Facebook':
@@ -36,7 +35,7 @@ export function getSmartSocialUrl(platform: string, handle: string): string {
 
 /**
  * Membangun URL publik pengguna secara ADAPTIF.
- * Mendukung Subdomain di Produksi/Local, dan Fallback Path di Workstation/Vercel-Preview (SSL Issue).
+ * Mendukung Subdomain di Produksi/Localhost, dan Fallback Path di lingkungan terbatas SSL.
  */
 export function getPublicUrl(username: string): string {
   if (typeof window === 'undefined') return '';
@@ -46,25 +45,19 @@ export function getPublicUrl(username: string): string {
   const port = window.location.port ? `:${window.location.port}` : '';
   const cleanUsername = username.toLowerCase();
 
-  // 1. LINGKUNGAN YANG MENDUKUNG SUBDOMAIN (Domain Kustom & Localhost)
+  // LINGKUNGAN YANG MENDUKUNG SUBDOMAIN (Domain Kustom & Localhost)
   if (
     hostname === 'localhost' || 
     hostname === '127.0.0.1' || 
     hostname === 'linku.biz.id' ||
     hostname.endsWith('.linku.biz.id')
   ) {
-    let baseHost = hostname;
-    if (hostname.includes('linku.biz.id')) {
-      baseHost = 'linku.biz.id';
-    } else if (hostname.includes('localhost')) {
-      baseHost = 'localhost';
-    }
-    
+    let baseHost = hostname.includes('linku.biz.id') ? 'linku.biz.id' : 'localhost';
     return `${protocol}//${cleanUsername}.${baseHost}${port}`;
   }
 
-  // 2. LINGKUNGAN TESTING (Workstation / Vercel Preview / Project Domain Lain)
-  // Pakai format Path agar tidak kena SSL Error (Double Subdomain)
+  // LINGKUNGAN TESTING (Workstation / Vercel Preview)
+  // Gunakan format Path agar tidak kena SSL Error (Double Subdomain)
   return `${protocol}//${hostname}${port}/${cleanUsername}`;
 }
 

@@ -1,10 +1,9 @@
-
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 /**
- * @fileOverview Middleware Universal Linku v5.0 (Final Boss)
- * Menangani Subdomain Wildcard, Auto-Redirect, dan Multi-Environment.
+ * @fileOverview Middleware Universal Linku v6.0 (Final Edition)
+ * Menangani Subdomain Wildcard, Auto-Redirect, dan Multi-Environment secara akurat.
  */
 
 export function middleware(req: NextRequest) {
@@ -32,18 +31,16 @@ export function middleware(req: NextRequest) {
   // 3. LOGIKA EKSTRAKSI SUBDOMAIN
   let subdomain = '';
   const hostParts = host.split('.');
-
-  // Deteksi lingkungan (Hanya aktifkan subdomain rewrite di domain utama atau localhost)
   const isLocalhost = host.includes('localhost');
   const isProduction = host.includes('linku.biz.id');
 
   if (isLocalhost) {
-    // tes.localhost:9002 -> hostParts = ["tes", "localhost:9002"]
+    // budi.localhost:9002 -> hostParts = ["budi", "localhost:9002"]
     if (hostParts.length > 1 && !hostParts[0].includes('localhost')) {
       subdomain = hostParts[0];
     }
   } else if (isProduction) {
-    // tes.linku.biz.id -> hostParts = ["tes", "linku", "biz", "id"]
+    // budi.linku.biz.id -> hostParts = ["budi", "linku", "biz", "id"]
     if (hostParts.length >= 4) {
       subdomain = hostParts[0];
     }
