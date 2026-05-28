@@ -19,7 +19,7 @@ export function middleware(req: NextRequest) {
     'admin.linku.biz.id'
   ];
 
-  // Cek apakah host saat ini adalah domain utama
+  // Cek apakah host saat ini adalah domain utama atau workspace development
   const isMainDomain = mainDomains.some(domain => hostname === domain || hostname.includes('cloudworkstations.dev'));
 
   if (!isMainDomain && hostname.endsWith('.linku.biz.id')) {

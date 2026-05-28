@@ -42,7 +42,7 @@ export function getPublicUrl(username: string): string {
   const domain = 'linku.biz.id';
   const hostname = window.location.hostname;
   
-  // Jika sedang di localhost, gunakan path format agar tetap bisa ditest
+  // Jika sedang di localhost atau pratinjau cloud, gunakan path format agar tetap bisa ditest
   if (hostname === 'localhost' || hostname.includes('cloudworkstations.dev')) {
     const origin = window.location.origin;
     return `${origin}/${username}`;
