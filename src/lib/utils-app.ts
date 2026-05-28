@@ -36,7 +36,8 @@ export function getSmartSocialUrl(platform: string, handle: string): string {
 
 /**
  * Membangun URL publik pengguna secara ADAPTIF.
- * Mengutamakan format SUBDOMAIN untuk brand premium.
+ * Mengutamakan format SUBDOMAIN untuk brand premium di produksi.
+ * Fallback ke PATH untuk Workstation/Testing guna menghindari SSL Error.
  */
 export function getPublicUrl(username: string): string {
   if (typeof window === 'undefined') return '';
@@ -46,13 +47,15 @@ export function getPublicUrl(username: string): string {
   const port = window.location.port ? `:${window.location.port}` : '';
   const cleanUsername = username.toLowerCase();
 
-  // 1. PRODUKSI / LOCALHOST (Gunakan Subdomain)
+  // 1. PRODUKSI atau LOCALHOST (Gunakan Subdomain)
+  // Localhost mendukung subdomain secara default di browser modern.
   if (hostname.includes('linku.biz.id') || hostname === 'localhost' || hostname === '127.0.0.1') {
     const baseHost = hostname.includes('linku.biz.id') ? 'linku.biz.id' : `localhost${port}`;
     return `${protocol}//${cleanUsername}.${baseHost}`;
   }
 
   // 2. WORKSTATION / VERCEL PREVIEW (Gunakan Path agar tidak kena SSL Error)
+  // Lingkungan cloud development biasanya tidak punya sertifikat untuk nested subdomain.
   return `${protocol}//${hostname}${port}/${cleanUsername}`;
 }
 
