@@ -14,19 +14,19 @@ export function middleware(req: NextRequest) {
   // Daftar host utama yang diabaikan (tidak dianggap sebagai username)
   const mainDomains = [
     'linku.biz.id',
-    'localhost:9002',
     'www.linku.biz.id',
-    'admin.linku.biz.id' // Jika ingin admin punya subdomain sendiri nanti
+    'localhost:9002',
+    'admin.linku.biz.id'
   ];
 
   // Cek apakah host saat ini adalah domain utama
-  const isMainDomain = mainDomains.some(domain => hostname === domain);
+  const isMainDomain = mainDomains.some(domain => hostname === domain || hostname.includes('cloudworkstations.dev'));
 
   if (!isMainDomain && hostname.endsWith('.linku.biz.id')) {
     // Ambil bagian pertama dari hostname (username)
     const subdomain = hostname.split('.')[0].toLowerCase();
 
-    // Pastikan bukan favicon atau file statis lainnya
+    // Abaikan jika ini file statis, aset Next.js, atau rute API
     if (
       url.pathname.startsWith('/_next') ||
       url.pathname.startsWith('/api') ||
@@ -35,9 +35,15 @@ export function middleware(req: NextRequest) {
       return NextResponse.next();
     }
 
-    // Rewrite secara internal: budi.linku.biz.id/g/folder -> /budi/g/folder
-    url.pathname = `/${subdomain}${url.pathname}`;
-    return NextResponse.rewrite(url);
+    // Jangan lakukan rewrite untuk halaman sistem (Dashboard, Login, dll)
+    const reservedPaths = ['/dashboard', '/login', '/register', '/admin', '/verify-email', '/forgot-password', '/auth', '/reviews'];
+    const isReserved = reservedPaths.some(path => url.pathname.startsWith(path));
+
+    if (!isReserved) {
+      // Rewrite secara internal: budi.linku.biz.id -> /budi
+      url.pathname = `/${subdomain}${url.pathname}`;
+      return NextResponse.rewrite(url);
+    }
   }
 
   return NextResponse.next();

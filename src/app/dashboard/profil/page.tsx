@@ -164,11 +164,11 @@ export default function ProfilPage() {
       <div className="space-y-6">
         <Card className="glass-card border-none rounded-[2.5rem] p-6 shadow-2xl space-y-4">
            <div className="flex items-center justify-between">
-              <div>
-                 <p className="text-[9px] font-black uppercase text-primary tracking-widest mb-1">Link Hub Kamu</p>
-                 <p className="text-xs font-black text-white truncate max-w-[200px]">{publicUrl || 'Membangun URL...'}</p>
+              <div className="min-w-0 flex-1">
+                 <p className="text-[9px] font-black uppercase text-primary tracking-widest mb-1">URL Premium Kamu</p>
+                 <p className="text-sm font-black text-white truncate pr-4">{publicUrl || 'Membangun URL...'}</p>
               </div>
-              <Button variant="ghost" size="icon" onClick={handleCopyUrl} className="h-12 w-12 rounded-2xl bg-primary/10 hover:bg-primary/20 text-primary shadow-xl">
+              <Button variant="ghost" size="icon" onClick={handleCopyUrl} className="h-12 w-12 rounded-2xl bg-primary/10 hover:bg-primary/20 text-primary shadow-xl shrink-0">
                 <Copy size={20} />
               </Button>
            </div>

@@ -35,13 +35,19 @@ export function getSmartSocialUrl(platform: string, handle: string): string {
 }
 
 /**
- * Membangun URL publik pengguna (Subdomain format).
+ * Membangun URL publik pengguna (Subdomain format: username.linku.biz.id).
  */
 export function getPublicUrl(username: string): string {
   if (typeof window === 'undefined') return '';
   const domain = 'linku.biz.id';
-  // Jika localhost, tetap pakai path format
-  if (window.location.hostname === 'localhost') return `http://localhost:9002/${username}`;
+  const hostname = window.location.hostname;
+  
+  // Jika sedang di localhost, gunakan path format agar tetap bisa ditest
+  if (hostname === 'localhost' || hostname.includes('cloudworkstations.dev')) {
+    const origin = window.location.origin;
+    return `${origin}/${username}`;
+  }
+  
   return `https://${username}.${domain}`;
 }
 
