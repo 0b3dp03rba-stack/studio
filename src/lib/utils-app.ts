@@ -8,7 +8,7 @@ export function formatCurrency(amount: number) {
 }
 
 /**
- * SMART REDIRECT: Membangun link sosial media otomatis berdasarkan platform dan handle.
+ * SMART REDIRECT: Membangun link sosial media otomatis.
  */
 export function getSmartSocialUrl(platform: string, handle: string): string {
   const cleanHandle = handle.trim();
@@ -35,21 +35,44 @@ export function getSmartSocialUrl(platform: string, handle: string): string {
 }
 
 /**
- * Membangun URL publik pengguna (Subdomain format: username.linku.biz.id).
+ * Membangun URL publik pengguna secara ADAPTIF sesuai lingkungan hosting.
  */
 export function getPublicUrl(username: string): string {
   if (typeof window === 'undefined') return '';
-  const domain = 'linku.biz.id';
+  
   const hostname = window.location.hostname;
-  
-  // Jika sedang di localhost atau pratinjau cloud, gunakan path format agar tetap bisa ditest
-  if (hostname === 'localhost' || hostname.includes('cloudworkstations.dev')) {
-    const origin = window.location.origin;
-    return `${origin}/${username}`;
+  const protocol = window.location.protocol;
+  const port = window.location.port ? `:${window.location.port}` : '';
+
+  // 1. Localhost
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return `${protocol}//${username}.localhost${port}`;
   }
+
+  // 2. Lingkungan dengan Subdomain (linku.biz.id, vercel.app, workstation)
+  // Kami mendeteksi jika hostname saat ini sudah memiliki subdomain
+  const parts = hostname.split('.');
   
-  return `https://${username}.${domain}`;
+  // Jika di Cloud Workstations (port-id.region.cloudworkstations.dev)
+  if (hostname.includes('cloudworkstations.dev')) {
+    return `${protocol}//${username}.${hostname}${port}`;
+  }
+
+  // Jika di domain utama linku.biz.id
+  if (hostname === 'linku.biz.id' || hostname === 'www.linku.biz.id') {
+    return `${protocol}//${username}.linku.biz.id${port}`;
+  }
+
+  // Jika di Vercel atau domain lain, pasang username sebagai prefix paling depan
+  // Pastikan kita tidak menumpuk subdomain jika user sedang melihat dari subdomain
+  const cleanHostname = parts.length > 2 && rootDomainsList.some(d => hostname.endsWith(d))
+    ? hostname.split('.').slice(-2).join('.') // Ambil root domain saja
+    : hostname;
+
+  return `${protocol}//${username}.${hostname}${port}`;
 }
+
+const rootDomainsList = ['linku.biz.id', 'vercel.app', 'cloudworkstations.dev'];
 
 export const PRESTIGE_SECONDARIES = [
   '#FFFFFF', '#FFD700', '#00FFFF', '#FFFF00', '#FF00FF', '#00FF00', '#FF0000', '#7B00FF', 
@@ -91,10 +114,6 @@ export function getRecommendedSecondary(primaryHex: string): string {
   return '#FFFFFF';
 }
 
-/**
- * HUE-BASED VIBRANT EXTRACTION: 
- * Membagi lingkaran warna menjadi segmen dan mengambil warna paling cerah di tiap segmen.
- */
 export async function extractPaletteFromImage(base64: string): Promise<string[]> {
   return new Promise((resolve) => {
     const img = new Image();

@@ -3,47 +3,78 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 /**
- * @fileOverview Middleware untuk menangani sistem subdomain dinamis.
- * Mengubah [username].linku.biz.id menjadi rute internal /[username].
+ * @fileOverview Middleware Universal untuk Multi-Subdomain.
+ * Mendukung: linku.biz.id, *.vercel.app, *.cloudworkstations.dev, dan localhost.
  */
 
 export function middleware(req: NextRequest) {
   const url = req.nextUrl.clone();
   const hostname = req.headers.get('host') || '';
 
-  // Daftar host utama yang diabaikan (tidak dianggap sebagai username)
-  const mainDomains = [
-    'linku.biz.id',
-    'www.linku.biz.id',
-    'localhost:9002',
-    'admin.linku.biz.id'
+  // 1. Abaikan file statis, aset Next.js, dan API
+  if (
+    url.pathname.startsWith('/_next') ||
+    url.pathname.startsWith('/api') ||
+    url.pathname.startsWith('/static') ||
+    url.pathname.includes('.')
+  ) {
+    return NextResponse.next();
+  }
+
+  // 2. Daftar path yang dipesan untuk sistem (Dashboard & Auth)
+  const reservedPaths = [
+    '/dashboard', 
+    '/login', 
+    '/register', 
+    '/admin', 
+    '/verify-email', 
+    '/forgot-password', 
+    '/auth', 
+    '/reviews'
   ];
+  
+  if (reservedPaths.some(path => url.pathname.startsWith(path))) {
+    return NextResponse.next();
+  }
 
-  // Cek apakah host saat ini adalah domain utama atau workspace development
-  const isMainDomain = mainDomains.some(domain => hostname === domain || hostname.includes('cloudworkstations.dev'));
+  // 3. Deteksi Subdomain secara Dinamis
+  let subdomain = '';
 
-  if (!isMainDomain && hostname.endsWith('.linku.biz.id')) {
-    // Ambil bagian pertama dari hostname (username)
-    const subdomain = hostname.split('.')[0].toLowerCase();
-
-    // Abaikan jika ini file statis, aset Next.js, atau rute API
-    if (
-      url.pathname.startsWith('/_next') ||
-      url.pathname.startsWith('/api') ||
-      url.pathname.includes('.')
-    ) {
-      return NextResponse.next();
+  if (hostname.includes('localhost')) {
+    // Localhost: user.localhost:9002 -> subdomain: user
+    const parts = hostname.split('.');
+    if (parts.length > 1 && !parts[0].includes('localhost')) {
+      subdomain = parts[0];
     }
-
-    // Jangan lakukan rewrite untuk halaman sistem (Dashboard, Login, dll)
-    const reservedPaths = ['/dashboard', '/login', '/register', '/admin', '/verify-email', '/forgot-password', '/auth', '/reviews'];
-    const isReserved = reservedPaths.some(path => url.pathname.startsWith(path));
-
-    if (!isReserved) {
-      // Rewrite secara internal: budi.linku.biz.id -> /budi
-      url.pathname = `/${subdomain}${url.pathname}`;
-      return NextResponse.rewrite(url);
+  } else {
+    // Domain Publik (linku.biz.id, vercel.app, cloudworkstations.dev)
+    const rootDomains = ['linku.biz.id', 'vercel.app', 'cloudworkstations.dev'];
+    
+    for (const root of rootDomains) {
+      if (hostname.endsWith(`.${root}`)) {
+        // Ambil teks sebelum root domain
+        const prefix = hostname.replace(`.${root}`, '');
+        const parts = prefix.split('.');
+        
+        // Kasus linku.biz.id: budi.linku.biz.id (parts: ["budi"])
+        if (root === 'linku.biz.id' && parts.length === 1) {
+          subdomain = parts[0];
+        } 
+        // Kasus Vercel/Workstation: budi.my-app.vercel.app (parts: ["budi", "my-app"])
+        else if (parts.length > 1) {
+          subdomain = parts[0];
+        }
+        break;
+      }
     }
+  }
+
+  // 4. Proses Rewrite jika subdomain valid (bukan www, admin, dll)
+  const systemSubdomains = ['www', 'api', 'admin', 'mail', 'auth', 'support'];
+  if (subdomain && !systemSubdomains.includes(subdomain.toLowerCase())) {
+    // Secara internal arahkan ke halaman profile /[username]
+    url.pathname = `/${subdomain}${url.pathname}`;
+    return NextResponse.rewrite(url);
   }
 
   return NextResponse.next();
@@ -52,11 +83,7 @@ export function middleware(req: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Match all paths except for:
-     * 1. /api routes
-     * 2. /_next (Next.js internals)
-     * 3. /static (public files)
-     * 4. all root files inside public (e.g. /favicon.ico)
+     * Jalankan middleware pada semua path kecuali yang dikecualikan di atas
      */
     '/((?!api|_next|static|[\\w-]+\\.\\w+).*)',
   ],

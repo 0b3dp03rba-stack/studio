@@ -67,6 +67,9 @@ export default function ProfilPage() {
     url: ''
   });
 
+  // Ambil URL Publik secara dinamis berdasarkan domain tempat app berjalan
+  const [publicUrl, setPublicUrl] = useState('');
+
   useEffect(() => {
     if (profile) {
       setDisplayName(profile.displayName || '');
@@ -74,10 +77,12 @@ export default function ProfilPage() {
       setBio(profile.bio || '');
       setAvatarUrl(profile.avatarUrl || '');
       setSocialLinks(profile.socialLinks || []);
+      
+      if (profile.username) {
+        setPublicUrl(getPublicUrl(profile.username));
+      }
     }
   }, [profile]);
-
-  const publicUrl = profile?.username ? getPublicUrl(profile.username) : '';
 
   const handleCopyUrl = () => {
     if (!publicUrl) return;
@@ -165,7 +170,7 @@ export default function ProfilPage() {
         <Card className="glass-card border-none rounded-[2.5rem] p-6 shadow-2xl space-y-4">
            <div className="flex items-center justify-between">
               <div className="min-w-0 flex-1">
-                 <p className="text-[9px] font-black uppercase text-primary tracking-widest mb-1">URL Premium Kamu</p>
+                 <p className="text-[9px] font-black uppercase text-primary tracking-widest mb-1">URL PREMIUM KAMU</p>
                  <p className="text-sm font-black text-white truncate pr-4">{publicUrl || 'Membangun URL...'}</p>
               </div>
               <Button variant="ghost" size="icon" onClick={handleCopyUrl} className="h-12 w-12 rounded-2xl bg-primary/10 hover:bg-primary/20 text-primary shadow-xl shrink-0">
