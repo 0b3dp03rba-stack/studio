@@ -3,8 +3,8 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 /**
- * @fileOverview Middleware Universal Linku v3.0 (Anti-Dongo Edition)
- * Menangani Subdomain Wildcard, Auto-Redirect, dan Multi-Environment.
+ * @fileOverview Middleware Universal Linku v4.0 (Final Boss Edition)
+ * Menangani Subdomain Wildcard, Auto-Redirect, dan Multi-Environment (Vercel/Local).
  */
 
 export function middleware(req: NextRequest) {
@@ -30,21 +30,21 @@ export function middleware(req: NextRequest) {
   ];
 
   // 3. LOGIKA EKSTRAKSI SUBDOMAIN
-  // Mendukung: budi.linku.biz.id, budi.localhost:9002, budi.vercel.app
   let subdomain = '';
   const hostParts = host.split('.');
 
-  // Jika di localhost (contoh: budi.localhost:9002)
-  if (host.includes('localhost')) {
+  // Deteksi lingkungan
+  const isLocalhost = host.includes('localhost');
+  const isProduction = host.includes('linku.biz.id');
+
+  if (isLocalhost) {
+    // Contoh: budi.localhost:9002 -> hostParts = ["budi", "localhost:9002"]
     if (hostParts.length > 1 && !hostParts[0].includes('localhost')) {
       subdomain = hostParts[0];
     }
-  } 
-  // Jika di domain utama atau vercel (contoh: budi.linku.biz.id)
-  else {
-    // Kami mengambil bagian pertama jika host memiliki lebih dari 2 bagian (misal: budi.linku.biz.id)
-    // atau jika itu adalah wildcard vercel (budi.linkuu.vercel.app)
-    if (hostParts.length >= 3) {
+  } else if (isProduction) {
+    // Contoh: budi.linku.biz.id -> hostParts = ["budi", "linku", "biz", "id"]
+    if (hostParts.length >= 4) {
       subdomain = hostParts[0];
     }
   }
@@ -52,33 +52,39 @@ export function middleware(req: NextRequest) {
   const cleanSubdomain = subdomain.toLowerCase();
 
   // 4. LOGIKA REDIRECT (Domain Utama /username -> Subdomain)
-  // Hanya jika sedang di domain utama (linku.biz.id) tanpa subdomain
-  if (!cleanSubdomain && (host.includes('linku.biz.id') || host.includes('vercel.app'))) {
-    const firstSegment = pathname.split('/')[1];
+  // Hanya berlaku jika kita di domain utama (linku.biz.id) TANPA subdomain
+  if (!cleanSubdomain && (isProduction || isLocalhost)) {
+    const segments = pathname.split('/');
+    const firstSegment = segments[1];
+
     if (firstSegment && !reservedPaths.includes(firstSegment)) {
-      const remainingPath = pathname.split('/').slice(2).join('/');
-      // Redirect ke subdomain (pake protocol yang sesuai)
-      const protocol = host.includes('localhost') ? 'http' : 'https';
+      const remainingPath = segments.slice(2).join('/');
+      const protocol = isLocalhost ? 'http' : 'https';
+      
+      // Bersihkan hostname dari www jika ada
+      const cleanHost = host.replace(/^www\./, '');
+      
       return NextResponse.redirect(
-        new URL(`${protocol}://${firstSegment.toLowerCase()}.${host}${remainingPath ? '/' + remainingPath : ''}`, req.url)
+        new URL(`${protocol}://${firstSegment.toLowerCase()}.${cleanHost}${remainingPath ? '/' + remainingPath : ''}`, req.url),
+        301 // Permanent Redirect untuk SEO
       );
     }
   }
 
-  // 5. LOGIKA REWRITE (Subdomain -> Folder /[username])
+  // 5. LOGIKA REWRITE (Subdomain -> Path Profil /[username])
   if (cleanSubdomain && cleanSubdomain !== 'www') {
-    // Jika user mencoba akses /dashboard lewat subdomain, kembalikan ke domain utama
+    // Jika user mencoba akses path sistem lewat subdomain, kembalikan ke domain utama
+    // Misal: budi.linku.biz.id/dashboard -> linku.biz.id/dashboard
     const firstSegment = pathname.split('/')[1];
     if (reservedPaths.includes(firstSegment)) {
-      // Hilangkan subdomain dari host
       const mainHost = host.replace(`${subdomain}.`, '');
-      const protocol = host.includes('localhost') ? 'http' : 'https';
+      const protocol = isLocalhost ? 'http' : 'https';
       return NextResponse.redirect(new URL(`${protocol}://${mainHost}${pathname}`, req.url));
     }
 
     // Secara internal, arahkan ke rute profil
-    // Contoh: budi.linku.biz.id/ -> /budi/
-    // Contoh: budi.linku.biz.id/g/folderid -> /budi/g/folderid
+    // budi.linku.biz.id/ -> /budi/
+    // budi.linku.biz.id/g/xyz -> /budi/g/xyz
     url.pathname = `/${cleanSubdomain}${pathname}`;
     return NextResponse.rewrite(url);
   }

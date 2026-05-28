@@ -36,7 +36,7 @@ export function getSmartSocialUrl(platform: string, handle: string): string {
 
 /**
  * Membangun URL publik pengguna secara ADAPTIF.
- * Deteksi otomatis apakah lingkungan mendukung subdomain atau tidak.
+ * Mendukung Subdomain di Produksi/Local, dan Fallback Path di Workstation/Vercel-Preview.
  */
 export function getPublicUrl(username: string): string {
   if (typeof window === 'undefined') return '';
@@ -46,23 +46,26 @@ export function getPublicUrl(username: string): string {
   const port = window.location.port ? `:${window.location.port}` : '';
   const cleanUsername = username.toLowerCase();
 
-  // 1. LOCALHOST atau DOMAIN UTAMA (Mendukung Subdomain)
+  // 1. LINGKUNGAN YANG MENDUKUNG SUBDOMAIN (Domain Kustom & Localhost)
   if (
     hostname === 'localhost' || 
     hostname === '127.0.0.1' || 
-    hostname.includes('linku.biz.id') || 
-    hostname.includes('vercel.app')
+    hostname === 'linku.biz.id' ||
+    hostname.endsWith('.linku.biz.id')
   ) {
-    // Bersihkan hostname dari subdomain lama jika ada
+    // Ambil base domain (hilangkan subdomain yang sedang aktif jika ada)
     let baseHost = hostname;
-    if (hostname.split('.').length >= 3) {
-      baseHost = hostname.split('.').slice(1).join('.');
+    if (hostname.includes('linku.biz.id')) {
+      baseHost = 'linku.biz.id';
+    } else if (hostname.includes('localhost')) {
+      baseHost = 'localhost';
     }
     
     return `${protocol}//${cleanUsername}.${baseHost}${port}`;
   }
 
-  // 2. WORKSTATION (Fallback ke Path agar tidak SSL Error)
+  // 2. LINGKUNGAN TESTING (Workstation / Vercel Preview)
+  // Pakai format Path agar tidak kena SSL Error (Nested Subdomain)
   return `${protocol}//${hostname}${port}/${cleanUsername}`;
 }
 
