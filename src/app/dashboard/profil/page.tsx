@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { User, LogOut, Mail, Edit3, Upload, AtSign, Loader2, Palette, Share2, Plus, Trash2, Instagram, Youtube, Facebook, MessageCircle, Link2, Globe, Copy, Sparkles, AlertCircle } from 'lucide-react';
+import { User, LogOut, Mail, Edit3, Upload, AtSign, Loader2, Share2, Plus, Trash2, Instagram, Youtube, Facebook, MessageCircle, Link2, Globe, Copy, Sparkles, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -14,21 +14,10 @@ import { doc, updateDoc, serverTimestamp, getDoc, setDoc, deleteDoc } from 'fire
 import { getAuth, signOut } from 'firebase/auth';
 import ImageCropperModal from '@/components/ImageCropperModal';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { getPublicUrl } from '@/lib/utils-app';
 
 const TikTokIcon = ({ className, size = 16 }: { className?: string, size?: number }) => (
-  <svg 
-    width={size} 
-    height={size} 
-    viewBox="0 0 24 24" 
-    fill="none" 
-    stroke="currentColor" 
-    strokeWidth="2" 
-    strokeLinecap="round" 
-    strokeLinejoin="round" 
-    className={className}
-  >
-    <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" />
-  </svg>
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" /></svg>
 );
 
 const socialPlatforms = [
@@ -71,7 +60,6 @@ export default function ProfilPage() {
   
   const [cropperOpen, setCropperOpen] = useState(false);
   const [tempImage, setTempImage] = useState<string | null>(null);
-  const [fullUrl, setFullUrl] = useState('');
 
   const [newSocial, setNewSocial] = useState({
     platform: '',
@@ -86,17 +74,14 @@ export default function ProfilPage() {
       setBio(profile.bio || '');
       setAvatarUrl(profile.avatarUrl || '');
       setSocialLinks(profile.socialLinks || []);
-      
-      if (typeof window !== 'undefined') {
-        const domain = window.location.origin;
-        setFullUrl(`${domain}/${profile.username || profile.id}`);
-      }
     }
   }, [profile]);
 
+  const publicUrl = profile?.username ? getPublicUrl(profile.username) : '';
+
   const handleCopyUrl = () => {
-    if (!fullUrl) return;
-    navigator.clipboard.writeText(fullUrl);
+    if (!publicUrl) return;
+    navigator.clipboard.writeText(publicUrl);
     toast({ title: "Tersalin!", description: "Link profil Anda siap dibagikan." });
   };
 
@@ -177,6 +162,18 @@ export default function ProfilPage() {
       </div>
 
       <div className="space-y-6">
+        <Card className="glass-card border-none rounded-[2.5rem] p-6 shadow-2xl space-y-4">
+           <div className="flex items-center justify-between">
+              <div>
+                 <p className="text-[9px] font-black uppercase text-primary tracking-widest mb-1">Link Hub Kamu</p>
+                 <p className="text-xs font-black text-white truncate max-w-[200px]">{publicUrl || 'Membangun URL...'}</p>
+              </div>
+              <Button variant="ghost" size="icon" onClick={handleCopyUrl} className="h-12 w-12 rounded-2xl bg-primary/10 hover:bg-primary/20 text-primary shadow-xl">
+                <Copy size={20} />
+              </Button>
+           </div>
+        </Card>
+
         <Card className="glass-card border-none rounded-[2.5rem] overflow-hidden">
           <CardContent className="p-8 space-y-6">
             <div className="flex flex-col items-center gap-6">
@@ -219,7 +216,7 @@ export default function ProfilPage() {
             
             <div className="p-4 bg-primary/10 rounded-2xl border border-primary/20 flex gap-4 items-start">
                <AlertCircle size={20} className="text-primary shrink-0 mt-0.5" />
-               <p className="text-[10px] font-black uppercase leading-relaxed text-primary/80">Cukup masukkan username/ID saja. Sistem akan otomatis membuat link redirect yang cerdas ke profil Anda.</p>
+               <p className="text-[10px] font-black uppercase leading-relaxed text-primary/80">Masukkan username/ID saja. Sistem akan otomatis membuat link subdomain yang cerdas.</p>
             </div>
 
             <div className="grid gap-3">
@@ -263,18 +260,6 @@ export default function ProfilPage() {
               })}
             </div>
           </CardContent>
-        </Card>
-
-        <Card className="glass-card border-none rounded-[2rem] p-6 shadow-2xl space-y-4">
-           <div className="flex items-center justify-between">
-              <div>
-                 <p className="text-[9px] font-black uppercase text-primary tracking-widest mb-1">Public URL</p>
-                 <p className="text-xs font-bold text-white truncate max-w-[200px]">{fullUrl || 'Loading...'}</p>
-              </div>
-              <Button variant="ghost" size="icon" onClick={handleCopyUrl} className="h-12 w-12 rounded-2xl bg-primary/10 hover:bg-primary/20 text-primary shadow-xl">
-                <Copy size={20} />
-              </Button>
-           </div>
         </Card>
 
         <div className="flex flex-col gap-3 pt-4">

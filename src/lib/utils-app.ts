@@ -34,6 +34,17 @@ export function getSmartSocialUrl(platform: string, handle: string): string {
   }
 }
 
+/**
+ * Membangun URL publik pengguna (Subdomain format).
+ */
+export function getPublicUrl(username: string): string {
+  if (typeof window === 'undefined') return '';
+  const domain = 'linku.biz.id';
+  // Jika localhost, tetap pakai path format
+  if (window.location.hostname === 'localhost') return `http://localhost:9002/${username}`;
+  return `https://${username}.${domain}`;
+}
+
 export const PRESTIGE_SECONDARIES = [
   '#FFFFFF', '#FFD700', '#00FFFF', '#FFFF00', '#FF00FF', '#00FF00', '#FF0000', '#7B00FF', 
   '#E0FFFF', '#FF69B4', '#F0E68C', '#7DF9FF', '#B76E79', '#C0C0C0', '#FF4500', '#00FF7F'
@@ -77,7 +88,6 @@ export function getRecommendedSecondary(primaryHex: string): string {
 /**
  * HUE-BASED VIBRANT EXTRACTION: 
  * Membagi lingkaran warna menjadi segmen dan mengambil warna paling cerah di tiap segmen.
- * Ini memastikan warna rambut (biru) atau baju (putih) tetap terjaring meskipun warna kulit mendominasi luas gambar.
  */
 export async function extractPaletteFromImage(base64: string): Promise<string[]> {
   return new Promise((resolve) => {
@@ -94,7 +104,6 @@ export async function extractPaletteFromImage(base64: string): Promise<string[]>
       ctx.drawImage(img, 0, 0, 150, 150);
       const data = ctx.getImageData(0, 0, 150, 150).data;
 
-      // Gunakan Map untuk menyimpan warna terbaik per segmen Hue (12 segmen)
       const hueBuckets: Record<number, { hex: string, saturation: number, luminance: number, score: number }[]> = {};
       for(let i=0; i<12; i++) hueBuckets[i] = [];
 
@@ -108,19 +117,15 @@ export async function extractPaletteFromImage(base64: string): Promise<string[]>
         const hex = `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
         const hsl = hexToHsl(hex);
         
-        // Skip warna yang terlalu gelap/terang total
         if (hsl.l < 5 || hsl.l > 95) continue;
 
         const bucketIndex = Math.floor(hsl.h / 30) % 12;
-        // Scoring: Sangat mengutamakan Saturation (Vibrancy)
         const score = (hsl.s * 3) + (hsl.l > 30 && hsl.l < 80 ? 30 : 0);
 
         hueBuckets[bucketIndex].push({ hex, saturation: hsl.s, luminance: hsl.l, score });
       }
 
       const palette: string[] = [];
-      
-      // Ambil 1 warna terbaik dari setiap bucket yang terdeteksi
       Object.values(hueBuckets).forEach(bucket => {
         if (bucket.length > 0) {
           const sorted = bucket.sort((a, b) => b.score - a.score);
@@ -128,7 +133,6 @@ export async function extractPaletteFromImage(base64: string): Promise<string[]>
         }
       });
 
-      // Tambahkan warna netral cerah secara manual untuk opsi "kaos putih"
       palette.push('#FFFFFF', '#F5F5F5');
 
       const finalPalette = [...new Set(palette)]
