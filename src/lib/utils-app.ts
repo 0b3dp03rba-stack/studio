@@ -36,7 +36,7 @@ export function getSmartSocialUrl(platform: string, handle: string): string {
 
 /**
  * Membangun URL publik pengguna secara ADAPTIF sesuai lingkungan hosting.
- * Menghindari error SSL pada Cloud Workstations dengan beralih ke Path-based.
+ * Memberikan format Subdomain untuk Produksi/Localhost, dan Path untuk Dev/Workstation.
  */
 export function getPublicUrl(username: string): string {
   if (typeof window === 'undefined') return '';
@@ -45,18 +45,18 @@ export function getPublicUrl(username: string): string {
   const protocol = window.location.protocol;
   const port = window.location.port ? `:${window.location.port}` : '';
 
-  // 1. Lingkungan Produksi (linku.biz.id)
+  // 1. Lingkungan Produksi (linku.biz.id) -> Gunakan Subdomain
   if (hostname.includes('linku.biz.id')) {
-    return `${protocol}//${username}.linku.biz.id${port}`;
+    return `${protocol}//${username}.linku.biz.id`;
   }
 
-  // 2. Localhost
+  // 2. Localhost -> Gunakan Subdomain (Mendukung testing lokal)
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
     return `${protocol}//${username}.localhost${port}`;
   }
 
-  // 3. Lingkungan Development (Workstation/Vercel) - Gunakan Path untuk hindari Error SSL
-  // Kita kembalikan ke format: hostname.com/username
+  // 3. Lingkungan Development (Workstation/Vercel Preview) -> Gunakan Path
+  // Menghindari SSL Error pada sertifikat yang tidak mendukung wildcard nested.
   return `${protocol}//${hostname}${port}/${username}`;
 }
 
