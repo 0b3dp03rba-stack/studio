@@ -36,7 +36,7 @@ export function getSmartSocialUrl(platform: string, handle: string): string {
 
 /**
  * Membangun URL publik pengguna secara ADAPTIF.
- * Mendukung Subdomain di Produksi/Local, dan Fallback Path di Workstation/Vercel-Preview.
+ * Mendukung Subdomain di Produksi/Local, dan Fallback Path di Workstation/Vercel-Preview (SSL Issue).
  */
 export function getPublicUrl(username: string): string {
   if (typeof window === 'undefined') return '';
@@ -53,7 +53,6 @@ export function getPublicUrl(username: string): string {
     hostname === 'linku.biz.id' ||
     hostname.endsWith('.linku.biz.id')
   ) {
-    // Ambil base domain (hilangkan subdomain yang sedang aktif jika ada)
     let baseHost = hostname;
     if (hostname.includes('linku.biz.id')) {
       baseHost = 'linku.biz.id';
@@ -64,8 +63,8 @@ export function getPublicUrl(username: string): string {
     return `${protocol}//${cleanUsername}.${baseHost}${port}`;
   }
 
-  // 2. LINGKUNGAN TESTING (Workstation / Vercel Preview)
-  // Pakai format Path agar tidak kena SSL Error (Nested Subdomain)
+  // 2. LINGKUNGAN TESTING (Workstation / Vercel Preview / Project Domain Lain)
+  // Pakai format Path agar tidak kena SSL Error (Double Subdomain)
   return `${protocol}//${hostname}${port}/${cleanUsername}`;
 }
 
