@@ -45,21 +45,17 @@ export function getPublicUrl(username: string): string {
   const port = window.location.port ? `:${window.location.port}` : '';
   const cleanUsername = username.toLowerCase();
 
-  // Bersihkan hostname dari subdomain lama (misal dari dashboard.linku.biz.id ke linku.biz.id)
-  const baseDomain = hostname.replace(/^(dashboard|www|admin)\./, '');
+  // Deteksi Lingkungan
+  const isProduction = hostname.includes('linku.biz.id');
+  const isLocalhost = hostname.includes('localhost') || hostname === '127.0.0.1';
 
-  // Jika lingkungan mendukung subdomain (Produksi atau Localhost)
-  if (
-    baseDomain === 'linku.biz.id' || 
-    baseDomain === 'localhost' || 
-    baseDomain === '127.0.0.1' ||
-    baseDomain.endsWith('.linku.biz.id')
-  ) {
-    const finalBase = baseDomain.includes('linku.biz.id') ? 'linku.biz.id' : 'localhost';
-    return `${protocol}//${cleanUsername}.${finalBase}${port}`;
+  // Jika di Produksi atau Localhost -> Gunakan Subdomain (Mewah)
+  if (isProduction || isLocalhost) {
+    const base = isProduction ? 'linku.biz.id' : 'localhost';
+    return `${protocol}//${cleanUsername}.${base}${port}`;
   }
 
-  // Lingkungan Testing (Workstation / Vercel Preview) -> Pakai format path agar tidak SSL Error
+  // Jika di Workstation / Vercel Preview -> Gunakan Path (Aman SSL)
   return `${protocol}//${hostname}${port}/${cleanUsername}`;
 }
 
