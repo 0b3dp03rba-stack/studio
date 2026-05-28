@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 /**
- * @fileOverview Middleware Universal Linku v7.0 (Sistem Subdomain & Auto-Redirect)
- * Menangani Subdomain Wildcard dan memaksa redirect dari domain.com/user ke user.domain.com
+ * @fileOverview Middleware Linku Engine v8.0 (Final Subdomain & Auto-Redirect)
+ * Menangani routing internal untuk subdomain dan memaksa redirect linku.biz.id/user ke user.linku.biz.id
  */
 
 export function middleware(req: NextRequest) {
@@ -11,7 +11,7 @@ export function middleware(req: NextRequest) {
   const host = req.headers.get('host') || '';
   const pathname = url.pathname;
 
-  // 1. ABAIKAN INTERNAL & FILE STATIS
+  // 1. ABAIKAN INTERNAL, API, DAN FILE STATIS
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api') ||
@@ -22,7 +22,7 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // 2. PATH SISTEM (Tidak boleh jadi subdomain atau memicu redirect)
+  // 2. DAFTAR PATH SISTEM (Tidak boleh jadi subdomain atau kena redirect)
   const reservedPaths = [
     'dashboard', 'login', 'register', 'admin', 
     'verify-email', 'forgot-password', 'auth', 'reviews', 'u'
@@ -34,14 +34,18 @@ export function middleware(req: NextRequest) {
 
   let subdomain = '';
 
-  // 3. LOGIKA EKSTRAKSI SUBDOMAIN
+  // 3. LOGIKA DETEKSI SUBDOMAIN
   if (isLocalhost) {
+    // bobby.localhost:9002 -> hostParts = [bobby, localhost:9002]
     if (hostParts.length > 1 && !hostParts[0].includes('localhost')) {
       subdomain = hostParts[0];
     }
-  } else if (isProduction) {
-    // gunxmodz.linku.biz.id -> parts = [gunxmodz, linku, biz, id]
-    if (hostParts.length >= 4) {
+  } else {
+    // budi.linku.biz.id -> parts = [budi, linku, biz, id] (length 4)
+    // budi.customdomain.com -> parts = [budi, customdomain, com] (length 3)
+    // Kita ambil bagian pertama jika total bagian > 2 (untuk domain .com) atau > 3 (untuk .biz.id)
+    const minParts = host.includes('.biz.id') ? 4 : 3;
+    if (hostParts.length >= minParts) {
       subdomain = hostParts[0];
     }
   }
@@ -49,35 +53,33 @@ export function middleware(req: NextRequest) {
   const cleanSubdomain = subdomain.toLowerCase();
 
   // 4. LOGIKA AUTO-REDIRECT: linku.biz.id/user -> user.linku.biz.id
-  // Hanya jika kita di domain utama TANPA subdomain
-  if (!cleanSubdomain && (isProduction || isLocalhost)) {
+  // Hanya berjalan jika kita di domain utama TANPA subdomain
+  if (!cleanSubdomain) {
     const segments = pathname.split('/');
     const firstSegment = segments[1];
 
     if (firstSegment && !reservedPaths.includes(firstSegment)) {
       const remainingPath = segments.slice(2).join('/');
-      const protocol = isLocalhost ? 'http' : 'https';
-      // Pastikan membersihkan www jika ada
-      const baseHost = host.replace(/^www\./, '');
+      const protocol = req.headers.get('x-forwarded-proto') || (isLocalhost ? 'http' : 'https');
       
       return NextResponse.redirect(
-        new URL(`${protocol}://${firstSegment.toLowerCase()}.${baseHost}${remainingPath ? '/' + remainingPath : ''}`, req.url),
+        new URL(`${protocol}://${firstSegment.toLowerCase()}.${host}${remainingPath ? '/' + remainingPath : ''}`, req.url),
         301
       );
     }
   }
 
-  // 5. LOGIKA REWRITE: Subdomain -> Path Profil internal
+  // 5. LOGIKA INTERNAL REWRITE: Subdomain -> Folder Profil
   if (cleanSubdomain && cleanSubdomain !== 'www') {
-    // Cegah akses dashboard/login lewat subdomain (kembalikan ke root domain)
+    // Cegah akses halaman sistem lewat subdomain (pindahkan ke root domain)
     const firstSegment = pathname.split('/')[1];
     if (reservedPaths.includes(firstSegment)) {
       const mainHost = host.replace(`${subdomain}.`, '');
-      const protocol = isLocalhost ? 'http' : 'https';
+      const protocol = req.headers.get('x-forwarded-proto') || (isLocalhost ? 'http' : 'https');
       return NextResponse.redirect(new URL(`${protocol}://${mainHost}${pathname}`, req.url));
     }
 
-    // Secara internal arahkan ke file [username]
+    // Arahkan secara internal ke /username/[path]
     url.pathname = `/${cleanSubdomain}${pathname}`;
     return NextResponse.rewrite(url);
   }
