@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useCallback } from 'react';
@@ -40,11 +39,13 @@ export default function ImageCropperModal({ imageSrc, isOpen, onClose, onCropCom
       const image = new Image();
       image.src = imageSrc;
 
-      await new Promise((resolve) => {
+      await new Promise((resolve, reject) => {
         image.onload = resolve;
+        image.onerror = reject;
       });
 
-      const size = 400; // Final target size
+      // Target size 400x400px (Optimized for Firestore storage)
+      const size = 400; 
       canvas.width = size;
       canvas.height = size;
 
@@ -62,6 +63,7 @@ export default function ImageCropperModal({ imageSrc, isOpen, onClose, onCropCom
         );
       }
 
+      // Convert to Base64 String with 0.8 quality compression
       const base64Image = canvas.toDataURL('image/jpeg', 0.8);
       onCropComplete(base64Image);
       onClose();
@@ -72,9 +74,9 @@ export default function ImageCropperModal({ imageSrc, isOpen, onClose, onCropCom
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md glass-card border-none rounded-[2.5rem] p-0 overflow-hidden">
+      <DialogContent className="max-w-md glass-card border-none rounded-[2.5rem] p-0 overflow-hidden shadow-2xl">
         <DialogHeader className="p-6 border-b border-white/5">
-          <DialogTitle className="text-sm font-black uppercase tracking-widest text-white">Sesuaikan Foto</DialogTitle>
+          <DialogTitle className="text-sm font-black uppercase tracking-widest text-white">Adjust Visualization</DialogTitle>
         </DialogHeader>
         
         <div className="relative w-full aspect-square bg-black">
@@ -98,7 +100,7 @@ export default function ImageCropperModal({ imageSrc, isOpen, onClose, onCropCom
         <div className="p-6 space-y-6">
           <div className="space-y-3">
             <div className="flex justify-between text-[10px] font-black uppercase text-white/40 tracking-widest">
-              <span>Zoom</span>
+              <span>Zoom Level</span>
               <span>{Math.round(zoom * 100)}%</span>
             </div>
             <Slider
@@ -111,9 +113,9 @@ export default function ImageCropperModal({ imageSrc, isOpen, onClose, onCropCom
             />
           </div>
 
-          <DialogFooter className="flex gap-2">
-            <Button variant="ghost" onClick={onClose} className="flex-1 rounded-2xl text-[10px] font-black uppercase">Batal</Button>
-            <Button onClick={createCroppedImage} className="flex-1 neon-gradient text-background rounded-2xl glow-primary text-[10px] font-black uppercase">Gunakan Foto</Button>
+          <DialogFooter className="flex gap-2 pb-6">
+            <Button variant="ghost" onClick={onClose} className="flex-1 rounded-2xl text-[10px] font-black uppercase border border-white/5">Cancel</Button>
+            <Button onClick={createCroppedImage} className="flex-1 neon-gradient text-background rounded-2xl glow-primary text-[10px] font-black uppercase">Apply Photo</Button>
           </DialogFooter>
         </div>
       </DialogContent>

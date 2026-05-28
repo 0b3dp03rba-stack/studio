@@ -1,28 +1,27 @@
-
 {
   "entities": {
     "UserProfile": {
       "title": "UserProfile",
       "type": "object",
-      "description": "Profil pengguna Linku.",
+      "description": "Profil pengguna Linku. AvatarUrl disimpan sebagai Base64 string.",
       "properties": {
         "id": { "type": "string" },
         "email": { "type": "string", "format": "email" },
         "username": { "type": "string" },
         "displayName": { "type": "string" },
         "bio": { "type": "string" },
-        "avatarUrl": { "type": "string" },
-        "themeColor": { "type": "string", "description": "Primary theme color in hex (e.g. #ff0000)" },
-        "themeColorSecondary": { "type": "string", "description": "Secondary theme color in hex (e.g. #ffea00)" },
+        "avatarUrl": { "type": "string", "description": "Base64 encoded image string (max 400x400px)" },
+        "themeColor": { "type": "string" },
+        "themeColorSecondary": { "type": "string" },
         "role": { "type": "string", "enum": ["User", "Admin"] },
+        "views": { "type": "number" },
         "socialLinks": {
           "type": "array",
           "items": {
             "type": "object",
             "properties": {
               "platform": { "type": "string" },
-              "url": { "type": "string" },
-              "label": { "type": "string", "description": "Username atau label tampilan" }
+              "label": { "type": "string" }
             }
           }
         },
@@ -30,50 +29,22 @@
       },
       "required": ["id", "email", "username", "role"]
     },
-    "PlatformReview": {
-      "title": "PlatformReview",
-      "type": "object",
-      "description": "Ulasan pengguna untuk platform Linku.",
-      "properties": {
-        "userId": { "type": "string" },
-        "username": { "type": "string" },
-        "displayName": { "type": "string" },
-        "avatarUrl": { "type": "string" },
-        "rating": { "type": "number", "minimum": 1, "maximum": 5 },
-        "comment": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["userId", "rating", "comment"]
-    },
-    "LinkGroup": {
-      "title": "LinkGroup",
-      "type": "object",
-      "description": "Kelompok atau folder tautan.",
-      "properties": {
-        "id": { "type": "string" },
-        "userId": { "type": "string" },
-        "title": { "type": "string" },
-        "imageUrl": { "type": "string" },
-        "order": { "type": "number" },
-        "isEnabled": { "type": "boolean" }
-      },
-      "required": ["id", "userId", "title", "isEnabled"]
-    },
     "Link": {
       "title": "Link",
       "type": "object",
-      "description": "Tautan individu.",
+      "description": "Tautan individu. ImageUrl disimpan sebagai Base64 string.",
       "properties": {
         "id": { "type": "string" },
-        "groupId": { "type": "string", "description": "Optional, jika masuk kelompok" },
+        "userId": { "type": "string" },
+        "groupId": { "type": "string" },
         "title": { "type": "string" },
         "url": { "type": "string" },
-        "imageUrl": { "type": "string" },
-        "order": { "type": "number" },
+        "imageUrl": { "type": "string", "description": "Base64 encoded image string" },
+        "clicks": { "type": "number" },
         "isEnabled": { "type": "boolean" },
-        "clicks": { "type": "number" }
+        "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["id", "title", "url", "isEnabled"]
+      "required": ["id", "userId", "title", "url"]
     }
   },
   "auth": {
@@ -82,27 +53,19 @@
   "firestore": {
     "/userProfiles/{userId}": {
       "schema": { "$ref": "#/backend/entities/UserProfile" },
-      "description": "Profil pengguna."
+      "description": "Profil utama pengguna."
     },
     "/userProfiles/{userId}/links/{linkId}": {
       "schema": { "$ref": "#/backend/entities/Link" },
-      "description": "Tautan mandiri milik pengguna."
+      "description": "Tautan mandiri."
     },
     "/userProfiles/{userId}/linkGroups/{groupId}": {
-      "schema": { "$ref": "#/backend/entities/LinkGroup" },
-      "description": "Kelompok link milik pengguna."
+      "schema": { "type": "object" },
+      "description": "Folder/Kelompok link."
     },
     "/userProfiles/{userId}/linkGroups/{groupId}/links/{linkId}": {
       "schema": { "$ref": "#/backend/entities/Link" },
-      "description": "Daftar tautan di dalam kelompok."
-    },
-    "/usernames/{username}": {
-      "schema": { "type": "object" },
-      "description": "Mapping username unik ke userId."
-    },
-    "/platformReviews/{userId}": {
-      "schema": { "$ref": "#/backend/entities/PlatformReview" },
-      "description": "Ulasan pengguna untuk Linku."
+      "description": "Tautan di dalam kelompok."
     }
   }
 }
