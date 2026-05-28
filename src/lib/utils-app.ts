@@ -36,8 +36,7 @@ export function getSmartSocialUrl(platform: string, handle: string): string {
 
 /**
  * Membangun URL publik pengguna secara ADAPTIF.
- * Mengutamakan format SUBDOMAIN untuk brand premium di produksi.
- * Fallback ke PATH untuk Workstation/Testing guna menghindari SSL Error.
+ * Deteksi otomatis apakah lingkungan mendukung subdomain atau tidak.
  */
 export function getPublicUrl(username: string): string {
   if (typeof window === 'undefined') return '';
@@ -47,15 +46,23 @@ export function getPublicUrl(username: string): string {
   const port = window.location.port ? `:${window.location.port}` : '';
   const cleanUsername = username.toLowerCase();
 
-  // 1. PRODUKSI atau LOCALHOST (Gunakan Subdomain)
-  // Localhost mendukung subdomain secara default di browser modern.
-  if (hostname.includes('linku.biz.id') || hostname === 'localhost' || hostname === '127.0.0.1') {
-    const baseHost = hostname.includes('linku.biz.id') ? 'linku.biz.id' : `localhost${port}`;
-    return `${protocol}//${cleanUsername}.${baseHost}`;
+  // 1. LOCALHOST atau DOMAIN UTAMA (Mendukung Subdomain)
+  if (
+    hostname === 'localhost' || 
+    hostname === '127.0.0.1' || 
+    hostname.includes('linku.biz.id') || 
+    hostname.includes('vercel.app')
+  ) {
+    // Bersihkan hostname dari subdomain lama jika ada
+    let baseHost = hostname;
+    if (hostname.split('.').length >= 3) {
+      baseHost = hostname.split('.').slice(1).join('.');
+    }
+    
+    return `${protocol}//${cleanUsername}.${baseHost}${port}`;
   }
 
-  // 2. WORKSTATION / VERCEL PREVIEW (Gunakan Path agar tidak kena SSL Error)
-  // Lingkungan cloud development biasanya tidak punya sertifikat untuk nested subdomain.
+  // 2. WORKSTATION (Fallback ke Path agar tidak SSL Error)
   return `${protocol}//${hostname}${port}/${cleanUsername}`;
 }
 
