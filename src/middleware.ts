@@ -40,41 +40,40 @@ export function middleware(req: NextRequest) {
   
   const isReserved = reservedPaths.some(path => pathname.startsWith(path));
 
-  // 3. LOGIKA REDIRECT (Path -> Subdomain)
-  // Jika user mengakses linku.biz.id/username, kita paksa redirect ke username.linku.biz.id
-  if (!isReserved && pathname !== '/') {
-    const segments = pathname.split('/').filter(Boolean);
-    
-    // Pastikan ini adalah path username (hanya 1 segment, misal: /budi)
-    if (segments.length === 1) {
-      const username = segments[0];
-      const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
-
-      // Hanya lakukan redirect pada domain produksi atau localhost
-      if (hostname === 'linku.biz.id' || hostname === 'localhost:9002') {
-        const targetHost = hostname === 'localhost:9002' ? `${username}.localhost:9002` : `${username}.linku.biz.id`;
-        return NextResponse.redirect(new URL(`${protocol}://${targetHost}/`), 301);
-      }
-    }
-  }
-
-  // 4. LOGIKA REWRITE (Subdomain -> Internal Page)
+  // 3. DETEKSI SUBDOMAIN
   let subdomain = '';
-
   if (hostname.includes('localhost')) {
     const parts = hostname.split('.');
     if (parts.length > 1 && !parts[0].includes('localhost')) {
       subdomain = parts[0];
     }
-  } else if (hostname.endsWith('.linku.biz.id')) {
-    const part = hostname.replace('.linku.biz.id', '');
+  } else if (hostname.includes('.linku.biz.id')) {
+    // Deteksi subdomain di domain produksi
+    const part = hostname.split('.linku.biz.id')[0];
     if (part && part !== 'www' && part !== 'linku') {
       subdomain = part;
     }
   }
 
-  // Jika terdeteksi subdomain, lakukan rewrite internal ke /[username]
+  // 4. LOGIKA REDIRECT (Path -> Subdomain)
+  // Hanya jalankan redirect jika user mengakses domain utama tanpa subdomain
+  if (!subdomain && !isReserved && pathname !== '/') {
+    const segments = pathname.split('/').filter(Boolean);
+    if (segments.length === 1) {
+      const username = segments[0].toLowerCase();
+      const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
+      
+      // Jika di produksi atau localhost, paksa pindah ke subdomain
+      if (hostname.includes('linku.biz.id') || hostname.includes('localhost')) {
+        const baseHost = hostname.includes('localhost') ? 'localhost:9002' : 'linku.biz.id';
+        return NextResponse.redirect(new URL(`${protocol}://${username}.${baseHost}/`), 301);
+      }
+    }
+  }
+
+  // 5. LOGIKA REWRITE (Subdomain -> Internal Page)
   if (subdomain) {
+    // Arahkan gunxmodz.linku.biz.id/apapun ke /gunxmodz/apapun secara internal
     url.pathname = `/${subdomain}${pathname}`;
     return NextResponse.rewrite(url);
   }

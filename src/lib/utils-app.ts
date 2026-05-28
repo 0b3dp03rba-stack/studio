@@ -35,8 +35,8 @@ export function getSmartSocialUrl(platform: string, handle: string): string {
 }
 
 /**
- * Membangun URL publik pengguna secara ADAPTIF sesuai lingkungan hosting.
- * Memberikan format Subdomain untuk Produksi/Localhost, dan Path untuk Dev/Workstation.
+ * Membangun URL publik pengguna secara ADAPTIF.
+ * Menggunakan Subdomain untuk linku.biz.id dan localhost.
  */
 export function getPublicUrl(username: string): string {
   if (typeof window === 'undefined') return '';
@@ -45,19 +45,20 @@ export function getPublicUrl(username: string): string {
   const protocol = window.location.protocol;
   const port = window.location.port ? `:${window.location.port}` : '';
 
-  // 1. Lingkungan Produksi (linku.biz.id) -> Gunakan Subdomain
+  const cleanUsername = username.toLowerCase();
+
+  // 1. Lingkungan Produksi -> Subdomain
   if (hostname.includes('linku.biz.id')) {
-    return `${protocol}//${username}.linku.biz.id`;
+    return `${protocol}//${cleanUsername}.linku.biz.id`;
   }
 
-  // 2. Localhost -> Gunakan Subdomain (Mendukung testing lokal)
+  // 2. Localhost -> Subdomain
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return `${protocol}//${username}.localhost${port}`;
+    return `${protocol}//${cleanUsername}.localhost${port}`;
   }
 
-  // 3. Lingkungan Development (Workstation/Vercel Preview) -> Gunakan Path
-  // Menghindari SSL Error pada sertifikat yang tidak mendukung wildcard nested.
-  return `${protocol}//${hostname}${port}/${username}`;
+  // 3. Workstation / Vercel Preview -> Tetap Path (Hindari SSL Error)
+  return `${protocol}//${hostname}${port}/${cleanUsername}`;
 }
 
 export const PRESTIGE_SECONDARIES = [
