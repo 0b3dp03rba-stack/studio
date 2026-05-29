@@ -1,15 +1,16 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Sparkles, CheckCircle2, ShieldCheck, Zap, Globe, Image as ImageIcon, Loader2, QrCode, ArrowRight, ReceiptText } from 'lucide-react';
+import { Sparkles, CheckCircle2, ShieldCheck, Zap, Globe, Image as ImageIcon, Loader2, ReceiptText, AlertCircle, RefreshCw, Check } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, setDoc, updateDoc, serverTimestamp, collection, addDoc } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, collection, addDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '@/lib/utils-app';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { createRamsDeposit, checkRamsStatus } from './payment-actions';
 
 export default function PremiumPage() {
   const { user } = useUser();
@@ -21,56 +22,90 @@ export default function PremiumPage() {
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [showQRIS, setShowQRIS] = useState(false);
-  const [currentPaymentId, setCurrentPaymentId] = useState<string | null>(null);
+  const [paymentData, setPaymentData] = useState<any>(null);
+  const [checkingStatus, setCheckingStatus] = useState(false);
+  
+  const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
   const PREMIUM_PRICE = 10000;
+
+  // Cleanup polling saat modal tutup
+  useEffect(() => {
+    if (!showQRIS && pollingRef.current) {
+      clearInterval(pollingRef.current);
+    }
+    return () => { if (pollingRef.current) clearInterval(pollingRef.current); };
+  }, [showQRIS]);
 
   const handleUpgradeClick = async () => {
     if (!user || isProcessing) return;
     setIsProcessing(true);
 
     try {
-      // 1. Create Payment Log in Firestore
-      const paymentRef = await addDoc(collection(db, 'payments'), {
-        userId: user.uid,
-        amount: PREMIUM_PRICE,
-        status: 'pending',
-        method: 'QRIS',
-        createdAt: serverTimestamp(),
-      });
+      const ramsResponse = await createRamsDeposit(PREMIUM_PRICE);
+      
+      if (ramsResponse.success && ramsResponse.data) {
+        const data = ramsResponse.data;
+        
+        // 1. Catat transaksi di Firestore untuk log internal
+        await addDoc(collection(db, 'payments'), {
+          userId: user.uid,
+          ramsDepositId: data.depositId,
+          amount: data.amount,
+          totalAmount: data.totalAmount,
+          status: 'pending',
+          method: 'QRIS',
+          createdAt: serverTimestamp(),
+        });
 
-      setCurrentPaymentId(paymentRef.id);
-      setShowQRIS(true);
+        setPaymentData(data);
+        setShowQRIS(true);
+        
+        // 2. Mulai Polling Status (Cek tiap 10 detik)
+        startStatusPolling(data.depositId);
+      } else {
+        toast({ variant: "destructive", title: "Sistem Sibuk", description: ramsResponse.message || "Gagal membuat invoice." });
+      }
     } catch (e) {
-      toast({ variant: "destructive", title: "Gagal memproses", description: "Coba beberapa saat lagi." });
+      toast({ variant: "destructive", title: "Error", description: "Terjadi kesalahan sistem." });
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const simulatePaymentSuccess = async () => {
-    if (!user || !currentPaymentId || !profileRef) return;
-    setIsProcessing(true);
+  const startStatusPolling = (id: string) => {
+    if (pollingRef.current) clearInterval(pollingRef.current);
+    
+    pollingRef.current = setInterval(async () => {
+      await verifyPayment(id, true);
+    }, 10000);
+  };
+
+  const verifyPayment = async (id: string, isAuto = false) => {
+    if (!user || !profileRef || checkingStatus) return;
+    if (!isAuto) setCheckingStatus(true);
 
     try {
-      // 2. Update Payment Status
-      await updateDoc(doc(db, 'payments', currentPaymentId), {
-        status: 'success',
-        updatedAt: serverTimestamp()
-      });
+      const statusRes = await checkRamsStatus(id);
+      
+      if (statusRes.status && statusRes.data?.status === 'success') {
+        if (pollingRef.current) clearInterval(pollingRef.current);
+        
+        // AKTIVASI PREMIUM!
+        await updateDoc(profileRef, {
+          isPremium: true,
+          updatedAt: serverTimestamp()
+        });
 
-      // 3. Activate Premium for User
-      await updateDoc(profileRef, {
-        isPremium: true,
-        updatedAt: serverTimestamp()
-      });
-
-      toast({ title: "PEMBAYARAN BERHASIL", description: "Status Premium Anda telah aktif! Selamat menikmati fitur eksklusif." });
-      setShowQRIS(false);
+        toast({ title: "PEMBAYARAN BERHASIL", description: "Status Premium Anda telah aktif! Watermark kini hilang." });
+        setShowQRIS(false);
+      } else if (!isAuto) {
+        toast({ title: "Belum Dibayar", description: "Kami belum menerima dana Anda. Mohon tunggu atau scan ulang." });
+      }
     } catch (e) {
-      toast({ variant: "destructive", title: "Gagal aktivasi" });
+      if (!isAuto) toast({ variant: "destructive", title: "Gagal verifikasi" });
     } finally {
-      setIsProcessing(false);
+      if (!isAuto) setCheckingStatus(false);
     }
   };
 
@@ -157,39 +192,46 @@ export default function PremiumPage() {
           
           <DialogHeader className="mb-4">
              <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-white">Pembayaran QRIS</DialogTitle>
-             <p className="text-[9px] font-black text-primary uppercase tracking-widest">Scan & Bayar Secara Otomatis</p>
+             <p className="text-[9px] font-black text-primary uppercase tracking-widest">Real-time Invoice by Rams API</p>
           </DialogHeader>
 
           <div className="space-y-6 py-4">
-             <div className="bg-white p-4 rounded-[2rem] shadow-2xl inline-block relative group">
+             <div className="bg-white p-4 rounded-[2rem] shadow-2xl inline-block relative group overflow-hidden">
                 <div className="absolute inset-0 bg-primary/5 rounded-[2rem] blur-xl group-hover:bg-primary/10 transition-colors" />
-                {/* Real-time QR Code Generator using Public API */}
-                <img 
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=LINKU_PAY_${currentPaymentId}_${PREMIUM_PRICE}`} 
-                  alt="QRIS" 
-                  className="w-56 h-56 relative z-10 mx-auto"
-                />
+                {paymentData?.qrImage ? (
+                  <img src={paymentData.qrImage} alt="QRIS" className="w-56 h-56 relative z-10 mx-auto" />
+                ) : (
+                  <div className="w-56 h-56 flex items-center justify-center bg-muted rounded-xl"><Loader2 className="animate-spin" /></div>
+                )}
+                {checkingStatus && (
+                  <div className="absolute inset-0 z-20 bg-black/40 backdrop-blur-sm flex items-center justify-center">
+                    <Loader2 className="text-white animate-spin" size={40} />
+                  </div>
+                )}
              </div>
 
              <div className="space-y-2">
-                <p className="text-xs font-black text-white/70 uppercase">Total Tagihan:</p>
-                <h3 className="text-3xl font-black text-primary tracking-tighter">{formatCurrency(PREMIUM_PRICE)}</h3>
+                <div className="flex items-center justify-center gap-2 text-xs font-black text-white/70 uppercase">
+                  Total Tagihan: <div className="p-1 bg-primary/20 text-primary rounded-md flex items-center gap-1"><RefreshCw size={10} className="animate-spin" /> Auto-check On</div>
+                </div>
+                <h3 className="text-4xl font-black text-primary tracking-tighter">{formatCurrency(paymentData?.totalAmount || PREMIUM_PRICE)}</h3>
+                <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">ID Transaksi: {paymentData?.depositId}</p>
              </div>
 
              <div className="p-4 bg-white/5 rounded-2xl border border-white/10 flex items-start gap-3 text-left">
-                <ReceiptText size={20} className="text-primary shrink-0" />
+                <AlertCircle size={20} className="text-primary shrink-0 mt-0.5" />
                 <p className="text-[9px] font-bold text-white/40 uppercase leading-relaxed">
-                  Gunakan aplikasi e-wallet atau m-banking favorit Anda. Pembayaran akan terverifikasi secara otomatis setelah dana diterima.
+                  Penting: Bayar tepat sesuai nominal di atas agar sistem mengenali kode unik Anda. Status akan aktif otomatis setelah dana terverifikasi.
                 </p>
              </div>
 
              <Button 
-               onClick={simulatePaymentSuccess} 
-               disabled={isProcessing}
+               onClick={() => verifyPayment(paymentData?.depositId)} 
+               disabled={checkingStatus}
                className="w-full h-14 bg-primary/10 hover:bg-primary/20 text-primary font-black rounded-2xl border border-primary/20 uppercase text-[10px] tracking-widest shadow-xl"
              >
-                {isProcessing ? <Loader2 className="animate-spin mr-2" /> : <Sparkles size={16} className="mr-2" />}
-                KONFIRMASI PEMBAYARAN
+                {checkingStatus ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw size={16} className="mr-2" />}
+                CEK STATUS MANUAL
              </Button>
              
              <button 
