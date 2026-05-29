@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 /**
- * @fileOverview Linku Engine v15.0 - Real Subdomain System
- * Menangani routing dinamis untuk mengubah budi.linku.biz.id menjadi internal request ke /budi
+ * @fileOverview Linku Engine v16.0 - Real Subdomain System
+ * Menangani routing cerdas: user.linku.biz.id -> internal /[username]
  */
 
 export function middleware(req: NextRequest) {
@@ -11,7 +11,7 @@ export function middleware(req: NextRequest) {
   const host = req.headers.get('host') || '';
   const pathname = url.pathname;
 
-  // 1. ABAIKAN FILE STATIS, API, DAN FAVICON
+  // 1. ABAIKAN FILE SISTEM DAN STATIS
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api') ||
@@ -21,7 +21,7 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // 2. DAFTAR PATH SISTEM (Wajib diakses via domain utama saja)
+  // 2. DAFTAR PATH RESERVED (Hanya boleh di domain utama)
   const reservedPaths = [
     'dashboard', 'login', 'register', 'admin', 
     'verify-email', 'forgot-password', 'auth', 'reviews', 'u'
@@ -30,7 +30,6 @@ export function middleware(req: NextRequest) {
   const isLocalhost = host.includes('localhost');
   const isProduction = host.includes('linku.biz.id');
   
-  // Deteksi protokol (http untuk lokal, https untuk prod)
   const protocol = req.headers.get('x-forwarded-proto') || (isLocalhost ? 'http' : 'https');
 
   // Deteksi Subdomain
@@ -38,12 +37,12 @@ export function middleware(req: NextRequest) {
   const hostParts = host.split('.');
 
   if (isLocalhost) {
-    // Format: budi.localhost:9002
+    // bobby.localhost:9002 -> subdomain = bobby
     if (hostParts.length > 1 && !hostParts[0].includes('localhost')) {
       subdomain = hostParts[0];
     }
   } else if (isProduction) {
-    // Format: budi.linku.biz.id (4 parts: budi, linku, biz, id)
+    // bobby.linku.biz.id (4 segmen: bobby, linku, biz, id)
     if (hostParts.length >= 4) {
       subdomain = hostParts[0];
     }
@@ -51,25 +50,24 @@ export function middleware(req: NextRequest) {
 
   const cleanSubdomain = subdomain.toLowerCase();
 
-  // CASE A: PENGUNJUNG MENGGUNAKAN SUBDOMAIN (Misal: budi.linku.biz.id)
+  // CASE A: AKSES VIA SUBDOMAIN (Misal: budi.linku.biz.id)
   if (cleanSubdomain && cleanSubdomain !== 'www') {
     const firstSegment = pathname.split('/')[1];
     
-    // Keamanan: Jika user mencoba akses /dashboard lewat subdomain, lempar ke domain utama
+    // Keamanan: Jika buka /dashboard di subdomain, lempar ke domain utama
     if (reservedPaths.includes(firstSegment)) {
-      const mainDomain = isLocalhost ? 'localhost:9002' : 'linku.biz.id';
-      return NextResponse.redirect(new URL(`${protocol}://${mainDomain}${pathname}`, req.url));
+      const mainHost = isLocalhost ? 'localhost:9002' : 'linku.biz.id';
+      return NextResponse.redirect(new URL(`${protocol}://${mainHost}${pathname}`, req.url));
     }
 
-    // INTERNAL REWRITE: Sajikan profil tapi biarkan URL tetap di subdomain
-    // budi.linku.biz.id/ -> internal server ke /budi
-    // budi.linku.biz.id/g/123 -> internal server ke /budi/g/123
+    // REAL REWRITE: Petakan subdomain ke folder user secara internal
+    // URL di browser tetap budi.linku.biz.id, tapi server ambil data dari /[username]
     url.pathname = `/${cleanSubdomain}${pathname}`;
     return NextResponse.rewrite(url);
   }
 
-  // CASE B: PENGUNJUNG MENGGUNAKAN PATH DI DOMAIN UTAMA (Misal: linku.biz.id/budi)
-  // Kita paksa pindah ke subdomain (Auto-Redirect 301) demi branding premium
+  // CASE B: AKSES VIA PATH DI DOMAIN UTAMA (Misal: linku.biz.id/budi)
+  // Kita paksa pindah ke Subdomain demi branding premium (Redirect 301)
   const segments = pathname.split('/');
   const targetUser = segments[1];
 
@@ -78,7 +76,6 @@ export function middleware(req: NextRequest) {
     const port = isLocalhost ? ':9002' : '';
     const rest = segments.slice(2).join('/');
     
-    // Redirect permanen ke subdomain
     return NextResponse.redirect(
       new URL(`${protocol}://${targetUser.toLowerCase()}.${mainHost}${port}${rest ? '/' + rest : ''}`, req.url),
       301
@@ -90,13 +87,6 @@ export function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     */
     '/((?!api|_next/static|_next/image|favicon.ico).*)',
   ],
 };

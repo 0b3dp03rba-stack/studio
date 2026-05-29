@@ -34,8 +34,7 @@ export function getSmartSocialUrl(platform: string, handle: string): string {
 }
 
 /**
- * Membangun URL publik pengguna secara ADAPTIF.
- * Menghasilkan format https://username.linku.biz.id untuk branding premium.
+ * Membangun URL publik pengguna secara REAL SUBDOMAIN.
  */
 export function getPublicUrl(username: string): string {
   if (typeof window === 'undefined') return '';
@@ -46,15 +45,15 @@ export function getPublicUrl(username: string): string {
   const cleanUsername = username.toLowerCase();
 
   const isProduction = hostname.includes('linku.biz.id');
-  const isLocalhost = hostname.includes('localhost') || hostname === '127.0.0.1';
+  const isLocalhost = hostname.includes('localhost');
 
-  // Jika di Produksi atau Localhost, gunakan format SUBDOMAIN (Real)
+  // Selalu utamakan format SUBDOMAIN jika memungkinkan
   if (isProduction || isLocalhost) {
     const domain = isProduction ? 'linku.biz.id' : 'localhost';
     return `${protocol}//${cleanUsername}.${domain}${port}`;
   }
 
-  // Fallback untuk Vercel Preview/Workstation (Path-based) agar tidak SSL Error
+  // Fallback untuk Vercel Preview (Path-based)
   return `${protocol}//${hostname}${port}/${cleanUsername}`;
 }
 

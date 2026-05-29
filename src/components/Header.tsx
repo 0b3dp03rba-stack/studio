@@ -7,6 +7,7 @@ import { useAuth, useUser, useDoc, useFirestore, useMemoFirebase } from '@/fireb
 import { signOut } from 'firebase/auth';
 import { doc } from 'firebase/firestore';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 
 export default function Header() {
   const { user } = useUser();
@@ -14,6 +15,15 @@ export default function Header() {
   const db = useFirestore();
   const router = useRouter();
   const pathname = usePathname();
+  const [isSubdomain, setIsSubdomain] = useState(false);
+
+  useEffect(() => {
+    const host = window.location.hostname;
+    // Deteksi jika kita berada di subdomain (bukan domain utama)
+    if (host !== 'linku.biz.id' && host !== 'localhost' && host !== '127.0.0.1') {
+      setIsSubdomain(true);
+    }
+  }, []);
 
   const profileRef = useMemoFirebase(() => 
     user ? doc(db, 'userProfiles', user.uid) : null, 
@@ -28,14 +38,11 @@ export default function Header() {
 
   const isAdmin = profile?.role === 'Admin' || user?.email === 'creeppermoment@gmail.com';
 
-  if (!user) return null;
+  if (!user || isSubdomain) return null;
   
-  // Jangan tampilkan di halaman profil publik
-  if (pathname.startsWith('/u/') || (pathname.split('/').length === 2 && pathname !== '/dashboard' && pathname !== '/admin' && pathname !== '/login' && pathname !== '/register' && pathname !== '/')) {
-     // Ini adalah routing untuk /[username], kita biarkan ProfileClient yang handle headernya jika perlu
-     // Namun di spek awal Header ini hanya untuk dashboard/admin
-     if (pathname !== '/dashboard' && !pathname.startsWith('/dashboard') && !pathname.startsWith('/admin')) return null;
-  }
+  // Hanya tampilkan di rute dashboard/admin
+  const isSystemPath = pathname.startsWith('/dashboard') || pathname.startsWith('/admin');
+  if (!isSystemPath) return null;
 
   return (
     <header className="sticky top-0 w-full h-24 bg-black/95 backdrop-blur-3xl px-6 flex items-center justify-between z-40 border-b border-white/5 shadow-2xl">

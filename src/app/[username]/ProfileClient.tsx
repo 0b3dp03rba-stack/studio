@@ -29,6 +29,7 @@ export default function ProfileClient({ username }: { username: string }) {
   const db = useFirestore();
   const { toast } = useToast();
   
+  const [mounted, setMounted] = useState(false);
   const [resolvedUserId, setResolvedUserId] = useState<string | null>(null);
   const [isResolving, setIsResolving] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -36,6 +37,7 @@ export default function ProfileClient({ username }: { username: string }) {
   const [selectedSocial, setSelectedSocial] = useState<any>(null);
 
   useEffect(() => {
+    setMounted(true);
     const resolveUserAndTrackView = async () => {
       try {
         const userRef = doc(db, 'usernames', username.toLowerCase());
@@ -49,7 +51,6 @@ export default function ProfileClient({ username }: { username: string }) {
 
         if (uid) {
           setResolvedUserId(uid);
-          // Increment views for the profile
           updateDoc(doc(db, 'userProfiles', uid), { views: increment(1) }).catch(() => {});
         }
       } catch (e) {
@@ -62,7 +63,7 @@ export default function ProfileClient({ username }: { username: string }) {
   }, [db, username]);
 
   const profileRef = useMemoFirebase(() => resolvedUserId ? doc(db, 'userProfiles', resolvedUserId) : null, [db, resolvedUserId]);
-  const { data: profile } = useDoc(profileRef);
+  const { data: profile, isLoading: isProfileLoading } = useDoc(profileRef);
 
   const groupsQuery = useMemoFirebase(() => {
     if (!resolvedUserId) return null;
@@ -107,18 +108,10 @@ export default function ProfileClient({ username }: { username: string }) {
 
   const handleLinkClick = (linkId: string, url: string, groupId?: string) => {
     if (!resolvedUserId) return;
-    
-    // BUILD CORRECT REFERENCE PATH
     const linkRef = groupId 
       ? doc(db, 'userProfiles', resolvedUserId, 'linkGroups', groupId, 'links', linkId)
       : doc(db, 'userProfiles', resolvedUserId, 'links', linkId);
-    
-    // UPDATE DATABASE CLICKS
-    updateDoc(linkRef, { clicks: increment(1) }).catch((err) => {
-      console.error("Click Tracking Error:", err);
-    });
-    
-    // OPEN URL
+    updateDoc(linkRef, { clicks: increment(1) }).catch(() => {});
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
@@ -131,12 +124,8 @@ export default function ProfileClient({ username }: { username: string }) {
     return allLinks.filter(l => l.isStandalone && l.title.toLowerCase().includes(searchQuery.toLowerCase()));
   }, [allLinks, searchQuery]);
 
-  const filteredGroupedLinks = useMemo(() => {
-    if (!searchQuery) return [];
-    return allLinks.filter(l => !l.isStandalone && l.title.toLowerCase().includes(searchQuery.toLowerCase()));
-  }, [allLinks, searchQuery]);
-
-  if (isResolving) {
+  // Cegah Hydration Mismatch
+  if (!mounted || isResolving || (resolvedUserId && isProfileLoading)) {
     return (
       <div className="min-h-screen bg-black flex flex-col items-center justify-center gap-4">
         <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
@@ -153,10 +142,10 @@ export default function ProfileClient({ username }: { username: string }) {
         </div>
         <div className="space-y-4">
           <h1 className="text-4xl font-black text-white uppercase tracking-tighter">Identitas Tidak Ditemukan</h1>
-          <p className="text-sm font-medium text-white/40 max-w-xs mx-auto uppercase tracking-widest">Maaf, profil @{username} telah dihapus atau belum pernah terdaftar di Linku.</p>
+          <p className="text-sm font-medium text-white/40 max-w-xs mx-auto uppercase tracking-widest">Maaf, profil @{username} belum terdaftar di Linku.</p>
         </div>
         <Button asChild className="h-14 px-10 neon-gradient text-background font-black rounded-2xl uppercase text-[10px] tracking-[0.2em] shadow-2xl">
-          <Link href="/"><Home size={16} className="mr-2" /> Kembali ke Beranda</Link>
+          <Link href="https://linku.biz.id"><Home size={16} className="mr-2" /> Kembali ke Beranda</Link>
         </Button>
       </div>
     );
@@ -187,7 +176,7 @@ export default function ProfileClient({ username }: { username: string }) {
             style={{ backgroundImage: dynamicGradient, backgroundSize: '200% 200%', boxShadow: `0 0 50px -10px ${primaryColor}99` }}
           >
             <div className="w-full h-full rounded-[2.3rem] bg-background flex items-center justify-center overflow-hidden border-4 border-background">
-              {profile.avatarUrl ? <img src={profile.avatarUrl} className="w-full h-full object-cover" /> : <User size={64} className="text-white/20" />}
+              {profile.avatarUrl ? <img src={profile.avatarUrl} className="w-full h-full object-cover" alt={profile.username} /> : <User size={64} className="text-white/20" />}
             </div>
           </div>
           <div className="space-y-4">
@@ -247,7 +236,7 @@ export default function ProfileClient({ username }: { username: string }) {
                 </div>
                 <div className="w-full h-24 bg-black/80 backdrop-blur-2xl rounded-[1.4rem] flex items-center px-6 gap-4 border border-white/10">
                   <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10 shadow-xl">
-                    {newestLink.imageUrl ? <img src={newestLink.imageUrl} className="w-full h-full object-cover" /> : <Link2 size={32} style={{ color: primaryColor }} />}
+                    {newestLink.imageUrl ? <img src={newestLink.imageUrl} className="w-full h-full object-cover" alt="Link" /> : <Link2 size={32} style={{ color: primaryColor }} />}
                   </div>
                   <div className="flex-1 text-left min-w-0">
                     <span className="text-lg font-black text-white tracking-tight truncate block">{newestLink.title}</span>
@@ -271,7 +260,7 @@ export default function ProfileClient({ username }: { username: string }) {
                 >
                   <div className="w-full h-24 bg-black/70 backdrop-blur-2xl rounded-[1.9rem] flex items-center px-6 gap-4 border border-white/10 relative overflow-hidden">
                     <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10 shadow-xl shrink-0">
-                      {group.imageUrl ? <img src={group.imageUrl} className="w-full h-full object-cover" /> : <LayoutGrid size={32} style={{ color: primaryColor }} />}
+                      {group.imageUrl ? <img src={group.imageUrl} className="w-full h-full object-cover" alt="Group" /> : <LayoutGrid size={32} style={{ color: primaryColor }} />}
                     </div>
                     <div className="flex-1 text-left min-w-0">
                       <span className="text-lg font-black text-white tracking-tight block truncate">{group.title}</span>
@@ -297,7 +286,7 @@ export default function ProfileClient({ username }: { username: string }) {
               >
                 <div className="w-full h-20 bg-black/80 backdrop-blur-xl rounded-[0.95rem] flex items-center px-6 gap-4 border border-white/10">
                   <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/5">
-                    {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <Link2 size={24} style={{ color: primaryColor }} />}
+                    {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" alt="Link" /> : <Link2 size={24} style={{ color: primaryColor }} />}
                   </div>
                   <div className="flex-1 text-left min-w-0">
                     <span className="text-base font-black text-white tracking-tight truncate block">{link.title}</span>
@@ -311,7 +300,7 @@ export default function ProfileClient({ username }: { username: string }) {
 
         <div className="pt-12 text-center">
           <Button asChild className="w-full h-14 neon-gradient text-background font-black rounded-2xl glow-primary text-[10px] uppercase tracking-widest shadow-2xl transition-all animate-flowing-gradient" style={{ backgroundImage: dynamicGradient, backgroundSize: '200% 200%' }}>
-            <Link href="/"><User size={16} className="mr-2" /> Buat Linku Kamu Sekarang</Link>
+            <Link href="https://linku.biz.id"><User size={16} className="mr-2" /> Buat Linku Kamu Sekarang</Link>
           </Button>
         </div>
       </div>
