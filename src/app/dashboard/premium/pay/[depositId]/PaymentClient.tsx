@@ -4,7 +4,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Loader2, Clock, ShieldCheck, ChevronLeft, Download, Info, Copy, QrCode, X } from 'lucide-react';
+import { RefreshCw, Loader2, Clock, ShieldCheck, ChevronLeft, Download, Info, Copy, QrCode, X, Trash2 } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, serverTimestamp, collection, query, where, limit } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
@@ -13,6 +13,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { differenceInSeconds, parseISO } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 export default function PaymentClient({ depositId }: { depositId: string }) {
   const { user } = useUser();
@@ -21,6 +22,7 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
   const router = useRouter();
 
   const [checkingStatus, setCheckingStatus] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   const [timeLeft, setTimeLeft] = useState<string>('');
   const [isExpired, setIsExpired] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -119,10 +121,21 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
     }
   };
 
-  const handleCopyAmount = () => {
-    if (!breakdown) return;
-    navigator.clipboard.writeText(breakdown.total.toString());
-    toast({ title: "Nominal Tersalin", description: "Tempelkan di aplikasi bank Anda." });
+  const handleCancelPayment = async () => {
+    if (!payment || isCancelling) return;
+    setIsCancelling(true);
+    try {
+      await updateDoc(doc(db, 'payments', payment.id), {
+        status: 'cancelled',
+        cancelledAt: serverTimestamp()
+      });
+      toast({ title: "PEMBAYARAN DIBATALKAN", description: "Anda bisa memulai tagihan baru jika diinginkan." });
+      router.push('/dashboard/premium');
+    } catch (e) {
+      toast({ variant: "destructive", title: "GAGAL", description: "Gagal membatalkan tagihan." });
+    } finally {
+      setIsCancelling(false);
+    }
   };
 
   const handleDownloadQRIS = async () => {
@@ -182,13 +195,13 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
     );
   }
 
-  if (!payment) {
+  if (!payment || payment.status === 'cancelled') {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center space-y-6">
-        <h1 className="text-2xl font-black text-white uppercase tracking-tighter">Invoice Tidak Ditemukan</h1>
-        <p className="text-[10px] font-black uppercase text-white/40 tracking-widest">Atau Anda tidak memiliki izin melihat data ini.</p>
+        <h1 className="text-2xl font-black text-white uppercase tracking-tighter">Invoice Tidak Tersedia</h1>
+        <p className="text-[10px] font-black uppercase text-white/40 tracking-widest">Tagihan ini mungkin sudah dibatalkan atau tidak ditemukan.</p>
         <Button asChild className="neon-gradient text-background font-black rounded-2xl h-14 px-8 uppercase text-[10px] tracking-widest">
-           <Link href="/dashboard/premium"><ChevronLeft className="mr-2" /> Kembali</Link>
+           <Link href="/dashboard/premium"><ChevronLeft className="mr-2" /> Kembali ke Layanan</Link>
         </Button>
       </div>
     );
@@ -256,6 +269,28 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
                 <Button onClick={() => verifyPayment()} disabled={checkingStatus || isExpired} variant="outline" className="h-14 border-white/10 bg-white/5 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest">
                   {checkingStatus ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw size={16} className="mr-2" />} CEK STATUS PEMBAYARAN
                 </Button>
+
+                {payment.status === 'pending' && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" className="h-12 text-destructive/40 hover:text-destructive hover:bg-destructive/5 font-black uppercase text-[10px] tracking-widest">
+                        <Trash2 size={14} className="mr-2" /> Batalkan Tagihan
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="glass-card border-none rounded-[2.5rem] bg-background/95 backdrop-blur-3xl">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter">Konfirmasi Pembatalan</AlertDialogTitle>
+                        <AlertDialogDescription className="text-white/60 font-medium">
+                          Apakah Anda yakin ingin membatalkan tagihan ini? Anda bisa membuat tagihan baru nanti.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel className="bg-white/5 border-none rounded-xl text-[10px] font-black uppercase h-12 text-white">Lanjutkan Bayar</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleCancelPayment} className="bg-destructive text-white rounded-xl text-[10px] font-black uppercase h-12 shadow-xl shadow-destructive/20">Ya, Batalkan</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
 
                 {isExpired && (
                   <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-2xl">
