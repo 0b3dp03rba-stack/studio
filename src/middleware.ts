@@ -1,9 +1,9 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/request';
 import type { NextRequest } from 'next/server';
 
 /**
- * @fileOverview Linku Engine v38.0 - FINAL REDIRECT LOOP RESOLUTION
- * Menggunakan pengecekan host yang lebih presisi dan mencegah re-processing pada rute internal.
+ * @fileOverview Linku Engine v39.0 - SUBDOMAIN ARCHITECTURE
+ * Memisahkan rute publik (redirect) dan rute subdomain (render).
  */
 
 export function middleware(req: NextRequest) {
@@ -22,12 +22,12 @@ export function middleware(req: NextRequest) {
   }
 
   const mainDomain = 'linku.biz.id';
-  // Hapus 'www.' dan port untuk standarisasi pengecekan
+  // Standarisasi host (lowercase, hapus www)
   const hostOnly = host.split(':')[0].toLowerCase().replace('www.', '');
   
   const reservedPaths = [
-    'dashboard', 'login', 'register', 'admin', 
-    'verify-email', 'forgot-password', 'auth', 'reviews', 'u', '_domain'
+    'dashboard', 'login', 'register', 'admin', 'u',
+    'verify-email', 'forgot-password', 'auth', 'reviews', '_domain', '_subdomain'
   ];
   const firstSegment = pathname.split('/')[1];
 
@@ -39,42 +39,35 @@ export function middleware(req: NextRequest) {
     hostOnly.includes('localhost') ||
     hostOnly.includes('127.0.0.1');
 
-  // B. LOGIKA CUSTOM DOMAIN (Domain murni milik user, misal: budi.com)
+  // B. LOGIKA CUSTOM DOMAIN (Domain luar milik user, misal: budi.com)
   if (!isSystemHost && !hostOnly.endsWith(mainDomain)) {
-    // Cegah loop: Jika rute sudah diawali /_domain, jangan rewrite lagi
-    if (pathname.startsWith('/_domain')) {
-      return NextResponse.next();
-    }
+    if (pathname.startsWith('/_domain')) return NextResponse.next();
     url.pathname = `/_domain/${hostOnly}${pathname}`;
     return NextResponse.rewrite(url);
   }
 
-  // C. LOGIKA SUBDOMAIN (Contoh: budi.linku.biz.id)
+  // C. LOGIKA SUBDOMAIN (user.linku.biz.id)
   if (hostOnly.endsWith(mainDomain) && hostOnly !== mainDomain) {
     const subdomain = hostOnly.replace(`.${mainDomain}`, '');
     
-    // Jika user mengakses rute sistem (dashboard/login) di subdomain, biarkan saja (jangan rewrite)
+    // Jangan rewrite jika user mau akses dashboard/admin via subdomain (biarkan normal)
     if (reservedPaths.includes(firstSegment)) {
       return NextResponse.next();
     }
 
-    // PENTING: Mencegah Loop. 
-    // Jika Next.js melakukan internal rewrite, pathname mungkin sudah berubah.
-    // Kita cek apakah segment pertama sudah cocok dengan subdomain.
-    if (firstSegment === subdomain) {
-      return NextResponse.next();
-    }
-
-    // INTERNAL REWRITE: Petakan ke /[username] secara transparan
-    url.pathname = `/${subdomain}${pathname}`;
+    // INTERNAL REWRITE ke folder rahasia _subdomain
+    url.pathname = `/_subdomain/${subdomain}${pathname}`;
     return NextResponse.rewrite(url);
   }
 
-  // D. LOGIKA REDIRECT linku.biz.id/budi -> budi.linku.biz.id
-  // Hanya berlaku di domain utama untuk user profile path
+  // D. LOGIKA REDIRECT (linku.biz.id/username -> username.linku.biz.id)
+  // Hanya berlaku di domain utama
   if (hostOnly === mainDomain && firstSegment && !reservedPaths.includes(firstSegment)) {
+    // 301 Redirect ke subdomain untuk SEO dan UX yang lebih baik
+    const newHost = `${firstSegment}.${mainDomain}`;
+    const newPath = pathname.replace(`/${firstSegment}`, '') || '/';
     return NextResponse.redirect(
-      new URL(`https://${firstSegment}.${mainDomain}${pathname.replace(`/${firstSegment}`, '')}`, req.url),
+      new URL(`${url.protocol}//${newHost}${newPath}`, req.url),
       301
     );
   }

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Sparkles, ShieldCheck, Zap, Globe, Loader2, Save, ReceiptText, ArrowRight, Info, Network, AlertCircle } from 'lucide-react';
+import { Sparkles, ShieldCheck, Zap, Globe, Loader2, Save, ReceiptText, ArrowRight, Info, Network, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, updateDoc, serverTimestamp, collection, setDoc, query, where, limit } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
@@ -153,14 +153,13 @@ export default function PremiumPage() {
                         {isSavingDomain ? <Loader2 className="animate-spin" size={24} /> : <Save size={28} />}
                       </Button>
                    </div>
-                   <p className="text-[8px] font-black uppercase text-white/10 tracking-widest text-center">Simpan domain terlebih dahulu untuk memunculkan instruksi DNS.</p>
                 </div>
 
                 {customDomain && customDomain.includes('.') && (
                   <div className="p-6 bg-primary/5 rounded-[2rem] border border-primary/20 space-y-6 animate-in fade-in slide-in-from-top-4 duration-500">
                     <div className="flex items-center gap-3 text-primary">
                       <Network size={20} />
-                      <p className="text-xs font-black uppercase tracking-widest">Instruksi DNS (Wajib):</p>
+                      <p className="text-xs font-black uppercase tracking-widest">Panduan Pengisian DNS (CNAME):</p>
                     </div>
                     
                     <div className="space-y-4">
@@ -168,28 +167,30 @@ export default function PremiumPage() {
                         Buka panel domain Anda (seperti Niagahoster/Rumahweb/Cloudflare), lalu tambahkan record berikut:
                       </p>
                       
-                      <div className="bg-black/40 rounded-2xl p-5 border border-white/10 space-y-4">
-                         <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-1">
-                               <p className="text-[8px] font-black text-white/30 uppercase">Tipe Record</p>
-                               <p className="text-sm font-black text-white">CNAME</p>
-                            </div>
-                            <div className="space-y-1">
-                               <p className="text-[8px] font-black text-white/30 uppercase">Nama / Host</p>
-                               <p className="text-sm font-black text-white">{customDomain.split('.')[0] === 'www' || !customDomain.includes('.') ? '@' : (customDomain.split('.').length > 2 ? customDomain.split('.')[0] : '@')}</p>
-                            </div>
-                         </div>
-                         <div className="space-y-1 pt-2 border-t border-white/5">
-                            <p className="text-[8px] font-black text-white/30 uppercase">Nilai / Value / Target</p>
-                            <p className="text-sm font-black text-primary break-all">linku.biz.id</p>
-                         </div>
+                      <div className="bg-black/40 rounded-2xl overflow-hidden border border-white/10">
+                        <table className="w-full text-[10px] text-left">
+                          <thead>
+                            <tr className="bg-white/5 text-white/40 font-black uppercase">
+                              <th className="p-3 border-r border-white/5">Tipe</th>
+                              <th className="p-3 border-r border-white/5">Nama / Host</th>
+                              <th className="p-3">Nilai / Target</th>
+                            </tr>
+                          </thead>
+                          <tbody className="font-bold text-white uppercase">
+                            <tr className="border-t border-white/5">
+                              <td className="p-3 border-r border-white/5">CNAME</td>
+                              <td className="p-3 border-r border-white/5 text-primary">@ <span className="text-[8px] opacity-40">(atau domain utama)</span></td>
+                              <td className="p-3 text-primary">linku.biz.id</td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </div>
 
                     <div className="flex gap-3 pt-2">
-                      <AlertCircle size={16} className="text-primary shrink-0" />
+                      <CheckCircle2 size={16} className="text-primary shrink-0" />
                       <p className="text-[9px] font-bold text-white/40 leading-relaxed uppercase">
-                        Gunakan metode CNAME karena paling stabil untuk sistem kami. Proses propagasi DNS biasanya memakan waktu <span className="text-white underline">1 - 24 jam</span>.
+                        Metode CNAME adalah yang paling stabil. Proses aktivasi domain biasanya memakan waktu <span className="text-white underline">1 jam hingga maksimal 1 hari</span>.
                       </p>
                     </div>
                   </div>
