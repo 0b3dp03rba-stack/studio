@@ -1,7 +1,6 @@
-
 "use client";
 
-import { LayoutDashboard, User, Palette, FolderKanban, Sparkles } from 'lucide-react';
+import { LayoutDashboard, User, Palette, FolderKanban, Sparkles, BarChart3, Clock, Users } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -13,19 +12,31 @@ export default function BottomNav() {
 
   if (!user) return null;
   
-  // SEMBUNYIKAN DI HALAMAN ADMIN DAN PROFIL PUBLIK
+  // Tentukan apakah kita di area admin
   const isAdminPath = pathname.startsWith('/admin');
-  const isPublicProfile = pathname.startsWith('/u/') || (pathname.length > 1 && !pathname.startsWith('/dashboard') && !isAdminPath);
   
-  if (isAdminPath || isPublicProfile) return null;
+  // Sembunyikan di profil publik
+  const isPublicProfile = pathname.startsWith('/u/') || (pathname.length > 1 && !pathname.startsWith('/dashboard') && !isAdminPath);
+  if (isPublicProfile) return null;
 
-  const navItems = [
+  // Item Menu User
+  const userItems = [
     { label: 'Overview', icon: LayoutDashboard, href: '/dashboard' },
     { label: 'Manage', icon: FolderKanban, href: '/dashboard/manage' },
     { label: 'Premium', icon: Sparkles, href: '/dashboard/premium' },
     { label: 'Theme', icon: Palette, href: '/dashboard/theme' },
     { label: 'Profil', icon: User, href: '/dashboard/profil' },
   ];
+
+  // Item Menu Admin
+  const adminItems = [
+    { label: 'Analisis', icon: BarChart3, href: '/admin' },
+    { label: 'Aktivitas', icon: Clock, href: '/admin/activity' },
+    { label: 'Database', icon: Users, href: '/admin/users' },
+    { label: 'User Dash', icon: LayoutDashboard, href: '/dashboard' },
+  ];
+
+  const navItems = isAdminPath ? adminItems : userItems;
 
   return (
     <nav className="bottom-nav h-24">
