@@ -1,20 +1,21 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Sparkles, CheckCircle2, ShieldCheck, Zap, Globe, Image as ImageIcon, Loader2, RefreshCw, AlertCircle, ShieldAlert, Copy, ExternalLink, Save } from 'lucide-react';
+import { Sparkles, CheckCircle2, ShieldCheck, Zap, Globe, Loader2, Save, ExternalLink, AlertCircle } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, serverTimestamp, collection, addDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { formatCurrency, getPublicUrl } from '@/lib/utils-app';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { formatCurrency } from '@/lib/utils-app';
+import { useRouter } from 'next/navigation';
 
 export default function PremiumPage() {
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
+  const router = useRouter();
 
   const profileRef = useMemoFirebase(() => user ? doc(db, 'userProfiles', user.uid) : null, [db, user?.uid]);
   const { data: profile } = useDoc(profileRef);
@@ -23,14 +24,9 @@ export default function PremiumPage() {
   const { data: globalStats } = useDoc(globalStatsRef);
 
   const [isProcessing, setIsProcessing] = useState(false);
-  const [showQRIS, setShowQRIS] = useState(false);
-  const [paymentData, setPaymentData] = useState<any>(null);
-  const [checkingStatus, setCheckingStatus] = useState(false);
   const [customDomain, setCustomDomain] = useState('');
   const [isSavingDomain, setIsSavingDomain] = useState(false);
   
-  const pollingRef = useRef<NodeJS.Timeout | null>(null);
-
   const PREMIUM_PRICE = globalStats?.premiumPrice || 10000;
 
   useEffect(() => {
@@ -38,12 +34,6 @@ export default function PremiumPage() {
       setCustomDomain(profile.customDomain);
     }
   }, [profile]);
-
-  useEffect(() => {
-    return () => {
-      if (pollingRef.current) clearInterval(pollingRef.current);
-    };
-  }, []);
 
   const handleUpgradeClick = async () => {
     if (!user || isProcessing) return;
@@ -61,18 +51,20 @@ export default function PremiumPage() {
       if (result.success && result.data) {
         const data = result.data;
         
+        // Simpan ke Firestore sebagai draft transaksi
         await addDoc(collection(db, 'payments'), {
           userId: user.uid,
           depositId: data.depositId,
           amount: data.amount,
           totalAmount: data.totalAmount,
+          qrImage: data.qrImage,
+          expiredAt: data.expiredAt,
           status: 'pending',
           createdAt: serverTimestamp(),
         });
 
-        setPaymentData(data);
-        setShowQRIS(true);
-        startStatusPolling(data.depositId);
+        // Arahkan ke halaman pembayaran khusus
+        router.push(`/dashboard/premium/pay/${data.depositId}`);
       } else {
         toast({ variant: "destructive", title: "Gagal", description: result.error || "Gagal membuat QRIS." });
       }
@@ -80,41 +72,6 @@ export default function PremiumPage() {
       toast({ variant: "destructive", title: "Error", description: "Terjadi kesalahan sistem." });
     } finally {
       setIsProcessing(false);
-    }
-  };
-
-  const startStatusPolling = (id: string) => {
-    if (pollingRef.current) clearInterval(pollingRef.current);
-    pollingRef.current = setInterval(async () => {
-      await verifyPayment(id, true);
-    }, 8000);
-  };
-
-  const verifyPayment = async (id: string, isAuto = false) => {
-    if (!user || !profileRef) return;
-    if (!isAuto) setCheckingStatus(true);
-
-    try {
-      const res = await fetch(`/api/deposit/${id}`);
-      const result = await res.json();
-      
-      if (result.status && result.data?.status === 'success') {
-        if (pollingRef.current) clearInterval(pollingRef.current);
-        
-        await updateDoc(profileRef, {
-          isPremium: true,
-          updatedAt: serverTimestamp()
-        });
-
-        toast({ title: "UPGRADE BERHASIL", description: "Status Premium Anda telah aktif selamanya!" });
-        setShowQRIS(false);
-      } else if (!isAuto && result.data?.status === 'pending') {
-        toast({ title: "Belum Terbayar", description: "Selesaikan scan QRIS sesuai nominal unik." });
-      }
-    } catch (e) {
-      if (!isAuto) toast({ variant: "destructive", title: "Gagal verifikasi" });
-    } finally {
-      if (!isAuto) setCheckingStatus(false);
     }
   };
 
@@ -252,53 +209,6 @@ export default function PremiumPage() {
           <p className="text-[8px] font-black uppercase text-white/10 tracking-widest">Secure transaction powered by Rams API</p>
         </CardContent>
       </Card>
-
-      <Dialog open={showQRIS} onOpenChange={(o) => !isProcessing && setShowQRIS(o)}>
-        <DialogContent className="glass-card border-none rounded-[2.5rem] bg-background/95 backdrop-blur-3xl p-8 shadow-2xl max-w-[95%] sm:max-w-md mx-auto overflow-hidden text-center">
-          <div className="absolute top-0 left-0 w-full h-1.5 neon-gradient" />
-          <DialogHeader className="mb-4">
-             <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-white">Pembayaran QRIS</DialogTitle>
-             <p className="text-[9px] font-black text-primary uppercase tracking-widest">Identity Authentication Invoice</p>
-          </DialogHeader>
-
-          <div className="space-y-6 py-4">
-             <div className="bg-white p-5 rounded-[2.5rem] shadow-2xl inline-block relative overflow-hidden">
-                {paymentData?.qrImage ? (
-                  <img src={paymentData.qrImage} alt="QRIS" className="w-60 h-60 mx-auto" />
-                ) : (
-                  <div className="w-60 h-60 flex items-center justify-center bg-muted rounded-2xl"><Loader2 className="animate-spin text-primary" /></div>
-                )}
-                {checkingStatus && (
-                  <div className="absolute inset-0 z-20 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center gap-3">
-                    <Loader2 className="text-primary animate-spin" size={48} />
-                    <p className="text-[10px] font-black text-white uppercase tracking-widest">Verifikasi...</p>
-                  </div>
-                )}
-             </div>
-
-             <div className="space-y-2">
-                <div className="flex items-center justify-center gap-2 text-xs font-black text-white/70 uppercase">
-                  Total Bayar: <div className="p-1 bg-primary/20 text-primary rounded-md flex items-center gap-1.5 text-[9px] px-2"><RefreshCw size={10} className="animate-spin" /> Auto-check active</div>
-                </div>
-                <h3 className="text-5xl font-black text-primary tracking-tighter leading-none">{formatCurrency(paymentData?.totalAmount || PREMIUM_PRICE)}</h3>
-                <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.2em] mt-2">ID: {paymentData?.depositId}</p>
-             </div>
-
-             <div className="p-4 bg-white/5 rounded-2xl border border-white/10 text-left">
-                <p className="text-[9px] font-bold text-white/40 uppercase leading-relaxed text-center">
-                  Mohon transfer sesuai nominal <span className="text-primary">Eksak</span> hingga kode unik terakhir agar sistem dapat memproses secara instan.
-                </p>
-             </div>
-
-             <div className="flex flex-col gap-3">
-                <Button onClick={() => verifyPayment(paymentData?.depositId)} disabled={checkingStatus} className="w-full h-14 bg-primary/10 hover:bg-primary/20 text-primary font-black rounded-2xl border border-primary/20 uppercase text-[10px] tracking-widest shadow-xl">
-                   {checkingStatus ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw size={16} className="mr-2" />} CEK PEMBAYARAN MANUAL
-                </Button>
-                <button onClick={() => setShowQRIS(false)} className="text-[9px] font-black text-white/20 uppercase tracking-[0.3em] hover:text-white transition-colors py-2">Batal / Tutup Invoice</button>
-             </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
