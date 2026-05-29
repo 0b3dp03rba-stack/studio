@@ -35,7 +35,7 @@ export function getSmartSocialUrl(platform: string, handle: string): string {
 
 /**
  * Membangun URL publik pengguna secara ADAPTIF.
- * Memberikan link subdomain di produksi/localhost, dan path di workstation/vercel-preview.
+ * Linku Engine mendeteksi environment untuk memberikan format link terbaik.
  */
 export function getPublicUrl(username: string): string {
   if (typeof window === 'undefined') return '';
@@ -48,13 +48,13 @@ export function getPublicUrl(username: string): string {
   const isProduction = hostname.includes('linku.biz.id');
   const isLocalhost = hostname.includes('localhost') || hostname === '127.0.0.1';
 
-  // Jika di Produksi atau Localhost -> Gunakan format Subdomain
+  // Format SUBDOMAIN untuk Produksi & Localhost
   if (isProduction || isLocalhost) {
-    const base = isProduction ? 'linku.biz.id' : 'localhost';
-    return `${protocol}//${cleanUsername}.${base}${port}`;
+    const domain = isProduction ? 'linku.biz.id' : 'localhost';
+    return `${protocol}//${cleanUsername}.${domain}${port}`;
   }
 
-  // Jika di Lingkungan Dev/Workstation -> Gunakan format Path (untuk hindari SSL Error)
+  // Format PATH untuk Workstation / Vercel Preview (Mencegah SSL Error)
   return `${protocol}//${hostname}${port}/${cleanUsername}`;
 }
 
