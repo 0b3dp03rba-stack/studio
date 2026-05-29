@@ -76,9 +76,10 @@ export default function PremiumPage() {
   const startStatusPolling = (id: string) => {
     if (pollingRef.current) clearInterval(pollingRef.current);
     
+    // Polling status setiap 8 detik (disesuaikan dengan cache Rams API)
     pollingRef.current = setInterval(async () => {
       await verifyPayment(id, true);
-    }, 10000);
+    }, 8000);
   };
 
   const verifyPayment = async (id: string, isAuto = false) => {
@@ -89,6 +90,7 @@ export default function PremiumPage() {
       const res = await fetch(`/api/deposit/${id}`);
       const result = await res.json();
       
+      // Rams API Response Format: { status: true, data: { status: "success" } }
       if (result.status && result.data?.status === 'success') {
         if (pollingRef.current) clearInterval(pollingRef.current);
         
@@ -100,7 +102,11 @@ export default function PremiumPage() {
         toast({ title: "PEMBAYARAN BERHASIL", description: "Status Premium Aktif! Watermark telah dihapus." });
         setShowQRIS(false);
       } else if (!isAuto) {
-        toast({ title: "Belum Dibayar", description: "Status masih pending. Silakan selesaikan pembayaran." });
+        if (result.data?.status === 'pending') {
+          toast({ title: "Belum Dibayar", description: "Selesaikan pembayaran sesuai nominal unik." });
+        } else {
+           toast({ title: "Status: " + (result.data?.status || 'Unknown') });
+        }
       }
     } catch (e) {
       if (!isAuto) toast({ variant: "destructive", title: "Gagal verifikasi" });
