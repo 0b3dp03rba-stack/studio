@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
@@ -197,19 +196,14 @@ export default function PremiumPage() {
              </div>
           </Card>
 
-          <Card className="glass-card border-none rounded-[2.5rem] p-8 text-center space-y-6">
+          <Card className="glass-card border-none rounded-[2.5rem] p-8 text-center space-y-4">
              <div className="p-6 bg-white/[0.02] rounded-3xl border border-white/5 space-y-2">
                 <CheckCircle2 size={32} className="text-green-500 mx-auto" />
                 <p className="text-sm font-bold text-white uppercase tracking-tight">Lisensi Seumur Hidup Aktif</p>
                 <p className="text-[10px] font-black text-white/30 uppercase tracking-widest leading-relaxed mt-2 px-4">
-                  Terima kasih telah mendukung Linku Engine. Semua fitur premium, visual neon mewah, dan branding bersih kini milik Anda sepenuhnya.
+                  Terima kasih telah mendukung Linku Engine. Semua fitur premium dan visual neon mewah kini milik Anda sepenuhnya.
                 </p>
              </div>
-             {profile?.role === 'Admin' && (
-               <Button asChild className="w-full h-14 bg-primary/10 hover:bg-primary/20 text-primary rounded-2xl border border-primary/20 font-black uppercase text-[10px] tracking-widest shadow-xl">
-                  <a href="/admin"><ShieldAlert size={16} className="mr-2" /> MASUK PANEL ADMIN</a>
-               </Button>
-             )}
           </Card>
         </div>
       </div>

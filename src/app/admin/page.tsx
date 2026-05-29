@@ -1,9 +1,8 @@
-
 "use client";
 
 import { useMemo, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Users, Eye, Link as LinkIcon, Globe, Clock, ArrowUpRight, Settings, ExternalLink, DollarSign, Save, Loader2 } from 'lucide-react';
+import { Users, Eye, Link as LinkIcon, Globe, Clock, ArrowUpRight, Settings, DollarSign, Save, Loader2, ArrowLeft, LogOut } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, limit, doc, collectionGroup, updateDoc, serverTimestamp, where } from 'firebase/firestore';
 import { Badge } from '@/components/ui/badge';
@@ -38,21 +37,23 @@ export default function AdminDashboard() {
     return successfulPayments?.reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0;
   }, [successfulPayments]);
 
-  const handleUpdatePrice = async () => {
+  const handleUpdatePrice = () => {
     if (!newPrice || isNaN(Number(newPrice))) return;
     setIsSavingPrice(true);
-    try {
-      await updateDoc(globalStatsRef!, {
-        premiumPrice: Number(newPrice),
-        updatedAt: serverTimestamp()
-      });
+    updateDoc(globalStatsRef!, {
+      premiumPrice: Number(newPrice),
+      updatedAt: serverTimestamp()
+    })
+    .then(() => {
       toast({ title: "HARGA DIPERBARUI", description: `Harga premium sekarang Rp ${Number(newPrice).toLocaleString()}` });
       setNewPrice('');
-    } catch (e) {
+    })
+    .catch(() => {
       toast({ variant: "destructive", title: "GAGAL", description: "Gagal update harga config." });
-    } finally {
+    })
+    .finally(() => {
       setIsSavingPrice(false);
-    }
+    });
   };
 
   const recentLinks = useMemo(() => {
@@ -77,17 +78,18 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="space-y-10 animate-in pb-20">
-      <div className="space-y-2">
-        <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 rounded-full mb-2 border border-primary/20">
-           <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-           <span className="text-[9px] font-black uppercase tracking-widest text-primary">Master Control active</span>
+    <div className="space-y-8 animate-in pb-24">
+      <div className="flex items-center justify-between">
+        <div className="space-y-1">
+          <h1 className="text-4xl font-black tracking-tighter uppercase text-white">Master Panel</h1>
+          <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.3em]">Platform Command Center</p>
         </div>
-        <h1 className="text-4xl font-black tracking-tighter uppercase text-white">Linku Analytics</h1>
-        <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.3em]">Business & User Performance Metrics</p>
+        <Button asChild variant="ghost" className="h-12 px-6 rounded-2xl bg-white/5 hover:bg-white/10 text-white/60 font-black uppercase text-[10px] tracking-widest">
+           <Link href="/dashboard"><LogOut size={16} className="mr-2" /> Keluar Panel</Link>
+        </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((item, i) => (
           <Card key={i} className="glass-card border-none rounded-[2rem] p-6 shadow-2xl relative overflow-hidden group">
             <CardContent className="p-0 space-y-4 relative z-10 text-left">
@@ -103,9 +105,9 @@ export default function AdminDashboard() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="space-y-8">
-           <div className="space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="space-y-6">
+           <div className="space-y-4">
               <h3 className="font-black text-xs uppercase tracking-widest text-white/50 flex items-center gap-2 px-2">
                 <DollarSign size={16} className="text-primary" /> Premium Settings
               </h3>
@@ -122,9 +124,9 @@ export default function AdminDashboard() {
                         placeholder="Contoh: 15000" 
                         value={newPrice}
                         onChange={(e) => setNewPrice(e.target.value)}
-                        className="bg-white/5 border-none h-11 rounded-xl text-xs font-bold"
+                        className="bg-white/5 border-none h-12 rounded-xl text-xs font-bold"
                       />
-                      <Button onClick={handleUpdatePrice} disabled={isSavingPrice || !newPrice} className="h-11 w-11 rounded-xl neon-gradient text-background shrink-0">
+                      <Button onClick={handleUpdatePrice} disabled={isSavingPrice || !newPrice} className="h-12 w-12 rounded-xl neon-gradient text-background shrink-0 shadow-xl">
                          {isSavingPrice ? <Loader2 className="animate-spin" size={16} /> : <Save size={18} />}
                       </Button>
                    </div>
@@ -132,17 +134,17 @@ export default function AdminDashboard() {
               </Card>
            </div>
 
-           <div className="space-y-6">
+           <div className="space-y-4">
               <h3 className="font-black text-xs uppercase tracking-widest text-white/50 flex items-center gap-2 px-2">
                 <Settings size={16} className="text-primary" /> Operations
               </h3>
               <Link href="/admin/users">
-                <Card className="glass-card border-none rounded-2xl p-5 hover:bg-white/[0.08] transition-all group shadow-xl flex items-center gap-4 text-left">
-                  <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center group-hover:neon-gradient group-hover:text-background transition-all shadow-lg">
+                <Card className="glass-card border-none rounded-[2rem] p-6 hover:bg-white/[0.08] transition-all group shadow-xl flex items-center gap-4 text-left">
+                  <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center group-hover:neon-gradient group-hover:text-background transition-all shadow-lg">
                     <Users size={24} />
                   </div>
                   <div className="flex-1">
-                    <p className="text-xs font-black uppercase tracking-tight text-white">Database Pengguna</p>
+                    <p className="text-sm font-black uppercase tracking-tight text-white">Database Pengguna</p>
                     <p className="text-[8px] font-bold text-white/30 uppercase">Kelola & Moderasi User</p>
                   </div>
                   <ArrowUpRight size={14} className="text-white/20 group-hover:text-primary transition-colors" />
@@ -151,18 +153,18 @@ export default function AdminDashboard() {
            </div>
         </div>
 
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-4">
           <div className="flex items-center justify-between px-2">
              <h3 className="font-black text-xs uppercase tracking-widest text-white/50 flex items-center gap-2">
-               <Clock size={16} className="text-primary" /> Recent Platform Activity
+               <Clock size={16} className="text-primary" /> Activity Feed
              </h3>
-             <Badge variant="outline" className="text-[8px] font-black uppercase border-white/10 text-white/40">LIVE FEED</Badge>
+             <Badge variant="outline" className="text-[8px] font-black uppercase border-white/10 text-white/40">LIVE DATA</Badge>
           </div>
           
           <div className="space-y-3">
             {recentLinks.map((link) => (
-              <Card key={link.id} className="glass-card border-none rounded-3xl p-4 flex items-center gap-4 group hover:bg-white/[0.05] transition-colors text-left">
-                 <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/5 shrink-0 shadow-inner">
+              <Card key={link.id} className="glass-card border-none rounded-[2rem] p-5 flex items-center gap-4 group hover:bg-white/[0.05] transition-colors text-left">
+                 <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/5 shrink-0 shadow-inner">
                     {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <LinkIcon size={20} className="text-primary/50" />}
                  </div>
                  <div className="flex-1 min-w-0">
@@ -170,7 +172,7 @@ export default function AdminDashboard() {
                     <p className="text-[9px] text-white/20 truncate uppercase font-mono mt-0.5">{link.url}</p>
                  </div>
                  <div className="text-right shrink-0">
-                    <p className="text-sm font-black text-primary tabular-nums">{link.clicks || 0}</p>
+                    <p className="text-lg font-black text-primary tabular-nums">{link.clicks || 0}</p>
                     <p className="text-[8px] font-black text-white/20 uppercase">CLICKS</p>
                  </div>
               </Card>
@@ -178,24 +180,6 @@ export default function AdminDashboard() {
             {recentLinks.length === 0 && (
               <div className="py-20 text-center opacity-10 font-black uppercase text-[10px] tracking-widest border border-dashed border-white/10 rounded-[2rem]">Belum ada feed aktivitas.</div>
             )}
-          </div>
-
-          <div className="pt-6">
-            <h3 className="font-black text-xs uppercase tracking-widest text-white/50 mb-4 px-2">Pembelian Terbaru</h3>
-            <div className="space-y-3">
-               {successfulPayments?.slice(0, 3).map((pay) => (
-                 <div key={pay.id} className="p-4 bg-green-500/5 border border-green-500/10 rounded-2xl flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                       <div className="w-8 h-8 rounded-full bg-green-500/20 text-green-500 flex items-center justify-center"><DollarSign size={14} /></div>
-                       <div>
-                          <p className="text-[10px] font-black text-white uppercase tracking-tight">Upgrade Premium</p>
-                          <p className="text-[8px] text-white/40 uppercase">UID: {pay.userId.slice(0, 10)}...</p>
-                       </div>
-                    </div>
-                    <p className="text-xs font-black text-green-500">Rp {pay.amount?.toLocaleString()}</p>
-                 </div>
-               ))}
-            </div>
           </div>
         </div>
       </div>

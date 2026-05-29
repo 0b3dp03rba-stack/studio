@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOut, Link2, Check, ShieldAlert } from 'lucide-react';
+import { LogOut, Link2, Check, ShieldAlert, LayoutDashboard } from 'lucide-react';
 import { Button } from './ui/button';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth, useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
@@ -21,10 +21,8 @@ export default function Header() {
     const host = window.location.hostname;
     const mainDomain = 'linku.biz.id';
     
-    // Header hanya muncul jika kita berada di domain utama (dashboard/login/admin)
-    // Jika di subdomain atau custom domain, sembunyikan header system.
     const isLocal = host.includes('localhost');
-    const isMain = host === mainDomain || host === `www.${mainDomain}` || (isLocal && host === 'localhost:9002');
+    const isMain = host === mainDomain || host === `www.${mainDomain}` || (isLocal && (host.includes('localhost') || host.includes('127.0.0.1')));
     
     setIsSystemDomain(isMain);
   }, []);
@@ -42,11 +40,12 @@ export default function Header() {
 
   const isAdmin = profile?.role === 'Admin' || user?.email === 'creeppermoment@gmail.com';
 
-  // HANYA tampilkan jika di domain sistem DAN rute dashboard/admin
   if (!user || !isSystemDomain) return null;
   
-  const isSystemPath = pathname.startsWith('/dashboard') || pathname.startsWith('/admin');
+  const isSystemPath = pathname.startsWith('/dashboard') || pathname.startsWith('/admin') || pathname.startsWith('/verify-email');
   if (!isSystemPath) return null;
+
+  const isAdminPage = pathname.startsWith('/admin');
 
   return (
     <header className="sticky top-0 w-full h-24 bg-black/95 backdrop-blur-3xl px-6 flex items-center justify-between z-40 border-b border-white/5 shadow-2xl">
@@ -54,7 +53,7 @@ export default function Header() {
         <Link href="/dashboard" className="flex items-center gap-5 group">
           <div className="w-14 h-14 bg-black rounded-2xl flex items-center justify-center border border-white/10 shadow-xl relative overflow-hidden transition-transform group-active:scale-95">
               <div className="relative flex items-center justify-center">
-                <Link2 size={32} className="text-primary" />
+                <Link2 size={32} className={isAdminPage ? "text-primary" : "text-primary"} />
                 <div className="absolute -bottom-1 -right-1 bg-black rounded-sm flex items-center justify-center p-0.5">
                   <Check size={12} className="text-primary" strokeWidth={5} />
                 </div>
@@ -65,22 +64,35 @@ export default function Header() {
               Linku
             </span>
             <span className="text-[9px] font-black uppercase tracking-[0.4em] text-primary/70 leading-none mt-1.5 animate-pulse">
-              {isAdmin ? 'ADMIN CONTROL' : 'PREMIUM HUB'}
+              {isAdminPage ? 'MASTER PANEL' : (isAdmin ? 'ADMIN CONTROL' : 'PREMIUM HUB')}
             </span>
           </div>
         </Link>
       </div>
       
       <div className="flex items-center gap-2">
-        {isAdmin && (
+        {isAdmin && !isAdminPage && (
           <Button 
             variant="ghost" 
             size="icon" 
             asChild
-            className={`h-12 w-12 rounded-2xl transition-all ${pathname.startsWith('/admin') ? 'bg-primary/20 text-primary shadow-[0_0_15px_rgba(255,0,0,0.3)]' : 'text-white/40 hover:text-primary hover:bg-white/5'}`}
+            className="h-12 w-12 rounded-2xl text-white/40 hover:text-primary hover:bg-primary/10 transition-all"
           >
             <Link href="/admin">
               <ShieldAlert size={22} />
+            </Link>
+          </Button>
+        )}
+
+        {isAdminPage && (
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            asChild
+            className="h-12 w-12 rounded-2xl text-white/40 hover:text-primary hover:bg-primary/10 transition-all"
+          >
+            <Link href="/dashboard">
+              <LayoutDashboard size={22} />
             </Link>
           </Button>
         )}
