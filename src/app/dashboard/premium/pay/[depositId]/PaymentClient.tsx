@@ -13,7 +13,7 @@ import Link from 'next/link';
 import { differenceInSeconds, parseISO } from 'date-fns';
 
 export default function PaymentClient({ depositId }: { depositId: string }) {
-  const { user } = user ? useUser() : { user: null }; // Gunakan hook dengan aman
+  const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
   const router = useRouter();
