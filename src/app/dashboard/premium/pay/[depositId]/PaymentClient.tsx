@@ -24,11 +24,17 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
   const [isDownloading, setIsDownloading] = useState(false);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Cari data transaksi di Firestore berdasarkan depositId
+  // FIX: Tambahkan filter userId agar sesuai dengan Security Rules (Rules are not filters)
   const paymentsQuery = useMemoFirebase(() => 
-    user ? query(collection(db, 'payments'), where('depositId', '==', depositId), limit(1)) : null,
+    user ? query(
+      collection(db, 'payments'), 
+      where('depositId', '==', depositId),
+      where('userId', '==', user.uid), // Wajib ada agar diizinkan Security Rules
+      limit(1)
+    ) : null,
     [db, user?.uid, depositId]
   );
+  
   const { data: payments, isLoading: isPaymentsLoading } = useCollection(paymentsQuery);
   const payment = payments?.[0];
 
@@ -67,7 +73,7 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
     if (pollingRef.current) clearInterval(pollingRef.current);
     pollingRef.current = setInterval(async () => {
       await verifyPayment(true);
-    }, 8000);
+    }, 10000); // Polling setiap 10 detik
   };
 
   const verifyPayment = async (isAuto = false) => {
@@ -99,7 +105,7 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
         toast({ title: "Belum Terbayar", description: "Selesaikan scan QRIS sesuai nominal unik." });
       }
     } catch (e) {
-      if (!isAuto) toast({ variant: "destructive", title: "Gagal verifikasi" });
+      if (!isAuto) console.error("Verifikasi error:", e);
     } finally {
       if (!isAuto) setCheckingStatus(false);
     }
@@ -122,20 +128,15 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
         img.onerror = reject;
       });
 
-      // Ukuran Canvas (QRIS asli + Padding Watermark)
       canvas.width = img.width;
       canvas.height = img.height + 80;
 
       if (ctx) {
-        // Background Putih
         ctx.fillStyle = "#FFFFFF";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // Gambar QRIS
         ctx.drawImage(img, 0, 0);
 
-        // Tambah Watermark Linku
-        ctx.fillStyle = "#ff0000"; // Primary Linku
+        ctx.fillStyle = "#ff0000"; 
         ctx.font = "bold 24px Inter, sans-serif";
         ctx.textAlign = "center";
         ctx.fillText("LINKU ENGINE - PREMIUM HUB", canvas.width / 2, canvas.height - 45);
@@ -144,7 +145,6 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
         ctx.font = "14px Inter, sans-serif";
         ctx.fillText(`ID Transaksi: ${depositId}`, canvas.width / 2, canvas.height - 20);
 
-        // Trigger Download
         const link = document.createElement('a');
         link.download = `QRIS-LINKU-${depositId}.jpg`;
         link.href = canvas.toDataURL('image/jpeg', 0.9);
@@ -171,7 +171,8 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
   if (!payment) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center space-y-6">
-        <h1 className="text-2xl font-black text-white uppercase tracking-tighter">Invoice Tidak Valid</h1>
+        <h1 className="text-2xl font-black text-white uppercase tracking-tighter">Invoice Tidak Ditemukan</h1>
+        <p className="text-[10px] font-black uppercase text-white/40 tracking-widest">Atau Anda tidak memiliki izin melihat data ini.</p>
         <Button asChild className="neon-gradient text-background font-black rounded-2xl h-14 px-8 uppercase text-[10px] tracking-widest">
            <Link href="/dashboard/premium"><ChevronLeft className="mr-2" /> Kembali</Link>
         </Button>

@@ -35,8 +35,8 @@ service cloud.firestore {
       }
     }
 
-    // FIX: Izinkan user mencatat pembayaran mereka sendiri
     match /payments/{paymentId} {
+      // FIX: Rule allow read 'list' memerlukan filter query userId di client side
       allow read: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
       allow update, delete: if isAdmin();
@@ -45,7 +45,7 @@ service cloud.firestore {
     match /appConfig/{docId} {
       allow read: if true;
       allow write: if isAdmin();
-      allow update: if (docId == 'globalStats') || isAdmin();
+      allow update: if isAdmin();
     }
 
     match /usernames/{username} {
