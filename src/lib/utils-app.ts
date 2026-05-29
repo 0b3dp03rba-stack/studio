@@ -49,10 +49,11 @@ export function getPublicUrl(username: string, customDomain?: string): string {
   const port = window.location.port ? `:${window.location.port}` : '';
   const cleanUsername = username.toLowerCase();
 
+  // Deteksi domain utama
   const isProduction = hostname.includes('linku.biz.id');
   const isLocalhost = hostname.includes('localhost');
 
-  // Selalu utamakan format SUBDOMAIN jika memungkinkan
+  // Selalu utamakan format SUBDOMAIN jika di domain kita
   if (isProduction || isLocalhost) {
     const domain = isProduction ? 'linku.biz.id' : 'localhost';
     return `${protocol}//${cleanUsername}.${domain}${port}`;

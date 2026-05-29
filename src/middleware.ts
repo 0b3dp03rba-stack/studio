@@ -2,11 +2,11 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 /**
- * @fileOverview Linku Engine v17.0 - Real Subdomain & Custom Domain Logic
- * Menangani routing cerdas:
- * 1. user.linku.biz.id -> internal /[username] (Rewrite)
- * 2. linku.biz.id/user -> user.linku.biz.id (Redirect 301)
- * 3. mycustom.com -> internal /[username_owner] (Rewrite - Persiapan Premium)
+ * @fileOverview Linku Engine v20.0 - PRO Custom Domain & Subdomain Logic
+ * Menangani routing untuk:
+ * 1. user.linku.biz.id -> internal /[username]
+ * 2. linku.biz.id/user -> redirect ke user.linku.biz.id
+ * 3. customdomain.com -> internal /_custom/[host] (Untuk pencarian profil via domain)
  */
 
 export function middleware(req: NextRequest) {
@@ -26,37 +26,40 @@ export function middleware(req: NextRequest) {
 
   const isLocalhost = host.includes('localhost');
   const mainDomain = 'linku.biz.id';
-  const isMainDomain = host === mainDomain || host === `www.${mainDomain}` || (isLocalhost && host === 'localhost:9002');
+  const isMainDomain = host === mainDomain || host === `www.${mainDomain}` || (isLocalhost && (host === 'localhost:9002' || host === '127.0.0.1:9002'));
   
-  // 2. DAFTAR PATH SISTEM (Hanya boleh di domain utama)
+  // Rute sistem yang HANYA boleh di domain utama
   const reservedPaths = [
     'dashboard', 'login', 'register', 'admin', 
     'verify-email', 'forgot-password', 'auth', 'reviews', 'u'
   ];
 
-  // 3. DETEKSI SUBDOMAIN ATAU CUSTOM DOMAIN
+  // CASE A: AKSES VIA CUSTOM DOMAIN (Bukan linku.biz.id dan bukan localhost murni)
+  // Contoh: budi.com atau www.tokosaya.id
+  if (!isMainDomain && !host.endsWith(mainDomain) && !host.endsWith('localhost:9002')) {
+    // Kita arahkan ke rute internal khusus untuk lookup domain
+    // Format internal: /_custom/[domain_name]
+    url.pathname = `/_domain/${host}${pathname}`;
+    return NextResponse.rewrite(url);
+  }
+
+  // CASE B: AKSES VIA SUBDOMAIN (Contoh: budi.linku.biz.id)
   let subdomain = '';
   if (isLocalhost) {
     const hostParts = host.split('.');
     if (hostParts.length > 1 && !hostParts[0].includes('localhost')) {
       subdomain = hostParts[0];
     }
-  } else if (!isMainDomain) {
-    // Jika bukan domain utama, anggap sebagai subdomain atau custom domain
+  } else if (!isMainDomain && host.endsWith(mainDomain)) {
     const hostParts = host.split('.');
-    if (hostParts.length >= 4 && host.endsWith(mainDomain)) {
-      // Ini Subdomain: user.linku.biz.id
+    // budi.linku.biz.id punya 4 bagian (budi, linku, biz, id)
+    if (hostParts.length >= 4) {
       subdomain = hostParts[0];
-    } else {
-      // Ini Custom Domain: budi.com (Implementasi menyusul di v18)
-      // Sementara kita biarkan default dulu
-      return NextResponse.next();
     }
   }
 
   const cleanSubdomain = subdomain.toLowerCase();
 
-  // CASE A: AKSES VIA SUBDOMAIN (Misal: budi.linku.biz.id)
   if (cleanSubdomain && cleanSubdomain !== 'www') {
     const firstSegment = pathname.split('/')[1];
     
@@ -67,13 +70,12 @@ export function middleware(req: NextRequest) {
       return NextResponse.redirect(new URL(`${protocol}://${mainHost}${pathname}`, req.url));
     }
 
-    // INTERNAL REWRITE: Petakan subdomain ke folder /[username] secara transparan
-    // browser tetap menunjukkan 'budi.linku.biz.id', server ambil isi '/budi'
+    // INTERNAL REWRITE: Petakan subdomain ke folder /[username]
     url.pathname = `/${cleanSubdomain}${pathname}`;
     return NextResponse.rewrite(url);
   }
 
-  // CASE B: AKSES VIA PATH DI DOMAIN UTAMA (Misal: linku.biz.id/budi)
+  // CASE C: AKSES VIA PATH DI DOMAIN UTAMA (Contoh: linku.biz.id/budi)
   // Kita paksa pindah ke Subdomain demi branding premium (Redirect 301)
   const segments = pathname.split('/');
   const targetUser = segments[1];
