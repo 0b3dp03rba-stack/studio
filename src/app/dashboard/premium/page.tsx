@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Sparkles, CheckCircle2, ShieldCheck, Zap, Globe, Loader2, Save, ExternalLink, AlertCircle, ArrowRight, ReceiptText, Clock, Info, Server, Network } from 'lucide-react';
+import { Sparkles, ShieldCheck, Zap, Globe, Loader2, Save, ReceiptText, ArrowRight, Info, Network, AlertCircle } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, updateDoc, serverTimestamp, collection, setDoc, query, where, limit } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
@@ -30,7 +30,7 @@ export default function PremiumPage() {
       collection(db, 'payments'),
       where('userId', '==', user.uid),
       where('status', '==', 'pending'),
-      limit(5)
+      limit(1)
     ) : null,
     [db, user?.uid]
   );
@@ -98,13 +98,17 @@ export default function PremiumPage() {
 
   const handleSaveDomain = async () => {
     if (!profileRef) return;
+    if (!customDomain.includes('.')) {
+      toast({ variant: "destructive", title: "Format Salah", description: "Masukkan domain yang valid (misal: budi.com)" });
+      return;
+    }
     setIsSavingDomain(true);
     try {
       await updateDoc(profileRef, {
         customDomain: customDomain.trim().toLowerCase(),
         updatedAt: serverTimestamp()
       });
-      toast({ title: "DOMAIN TERHUBUNG", description: "Tautan profil kini memprioritaskan domain pribadi Anda." });
+      toast({ title: "DOMAIN DISIMPAN", description: "Sekarang silakan atur DNS Anda sesuai panduan." });
     } catch (e) {
       toast({ variant: "destructive", title: "GAGAL", description: "Gagal menyimpan konfigurasi domain." });
     } finally {
@@ -130,51 +134,17 @@ export default function PremiumPage() {
              <div className="flex items-center gap-3 border-b border-white/5 pb-6">
                 <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner"><Globe size={24} /></div>
                 <div>
-                  <h3 className="font-black text-base uppercase tracking-widest text-white">Custom Domain Setup</h3>
-                  <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">Konfigurasi DNS Pemula</p>
+                  <h3 className="font-black text-base uppercase tracking-widest text-white">Custom Domain</h3>
+                  <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">Identitas Pribadi Anda</p>
                 </div>
              </div>
              
              <div className="space-y-6">
-                <div className="p-6 bg-primary/5 rounded-[2rem] border border-primary/20 space-y-5">
-                   <div className="flex items-center gap-2 text-primary">
-                      <Network size={20} />
-                      <p className="text-xs font-black uppercase tracking-widest">Panduan DNS (Wajib Dilakukan):</p>
-                   </div>
-                   
-                   <div className="space-y-4">
-                      <div className="space-y-2">
-                        <p className="text-[10px] font-black text-white/60 uppercase">Opsi A: Root Domain (budi.com)</p>
-                        <div className="bg-black/40 rounded-xl p-3 border border-white/5 font-mono text-[9px] grid grid-cols-3 gap-2 uppercase">
-                           <div className="text-white/30">Type: <span className="text-white">A</span></div>
-                           <div className="text-white/30">Name: <span className="text-white">@</span></div>
-                           <div className="text-white/30">Value: <span className="text-primary">76.76.21.21</span></div>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <p className="text-[10px] font-black text-white/60 uppercase">Opsi B: Subdomain (links.budi.com)</p>
-                        <div className="bg-black/40 rounded-xl p-3 border border-white/5 font-mono text-[9px] grid grid-cols-3 gap-2 uppercase">
-                           <div className="text-white/30">Type: <span className="text-white">CNAME</span></div>
-                           <div className="text-white/30">Name: <span className="text-white">links</span></div>
-                           <div className="text-white/30">Value: <span className="text-primary">cname.vercel-dns.com</span></div>
-                        </div>
-                      </div>
-                   </div>
-
-                   <div className="flex gap-3 pt-2">
-                      <AlertCircle size={16} className="text-primary shrink-0" />
-                      <p className="text-[9px] font-bold text-white/40 leading-relaxed uppercase">
-                        Gunakan salah satu saja. Jika menggunakan Cloudflare, pastikan ikon awan (Proxy) dalam posisi <span className="text-white underline">OFF / DNS ONLY</span>.
-                      </p>
-                   </div>
-                </div>
-
                 <div className="space-y-3">
-                   <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Masukkan Domain Anda Disini:</label>
+                   <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Masukkan Domain / Subdomain:</label>
                    <div className="flex gap-2">
                       <Input 
-                        placeholder="contoh: budi.com" 
+                        placeholder="contoh: budi.com atau links.budi.com" 
                         value={customDomain} 
                         onChange={(e) => setCustomDomain(e.target.value)}
                         className="bg-white/5 border-none h-16 rounded-2xl font-bold text-base px-6 focus-visible:ring-primary/20"
@@ -183,8 +153,47 @@ export default function PremiumPage() {
                         {isSavingDomain ? <Loader2 className="animate-spin" size={24} /> : <Save size={28} />}
                       </Button>
                    </div>
-                   <p className="text-[8px] font-black uppercase text-white/10 tracking-widest text-center">Butuh waktu hingga 24 jam agar DNS tersebar ke seluruh dunia.</p>
+                   <p className="text-[8px] font-black uppercase text-white/10 tracking-widest text-center">Simpan domain terlebih dahulu untuk memunculkan instruksi DNS.</p>
                 </div>
+
+                {customDomain && customDomain.includes('.') && (
+                  <div className="p-6 bg-primary/5 rounded-[2rem] border border-primary/20 space-y-6 animate-in fade-in slide-in-from-top-4 duration-500">
+                    <div className="flex items-center gap-3 text-primary">
+                      <Network size={20} />
+                      <p className="text-xs font-black uppercase tracking-widest">Instruksi DNS (Wajib):</p>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <p className="text-[10px] font-bold text-white/60 leading-relaxed uppercase">
+                        Buka panel domain Anda (seperti Niagahoster/Rumahweb/Cloudflare), lalu tambahkan record berikut:
+                      </p>
+                      
+                      <div className="bg-black/40 rounded-2xl p-5 border border-white/10 space-y-4">
+                         <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                               <p className="text-[8px] font-black text-white/30 uppercase">Tipe Record</p>
+                               <p className="text-sm font-black text-white">CNAME</p>
+                            </div>
+                            <div className="space-y-1">
+                               <p className="text-[8px] font-black text-white/30 uppercase">Nama / Host</p>
+                               <p className="text-sm font-black text-white">{customDomain.split('.')[0] === 'www' || !customDomain.includes('.') ? '@' : (customDomain.split('.').length > 2 ? customDomain.split('.')[0] : '@')}</p>
+                            </div>
+                         </div>
+                         <div className="space-y-1 pt-2 border-t border-white/5">
+                            <p className="text-[8px] font-black text-white/30 uppercase">Nilai / Value / Target</p>
+                            <p className="text-sm font-black text-primary break-all">linku.biz.id</p>
+                         </div>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3 pt-2">
+                      <AlertCircle size={16} className="text-primary shrink-0" />
+                      <p className="text-[9px] font-bold text-white/40 leading-relaxed uppercase">
+                        Gunakan metode CNAME karena paling stabil untuk sistem kami. Proses propagasi DNS biasanya memakan waktu <span className="text-white underline">1 - 24 jam</span>.
+                      </p>
+                    </div>
+                  </div>
+                )}
              </div>
           </Card>
         </div>

@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 /**
- * @fileOverview Linku Engine v37.0 - ULTIMATE REDIRECT LOOP FIX
- * Menggunakan logika deteksi host yang lebih ketat untuk mencegah ERR_TOO_MANY_REDIRECTS.
+ * @fileOverview Linku Engine v38.0 - FINAL REDIRECT LOOP RESOLUTION
+ * Menggunakan pengecekan host yang lebih presisi dan mencegah re-processing pada rute internal.
  */
 
 export function middleware(req: NextRequest) {
@@ -11,7 +11,7 @@ export function middleware(req: NextRequest) {
   const host = req.headers.get('host') || '';
   const pathname = url.pathname;
 
-  // 1. ABAIKAN FILE SISTEM, API, DAN STATIS
+  // 1. SKIP UNTUK FILE SISTEM & API
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api') ||
@@ -22,28 +22,26 @@ export function middleware(req: NextRequest) {
   }
 
   const mainDomain = 'linku.biz.id';
-  const hostOnly = host.split(':')[0].toLowerCase(); // Ambil domain saja tanpa port
+  // Hapus 'www.' dan port untuk standarisasi pengecekan
+  const hostOnly = host.split(':')[0].toLowerCase().replace('www.', '');
   
-  // Deteksi rute sistem yang tidak boleh dipetakan ke subdomain
   const reservedPaths = [
     'dashboard', 'login', 'register', 'admin', 
     'verify-email', 'forgot-password', 'auth', 'reviews', 'u', '_domain'
   ];
   const firstSegment = pathname.split('/')[1];
 
-  // A. DETEKSI DOMAIN SISTEM (Localhost, Vercel, Firebase, atau linku.biz.id)
+  // A. IDENTIFIKASI SISTEM HOST
   const isSystemHost = 
     hostOnly === mainDomain || 
-    hostOnly === `www.${mainDomain}` ||
     hostOnly.endsWith('.web.app') ||
     hostOnly.endsWith('.firebaseapp.com') ||
     hostOnly.includes('localhost') ||
     hostOnly.includes('127.0.0.1');
 
-  // B. LOGIKA CUSTOM DOMAIN (Bukan domain kita, bukan subdomain kita)
-  // Syarat: Bukan system host DAN tidak mengandung mainDomain
+  // B. LOGIKA CUSTOM DOMAIN (Domain murni milik user, misal: budi.com)
   if (!isSystemHost && !hostOnly.endsWith(mainDomain)) {
-    // Hindari double rewrite jika sudah berada di rute internal
+    // Cegah loop: Jika rute sudah diawali /_domain, jangan rewrite lagi
     if (pathname.startsWith('/_domain')) {
       return NextResponse.next();
     }
@@ -52,26 +50,28 @@ export function middleware(req: NextRequest) {
   }
 
   // C. LOGIKA SUBDOMAIN (Contoh: budi.linku.biz.id)
-  if (hostOnly.endsWith(mainDomain) && hostOnly !== mainDomain && hostOnly !== `www.${mainDomain}`) {
-    const subdomain = hostOnly.replace(`.${mainDomain}`, '').replace('www.', '');
+  if (hostOnly.endsWith(mainDomain) && hostOnly !== mainDomain) {
+    const subdomain = hostOnly.replace(`.${mainDomain}`, '');
     
-    // Keamanan: Jika buka rute sistem di subdomain, biarkan apa adanya (next)
+    // Jika user mengakses rute sistem (dashboard/login) di subdomain, biarkan saja (jangan rewrite)
     if (reservedPaths.includes(firstSegment)) {
       return NextResponse.next();
     }
 
-    // PENTING: Mencegah Loop. Jika pathname sudah diawali dengan username, jangan rewrite lagi.
-    if (pathname.startsWith(`/${subdomain}`)) {
+    // PENTING: Mencegah Loop. 
+    // Jika Next.js melakukan internal rewrite, pathname mungkin sudah berubah.
+    // Kita cek apakah segment pertama sudah cocok dengan subdomain.
+    if (firstSegment === subdomain) {
       return NextResponse.next();
     }
 
-    // INTERNAL REWRITE: Petakan ke folder /[username] secara transparan
+    // INTERNAL REWRITE: Petakan ke /[username] secara transparan
     url.pathname = `/${subdomain}${pathname}`;
     return NextResponse.rewrite(url);
   }
 
-  // D. LOGIKA REDIRECT PATH KE SUBDOMAIN (linku.biz.id/budi -> budi.linku.biz.id)
-  // Hanya berlaku di domain produksi utama untuk user profile
+  // D. LOGIKA REDIRECT linku.biz.id/budi -> budi.linku.biz.id
+  // Hanya berlaku di domain utama untuk user profile path
   if (hostOnly === mainDomain && firstSegment && !reservedPaths.includes(firstSegment)) {
     return NextResponse.redirect(
       new URL(`https://${firstSegment}.${mainDomain}${pathname.replace(`/${firstSegment}`, '')}`, req.url),
