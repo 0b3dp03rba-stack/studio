@@ -30,7 +30,6 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Gunakan ID Dokumen langsung (depositId)
   const paymentRef = useMemoFirebase(() => doc(db, 'payments', depositId), [db, depositId]);
   const { data: payment, isLoading: isPaymentsLoading } = useDoc(paymentRef);
 
@@ -42,11 +41,10 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
     return { basePrice, uniqueCode, total };
   }, [payment]);
 
-  // LOGIKA TIMER & AUTO-CANCEL
   useEffect(() => {
     if (!payment?.expiredAt || isExpired || payment.status !== 'pending') return;
 
-    const timer = setInterval(async () => {
+    const timer = setInterval(() => {
       try {
         const now = new Date();
         const end = parseISO(payment.expiredAt);
@@ -57,13 +55,12 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
           setTimeLeft('EXPIRED');
           clearInterval(timer);
           
-          // AUTO CANCEL DI DATABASE SAAT EXPIRED
           updateDoc(doc(db, 'payments', depositId), {
             status: 'cancelled',
             expiredAtSystem: serverTimestamp()
           }).catch(() => {});
           
-          toast({ variant: "destructive", title: "TAGIHAN KEDALUWARSA", description: "Waktu pembayaran telah habis. Silakan buat tagihan baru." });
+          toast({ variant: "destructive", title: "TAGIHAN KEDALUWARSA", description: "Waktu pembayaran telah habis." });
         } else {
           const m = Math.floor(seconds / 60);
           const s = seconds % 60;
@@ -139,7 +136,7 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
         cancelledAt: serverTimestamp()
       });
       
-      toast({ title: "PEMBAYARAN DIBATALKAN", description: "Invoice telah dihapus dari sistem." });
+      toast({ title: "PEMBAYARAN DIBATALKAN", description: "Invoice telah dihapus." });
       router.push('/dashboard/premium');
     } catch (e: any) {
       errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -153,7 +150,7 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
   };
 
   const handleDownloadQRIS = async () => {
-    if (!payment?.qrImage) return;
+    if (!payment?.qrImage || !breakdown) return;
     setIsDownloading(true);
 
     try {
@@ -169,32 +166,72 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
         img.onerror = reject;
       });
 
-      canvas.width = img.width;
-      canvas.height = img.height + 80;
+      // Layout Settings
+      const padding = 60;
+      const headerHeight = 120;
+      const amountSectionHeight = 100;
+      const detailsSectionHeight = 150;
+      const footerHeight = 100;
+      
+      canvas.width = img.width + (padding * 2);
+      canvas.height = img.height + headerHeight + amountSectionHeight + detailsSectionHeight + footerHeight;
 
       if (ctx) {
+        // 1. Background
         ctx.fillStyle = "#FFFFFF";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(img, 0, 0);
 
-        ctx.fillStyle = "#ff0000"; 
-        ctx.font = "bold 24px Inter, sans-serif";
+        // 2. Header
+        ctx.fillStyle = "#000000";
+        ctx.font = "bold 32px sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText("LINKU ENGINE - PREMIUM HUB", canvas.width / 2, canvas.height - 45);
+        ctx.fillText("PEMBAYARAN QRIS LINKU", canvas.width / 2, 60);
         
+        ctx.fillStyle = "#888888";
+        ctx.font = "20px sans-serif";
+        ctx.fillText(`ID Transaksi: ${depositId.toUpperCase()}`, canvas.width / 2, 95);
+
+        // 3. QRIS Image
+        ctx.drawImage(img, padding, headerHeight);
+
+        // 4. Nominal Besar (Tepat di bawah QRIS)
+        const amountY = headerHeight + img.height + 60;
+        ctx.fillStyle = "#ff0000"; // Linku Primary
+        ctx.font = "900 64px sans-serif";
+        ctx.fillText(formatCurrency(breakdown.total), canvas.width / 2, amountY);
+
+        // 5. Rincian (Dibawah nominal dengan jarak)
+        const detailY = amountY + 80;
         ctx.fillStyle = "#666666";
-        ctx.font = "14px Inter, sans-serif";
-        ctx.fillText(`ID Transaksi: ${depositId}`, canvas.width / 2, canvas.height - 20);
+        ctx.font = "20px sans-serif";
+        ctx.fillText(`Harga Lisensi: ${formatCurrency(breakdown.basePrice)}`, canvas.width / 2, detailY);
+        
+        ctx.fillStyle = "#ff0000";
+        ctx.font = "bold 20px sans-serif";
+        ctx.fillText(`Kode Unik: +${breakdown.uniqueCode}`, canvas.width / 2, detailY + 35);
+
+        // 6. Footer
+        const footerY = canvas.height - 40;
+        ctx.fillStyle = "#EEEEEE";
+        ctx.fillRect(0, canvas.height - 100, canvas.width, 100);
+        
+        ctx.fillStyle = "#000000";
+        ctx.font = "bold 24px sans-serif";
+        ctx.fillText("LINKU ENGINE - PREMIUM HUB", canvas.width / 2, footerY);
+        
+        ctx.fillStyle = "#888888";
+        ctx.font = "16px sans-serif";
+        ctx.fillText("Scan nominal yang sama persis untuk verifikasi otomatis", canvas.width / 2, footerY + 25);
 
         const link = document.createElement('a');
         link.download = `QRIS-LINKU-${depositId}.jpg`;
         link.href = canvas.toDataURL('image/jpeg', 0.9);
         link.click();
         
-        toast({ title: "Tersalin ke Galeri", description: "QRIS berhasil diunduh." });
+        toast({ title: "Berhasil Unduh", description: "QRIS siap digunakan dari galeri." });
       }
     } catch (e) {
-      toast({ variant: "destructive", title: "Gagal Unduh", description: "Terjadi kesalahan sistem visual." });
+      toast({ variant: "destructive", title: "Gagal Unduh", description: "Kesalahan sistem visual." });
     } finally {
       setIsDownloading(false);
     }
@@ -219,12 +256,12 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
            <h1 className="text-2xl font-black text-white uppercase tracking-tighter">
              {isExpired ? 'Tagihan Kedaluwarsa' : 'Tagihan Tidak Aktif'}
            </h1>
-           <p className="text-[10px] font-black uppercase text-white/40 tracking-widest max-w-xs mx-auto">
-             {isExpired ? 'Waktu pembayaran Anda telah habis. Silakan buat tagihan baru di menu Premium.' : 'Tagihan ini mungkin sudah dibatalkan atau masa berlakunya telah habis.'}
+           <p className="text-[10px] font-black uppercase text-white/40 tracking-widest max-w-xs mx-auto leading-relaxed">
+             Tagihan ini sudah tidak berlaku. Silakan buat tagihan baru di menu Premium.
            </p>
         </div>
         <Button asChild className="neon-gradient text-background font-black rounded-2xl h-14 px-8 uppercase text-[10px] tracking-widest">
-           <Link href="/dashboard/premium"><ChevronLeft className="mr-2" /> Kembali ke Layanan</Link>
+           <Link href="/dashboard/premium"><ChevronLeft className="mr-2" /> Kembali ke Premium</Link>
         </Button>
       </div>
     );
@@ -307,12 +344,12 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
                         </div>
                         <AlertDialogTitle className="text-2xl font-black uppercase tracking-tighter text-white">Konfirmasi Batal</AlertDialogTitle>
                         <AlertDialogDescription className="text-white/60 font-medium leading-relaxed">
-                          Apakah Anda yakin ingin membatalkan tagihan ini? Anda bisa membuat tagihan baru nanti jika ingin mengganti nominal.
+                          Batalkan tagihan ini? Anda dapat membuat tagihan baru jika nominal atau metode ingin diganti.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter className="mt-8 flex flex-col gap-3">
                         <AlertDialogCancel className="bg-white/5 border-none rounded-xl text-[10px] font-black uppercase h-12 text-white hover:bg-white/10">Lanjutkan Bayar</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleCancelPayment} className="bg-destructive hover:bg-destructive/80 text-white rounded-xl text-[10px] font-black uppercase h-12 shadow-xl shadow-destructive/20">Ya, Batalkan Invoice</AlertDialogAction>
+                        <AlertDialogAction onClick={handleCancelPayment} className="bg-destructive hover:bg-destructive/80 text-white rounded-xl text-[10px] font-black uppercase h-12 shadow-xl">Ya, Batalkan Invoice</AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
@@ -325,10 +362,10 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
                 </p>
                 <ul className="space-y-2">
                    <li className="text-[9px] font-bold text-white/40 uppercase flex gap-3">
-                      <span className="text-primary font-black">•</span> Jangan tutup halaman ini sampai pembayaran diverifikasi.
+                      <span className="text-primary font-black">•</span> Jangan tutup halaman ini sampai pembayaran diverifikasi otomatis.
                    </li>
                    <li className="text-[9px] font-bold text-white/40 uppercase flex gap-3">
-                      <span className="text-primary font-black">•</span> Pastikan nominal yang Anda scan <span className="text-white">sama persis</span>.
+                      <span className="text-primary font-black">•</span> Pastikan nominal yang Anda scan <span className="text-white">sama persis</span> hingga 3 digit terakhir.
                    </li>
                 </ul>
              </div>
