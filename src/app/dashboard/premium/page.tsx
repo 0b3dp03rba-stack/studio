@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '@/lib/utils-app';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { isBefore, parseISO } from 'date-fns';
 
 export default function PremiumPage() {
   const { user } = useUser();
@@ -30,7 +31,7 @@ export default function PremiumPage() {
       collection(db, 'payments'),
       where('userId', '==', user.uid),
       where('status', '==', 'pending'),
-      limit(1)
+      limit(5) // Ambil beberapa untuk pengecekan expiry
     ) : null,
     [db, user?.uid]
   );
@@ -48,12 +49,22 @@ export default function PremiumPage() {
     }
   }, [profile]);
 
+  // LOGIKA VALIDASI INVOICE AKTIF: Abaikan yang sudah kedaluwarsa secara waktu
+  const activeInvoice = pendingPayments?.find(p => {
+    if (!p.expiredAt) return true;
+    try {
+      return !isBefore(parseISO(p.expiredAt), new Date());
+    } catch (e) {
+      return true;
+    }
+  });
+
   const handleCreateInvoice = async () => {
     if (!user || isProcessing) return;
 
-    // Jika sudah ada invoice pending, arahkan ke sana
-    if (pendingPayments && pendingPayments.length > 0) {
-      router.push(`/dashboard/premium/pay/${pendingPayments[0].id}`);
+    // Jika sudah ada invoice pending yang masih valid, arahkan ke sana
+    if (activeInvoice) {
+      router.push(`/dashboard/premium/pay/${activeInvoice.id}`);
       return;
     }
 
@@ -163,8 +174,6 @@ export default function PremiumPage() {
     );
   }
 
-  const hasPending = pendingPayments && pendingPayments.length > 0;
-
   return (
     <div className="space-y-8 animate-in pb-24">
       <div className="space-y-1 text-center">
@@ -217,15 +226,15 @@ export default function PremiumPage() {
               disabled={isProcessing || isPaymentsLoading} 
               className="w-full h-16 neon-gradient text-background font-black rounded-3xl glow-primary shadow-2xl uppercase tracking-[0.2em] text-sm active:scale-95 transition-all"
             >
-              {isProcessing ? <Loader2 className="animate-spin" /> : (hasPending ? "LANJUTKAN PEMBAYARAN" : "AKTIFKAN SEKARANG")}
+              {isProcessing ? <Loader2 className="animate-spin" /> : (activeInvoice ? "LANJUTKAN PEMBAYARAN" : "AKTIFKAN SEKARANG")}
             </Button>
             
             <p className="text-[8px] font-black uppercase text-white/10 text-center tracking-widest">Powered by Rams API Secure Payment</p>
           </CardContent>
         </Card>
 
-        {hasPending && (
-          <Link href={`/dashboard/premium/pay/${pendingPayments![0].id}`}>
+        {activeInvoice && (
+          <Link href={`/dashboard/premium/pay/${activeInvoice.id}`}>
             <Card className="bg-primary/5 border border-primary/20 rounded-2xl p-5 flex items-center justify-between group active:scale-95 transition-all shadow-xl">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
@@ -233,7 +242,7 @@ export default function PremiumPage() {
                 </div>
                 <div className="text-left">
                   <p className="text-[10px] font-black text-white uppercase">Invoice Masih Aktif</p>
-                  <p className="text-[8px] font-bold text-primary uppercase">ID: {pendingPayments![0].id}</p>
+                  <p className="text-[8px] font-bold text-primary uppercase">ID: {activeInvoice.id}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">

@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '@/lib/utils-app';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { differenceInSeconds, parseISO } from 'date-fns';
+import { differenceInSeconds, parseISO, isBefore } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
@@ -42,10 +42,11 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
     return { basePrice, uniqueCode, total };
   }, [payment]);
 
+  // LOGIKA TIMER & AUTO-CANCEL
   useEffect(() => {
     if (!payment?.expiredAt || isExpired || payment.status !== 'pending') return;
 
-    const timer = setInterval(() => {
+    const timer = setInterval(async () => {
       try {
         const now = new Date();
         const end = parseISO(payment.expiredAt);
@@ -55,6 +56,14 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
           setIsExpired(true);
           setTimeLeft('EXPIRED');
           clearInterval(timer);
+          
+          // AUTO CANCEL DI DATABASE SAAT EXPIRED
+          updateDoc(doc(db, 'payments', depositId), {
+            status: 'cancelled',
+            expiredAtSystem: serverTimestamp()
+          }).catch(() => {});
+          
+          toast({ variant: "destructive", title: "TAGIHAN KEDALUWARSA", description: "Waktu pembayaran telah habis. Silakan buat tagihan baru." });
         } else {
           const m = Math.floor(seconds / 60);
           const s = seconds % 60;
@@ -66,7 +75,7 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [payment, isExpired]);
+  }, [payment, isExpired, db, depositId, toast]);
 
   useEffect(() => {
     if (payment && payment.status === 'pending' && !isExpired) {
@@ -81,7 +90,7 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
     if (pollingRef.current) clearInterval(pollingRef.current);
     pollingRef.current = setInterval(async () => {
       await verifyPayment(true);
-    }, 10000); // Polling setiap 10 detik
+    }, 10000); 
   };
 
   const verifyPayment = async (isAuto = false) => {
@@ -95,14 +104,12 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
       if (result.status && result.data?.status === 'success') {
         if (pollingRef.current) clearInterval(pollingRef.current);
         
-        // 1. Update status payment
         const docRef = doc(db, 'payments', depositId);
         await updateDoc(docRef, {
           status: 'success',
           paidAt: serverTimestamp()
         });
 
-        // 2. Aktifkan Premium di Profil
         const profileRef = doc(db, 'userProfiles', user.uid);
         await updateDoc(profileRef, {
           isPremium: true,
@@ -202,15 +209,19 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
     );
   }
 
-  if (!payment || payment.status === 'cancelled') {
+  if (!payment || payment.status === 'cancelled' || isExpired) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center space-y-6">
         <div className="w-20 h-20 rounded-[2rem] bg-white/5 flex items-center justify-center text-white/20">
            <AlertTriangle size={40} />
         </div>
         <div className="space-y-2">
-           <h1 className="text-2xl font-black text-white uppercase tracking-tighter">Tagihan Tidak Aktif</h1>
-           <p className="text-[10px] font-black uppercase text-white/40 tracking-widest max-w-xs mx-auto">Tagihan ini mungkin sudah dibatalkan atau masa berlakunya telah habis.</p>
+           <h1 className="text-2xl font-black text-white uppercase tracking-tighter">
+             {isExpired ? 'Tagihan Kedaluwarsa' : 'Tagihan Tidak Aktif'}
+           </h1>
+           <p className="text-[10px] font-black uppercase text-white/40 tracking-widest max-w-xs mx-auto">
+             {isExpired ? 'Waktu pembayaran Anda telah habis. Silakan buat tagihan baru di menu Premium.' : 'Tagihan ini mungkin sudah dibatalkan atau masa berlakunya telah habis.'}
+           </p>
         </div>
         <Button asChild className="neon-gradient text-background font-black rounded-2xl h-14 px-8 uppercase text-[10px] tracking-widest">
            <Link href="/dashboard/premium"><ChevronLeft className="mr-2" /> Kembali ke Layanan</Link>
@@ -306,12 +317,6 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
                     </AlertDialogContent>
                   </AlertDialog>
                 )}
-
-                {isExpired && (
-                  <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-2xl">
-                    <p className="text-[10px] font-black text-destructive uppercase tracking-widest">Waktu Pembayaran Telah Habis</p>
-                  </div>
-                )}
              </div>
 
              <div className="p-5 bg-primary/5 rounded-[2rem] border border-primary/20 text-left space-y-3">
@@ -344,11 +349,6 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
           <div className="space-y-6">
             <div className="bg-white p-6 rounded-[2rem] shadow-2xl inline-block relative aspect-square w-full max-w-[280px]">
                <img src={payment.qrImage} alt="QRIS" className="w-full h-full object-contain" />
-               {isExpired && (
-                 <div className="absolute inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center rounded-[2rem]">
-                    <p className="text-xs font-black text-white uppercase tracking-widest">KEDALUWARSA</p>
-                 </div>
-               )}
             </div>
 
             <div className="space-y-4">
