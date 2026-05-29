@@ -1,7 +1,7 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Fungsi Admin yang lebih ringan (Free check untuk email utama)
+    // Fungsi Admin: Email utama atau user dengan role Admin
     function isAdmin() {
       return request.auth != null && (
         request.auth.token.email == 'creeppermoment@gmail.com' || 
@@ -40,13 +40,12 @@ service cloud.firestore {
     }
 
     match /payments/{paymentId} {
-      // User hanya boleh baca kueri miliknya sendiri (Wajib filter userId di client)
-      allow list: if request.auth != null && query.limit <= 10 && request.auth.uid == request.query.filters.userId;
-      // User boleh baca dokumen invoice tunggal miliknya
-      allow get: if request.auth != null && resource.data.userId == request.auth.uid;
-      // User boleh buat data payment (invoice)
+      // User hanya boleh akses data miliknya sendiri (Berdasarkan field userId)
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      // User boleh buat invoice baru untuk dirinya sendiri
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      // Admin punya akses penuh via rule global di atas
+      // User boleh update status (digunakan saat verifikasi client-side di demo ini)
+      allow update: if request.auth != null && resource.data.userId == request.auth.uid;
     }
     
     match /appConfig/{docId} {

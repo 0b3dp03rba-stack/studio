@@ -24,7 +24,7 @@ export default function PremiumPage() {
   const globalStatsRef = useMemoFirebase(() => doc(db, 'appConfig', 'globalStats'), [db]);
   const { data: globalStats } = useDoc(globalStatsRef);
 
-  // Perbaikan Kueri: Dibuat sesederhana mungkin agar tidak bentrok dengan Security Rules
+  // Kueri yang sangat sederhana agar pas dengan Security Rules
   const pendingPaymentsQuery = useMemoFirebase(() => 
     user ? query(
       collection(db, 'payments'),
@@ -51,6 +51,7 @@ export default function PremiumPage() {
   const handleCreateInvoice = async () => {
     if (!user || isProcessing) return;
 
+    // Jika sudah ada invoice pending, arahkan langsung ke sana
     if (pendingPayments && pendingPayments.length > 0) {
       router.push(`/dashboard/premium/pay/${pendingPayments[0].depositId}`);
       return;
@@ -69,6 +70,7 @@ export default function PremiumPage() {
       if (result.success && result.data) {
         const data = result.data;
         
+        // Simpan ke Firestore
         await addDoc(collection(db, 'payments'), {
           userId: user.uid,
           depositId: data.depositId,
