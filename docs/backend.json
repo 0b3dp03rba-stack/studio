@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "UserProfile": {
@@ -31,6 +32,20 @@
       },
       "required": ["id", "email", "username", "role"]
     },
+    "Payment": {
+      "title": "Payment",
+      "type": "object",
+      "description": "Log transaksi pembayaran premium.",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "amount": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "success", "failed"] },
+        "method": { "type": "string" },
+        "qrisData": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
     "Link": {
       "title": "Link",
       "type": "object",
@@ -57,6 +72,10 @@
       "schema": { "$ref": "#/backend/entities/UserProfile" },
       "description": "Profil utama pengguna."
     },
+    "/payments/{paymentId}": {
+      "schema": { "$ref": "#/backend/entities/Payment" },
+      "description": "Data transaksi pembayaran user."
+    },
     "/usernames/{username}": {
       "schema": { "type": "object", "properties": { "userId": { "type": "string" } } },
       "description": "Registri username unik untuk mencegah duplikasi."
@@ -68,10 +87,6 @@
     "/userProfiles/{userId}/linkGroups/{groupId}": {
       "schema": { "type": "object" },
       "description": "Folder/Kelompok link."
-    },
-    "/userProfiles/{userId}/linkGroups/{groupId}/links/{linkId}": {
-      "schema": { "$ref": "#/backend/entities/Link" },
-      "description": "Tautan di dalam kelompok."
     }
   }
 }
