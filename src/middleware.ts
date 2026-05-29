@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 /**
- * @fileOverview Linku Engine v22.0 - PRO Custom Domain & Subdomain Logic
- * Perbaikan: Mendukung lingkungan Cloud Workstation (dio.firebase.google.com)
+ * @fileOverview Linku Engine v23.0 - FIX IP & SYSTEM HOST DETECTION
+ * Perbaikan: Mengabaikan IP (127.0.0.1) dan host internal agar tidak dianggap subdomain.
  */
 
 export function middleware(req: NextRequest) {
@@ -22,10 +22,15 @@ export function middleware(req: NextRequest) {
   }
 
   const mainDomain = 'linku.biz.id';
-  const isLocalhost = host.includes('localhost') || host.includes('127.0.0.1');
+  const hostParts = host.split(':')[0]; // Ambil domain saja tanpa port
   
-  // Deteksi jika kita berada di domain sistem (Workstation / Firebase Preview)
+  // Deteksi jika host adalah alamat IP (seperti 127.0.0.1)
+  const isIP = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(hostParts);
+  const isLocalhost = host.includes('localhost');
+  
+  // Deteksi jika kita berada di domain sistem (Workstation / Firebase Studio)
   const isSystemHost = 
+    isIP ||
     isLocalhost || 
     host.includes('firebase.google.com') || 
     host.includes('web.app') || 
@@ -47,7 +52,7 @@ export function middleware(req: NextRequest) {
   }
 
   // B. AKSES VIA CUSTOM DOMAIN (Bukan domain sistem kita)
-  // Contoh: budi.com
+  // Syarat: Bukan domain sistem kita DAN bukan subdomain dari linku.biz.id
   if (!isSystemHost && !host.endsWith(mainDomain)) {
     url.pathname = `/_domain/${host}${pathname}`;
     return NextResponse.rewrite(url);
@@ -55,30 +60,32 @@ export function middleware(req: NextRequest) {
 
   // C. AKSES VIA SUBDOMAIN (Contoh: budi.linku.biz.id atau budi.localhost:9002)
   let subdomain = '';
-  if (host.endsWith(mainDomain) && host !== mainDomain && host !== `www.${mainDomain}`) {
-    subdomain = host.replace(`.${mainDomain}`, '').replace('www.', '');
-  } else if (isLocalhost && host.split('.').length > 1 && !host.startsWith('localhost')) {
-    subdomain = host.split('.')[0];
+  
+  // Hanya proses subdomain jika itu di main domain atau localhost (BUKAN ALAMAT IP)
+  if (!isIP) {
+    if (host.endsWith(mainDomain) && host !== mainDomain && host !== `www.${mainDomain}`) {
+      subdomain = host.replace(`.${mainDomain}`, '').replace('www.', '');
+    } else if (isLocalhost && host.split('.').length > 1 && !host.startsWith('localhost')) {
+      subdomain = host.split('.')[0];
+    }
   }
 
   const cleanSubdomain = subdomain.toLowerCase();
 
-  if (cleanSubdomain && cleanSubdomain !== 'www') {
-    // Keamanan: Jika buka rute reserved di subdomain, paksa balik ke domain sistem utama
+  // Jika terdeteksi subdomain asli (bukan www atau IP)
+  if (cleanSubdomain && cleanSubdomain !== 'www' && !isIP) {
+    // Keamanan: Jika buka rute reserved di subdomain, biarkan atau lempar ke domain utama
     if (reservedPaths.includes(firstSegment)) {
-      const protocol = isLocalhost ? 'http' : 'https';
-      // Di workstation, kita tidak bisa dengan mudah lompat antar subdomain, 
-      // tapi di produksi ini akan melempar ke domain utama.
       return NextResponse.next(); 
     }
 
-    // INTERNAL REWRITE: Petakan subdomain ke folder /[username]
+    // INTERNAL REWRITE: Petakan subdomain ke folder /[username] secara transparan
     url.pathname = `/${cleanSubdomain}${pathname}`;
     return NextResponse.rewrite(url);
   }
 
   // D. AKSES VIA PATH DI DOMAIN UTAMA (Contoh: linku.biz.id/budi)
-  // Paksa pindah ke Subdomain (Hanya berlaku di domain produksi asli untuk branding)
+  // Redirect ke Subdomain hanya berlaku di domain produksi asli
   if (host === mainDomain && firstSegment && !reservedPaths.includes(firstSegment)) {
     return NextResponse.redirect(
       new URL(`https://${firstSegment.toLowerCase()}.${mainDomain}${pathname.replace(`/${firstSegment}`, '')}`, req.url),
