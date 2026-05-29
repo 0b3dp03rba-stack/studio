@@ -1,15 +1,16 @@
-
 /**
  * @fileOverview Helper for Rams API communication.
- * Encapsulates the API Key and Base URL logic on the server side.
+ * Mengambil konfigurasi langsung dari config.ts sesuai permintaan user.
  */
 
-const BASE_URL = process.env.RAMS_BASE_URL;
-const API_KEY = process.env.RAMS_API_KEY;
+import { ramsConfig } from '@/firebase/config';
+
+const BASE_URL = ramsConfig.baseUrl;
+const API_KEY = ramsConfig.apiKey;
 
 export async function ramsFetch(endpoint: string, options: RequestInit = {}) {
   if (!BASE_URL || !API_KEY) {
-    throw new Error('RAMS_BASE_URL or RAMS_API_KEY is not defined in environment variables.');
+    throw new Error('Rams configuration (apiKey/baseUrl) is missing in src/firebase/config.ts');
   }
 
   const res = await fetch(`${BASE_URL}${endpoint}`, {
