@@ -13,7 +13,11 @@ export default function BottomNav() {
 
   if (!user) return null;
   
-  if (pathname.startsWith('/u/') || (pathname.length > 1 && !pathname.startsWith('/dashboard'))) return null;
+  // SEMBUNYIKAN DI HALAMAN ADMIN DAN PROFIL PUBLIK
+  const isAdminPath = pathname.startsWith('/admin');
+  const isPublicProfile = pathname.startsWith('/u/') || (pathname.length > 1 && !pathname.startsWith('/dashboard') && !isAdminPath);
+  
+  if (isAdminPath || isPublicProfile) return null;
 
   const navItems = [
     { label: 'Overview', icon: LayoutDashboard, href: '/dashboard' },

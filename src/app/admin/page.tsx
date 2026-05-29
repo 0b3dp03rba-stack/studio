@@ -1,15 +1,14 @@
+
 "use client";
 
 import { useMemo, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Users, Eye, Link as LinkIcon, Globe, Clock, ArrowUpRight, Settings, DollarSign, Save, Loader2, LogOut, TrendingUp } from 'lucide-react';
+import { Users, Globe, Settings, DollarSign, Save, Loader2, TrendingUp } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, limit, doc, collectionGroup, updateDoc, serverTimestamp, where } from 'firebase/firestore';
-import { Badge } from '@/components/ui/badge';
+import { collection, query, limit, doc, updateDoc, serverTimestamp, where } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import Link from 'next/link';
 
 export default function AdminDashboard() {
   const db = useFirestore();
@@ -17,21 +16,17 @@ export default function AdminDashboard() {
   const [isSavingPrice, setIsSavingPrice] = useState(false);
   const [newPrice, setNewPrice] = useState<number | string>('');
 
-  // 1. Data User Profiles
+  // Data Profiles for Count
   const usersQuery = useMemoFirebase(() => query(collection(db, 'userProfiles'), limit(1000)), [db]);
   const { data: allUsers, isLoading: isUsersLoading } = useCollection(usersQuery);
 
-  // 2. Data Global Stats & Config
+  // Global Config
   const globalStatsRef = useMemoFirebase(() => doc(db, 'appConfig', 'globalStats'), [db]);
   const { data: globalStats } = useDoc(globalStatsRef);
 
-  // 3. Data Transaksi (Success Only for Revenue)
+  // Revenue Data
   const paymentsQuery = useMemoFirebase(() => query(collection(db, 'payments'), where('status', '==', 'success')), [db]);
   const { data: successfulPayments } = useCollection(paymentsQuery);
-
-  // 4. Data Link Global (Activity Feed)
-  const linksQuery = useMemoFirebase(() => query(collectionGroup(db, 'links'), limit(50)), [db]);
-  const { data: rawLinks } = useCollection(linksQuery);
 
   const totalRevenue = useMemo(() => {
     return successfulPayments?.reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0;
@@ -56,11 +51,6 @@ export default function AdminDashboard() {
     });
   };
 
-  const recentLinks = useMemo(() => {
-    if (!rawLinks) return [];
-    return [...rawLinks].sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)).slice(0, 10);
-  }, [rawLinks]);
-
   const stats = [
     { label: 'Total Pengguna', value: allUsers?.length || 0, icon: Users, color: 'text-primary' },
     { label: 'Total Revenue', value: `Rp ${totalRevenue.toLocaleString()}`, icon: DollarSign, color: 'text-green-500' },
@@ -72,16 +62,16 @@ export default function AdminDashboard() {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-4">
         <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-[10px] font-black uppercase tracking-widest text-primary/50">Membangun Analisis...</p>
+        <p className="text-[10px] font-black uppercase tracking-widest text-primary/50">Sinkronisasi Analisis...</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-12 animate-in pb-24">
+    <div className="space-y-12 animate-in">
       <div className="flex flex-col gap-1">
-        <h1 className="text-4xl font-black tracking-tighter uppercase text-white">Dashboard Analisis</h1>
-        <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.4em]">Real-time Market & Platform Insight</p>
+        <h1 className="text-4xl font-black tracking-tighter uppercase text-white">Insight Center</h1>
+        <p className="text-primary/60 text-[10px] font-black uppercase tracking-[0.4em]">Real-time Performance Metrics</p>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -100,65 +90,31 @@ export default function AdminDashboard() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="space-y-8">
-           <div className="space-y-4">
-              <h3 className="font-black text-xs uppercase tracking-widest text-white/50 flex items-center gap-2 px-2">
-                <Settings size={16} className="text-primary" /> Market Control
-              </h3>
-              <Card className="glass-card border-none rounded-[2.5rem] p-8 space-y-6">
-                <div className="space-y-1.5">
-                   <label className="text-[10px] font-black uppercase text-white/40 ml-1">Premium License Price</label>
-                   <p className="text-3xl font-black text-primary tracking-tighter">Rp {(globalStats?.premiumPrice || 10000).toLocaleString()}</p>
-                </div>
-                <div className="space-y-3 pt-4 border-t border-white/5">
-                   <label className="text-[9px] font-black uppercase text-muted-foreground ml-1">Atur Harga Baru (IDR)</label>
-                   <div className="flex gap-2">
-                      <Input 
-                        type="number" 
-                        placeholder="Contoh: 15000" 
-                        value={newPrice}
-                        onChange={(e) => setNewPrice(e.target.value)}
-                        className="bg-white/5 border-none h-14 rounded-2xl text-xs font-bold"
-                      />
-                      <Button onClick={handleUpdatePrice} disabled={isSavingPrice || !newPrice} className="h-14 w-14 rounded-2xl neon-gradient text-background shrink-0 shadow-xl active:scale-95 transition-all">
-                         {isSavingPrice ? <Loader2 className="animate-spin" size={18} /> : <Save size={22} />}
-                      </Button>
-                   </div>
-                </div>
-              </Card>
-           </div>
-        </div>
-
-        <div className="lg:col-span-2 space-y-4">
-          <div className="flex items-center justify-between px-2">
-             <h3 className="font-black text-xs uppercase tracking-widest text-white/50 flex items-center gap-2">
-               <Clock size={16} className="text-primary" /> Activity Feed
-             </h3>
-             <Badge variant="outline" className="text-[8px] font-black uppercase border-white/10 text-white/40">LIVE DATA</Badge>
+      <div className="max-w-md">
+        <h3 className="font-black text-xs uppercase tracking-widest text-white/50 flex items-center gap-2 px-2 mb-4">
+          <Settings size={16} className="text-primary" /> Market Control
+        </h3>
+        <Card className="glass-card border-none rounded-[2.5rem] p-8 space-y-6">
+          <div className="space-y-1.5">
+             <label className="text-[10px] font-black uppercase text-white/40 ml-1">Premium License Price</label>
+             <p className="text-3xl font-black text-primary tracking-tighter">Rp {(globalStats?.premiumPrice || 10000).toLocaleString()}</p>
           </div>
-          
-          <div className="space-y-3">
-            {recentLinks.map((link) => (
-              <Card key={link.id} className="glass-card border-none rounded-2xl p-5 flex items-center gap-4 group hover:bg-white/[0.05] transition-colors text-left shadow-xl">
-                 <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/5 shrink-0 shadow-inner">
-                    {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <LinkIcon size={20} className="text-primary/50" />}
-                 </div>
-                 <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-white text-sm truncate uppercase tracking-tight">{link.title}</h4>
-                    <p className="text-[9px] text-white/20 truncate uppercase font-mono mt-0.5">{link.url}</p>
-                 </div>
-                 <div className="text-right shrink-0">
-                    <p className="text-xl font-black text-primary tabular-nums">{link.clicks || 0}</p>
-                    <p className="text-[8px] font-black text-white/20 uppercase tracking-widest">CLICKS</p>
-                 </div>
-              </Card>
-            ))}
-            {recentLinks.length === 0 && (
-              <div className="py-20 text-center opacity-10 font-black uppercase text-[10px] tracking-widest border border-dashed border-white/10 rounded-[2rem]">Belum ada feed aktivitas.</div>
-            )}
+          <div className="space-y-3 pt-4 border-t border-white/5">
+             <label className="text-[9px] font-black uppercase text-muted-foreground ml-1">Ubah Harga (IDR)</label>
+             <div className="flex gap-2">
+                <Input 
+                  type="number" 
+                  placeholder="Contoh: 15000" 
+                  value={newPrice}
+                  onChange={(e) => setNewPrice(e.target.value)}
+                  className="bg-white/5 border-none h-14 rounded-2xl text-xs font-bold"
+                />
+                <Button onClick={handleUpdatePrice} disabled={isSavingPrice || !newPrice} className="h-14 w-14 rounded-2xl neon-gradient text-background shrink-0 shadow-xl active:scale-95 transition-all">
+                   {isSavingPrice ? <Loader2 className="animate-spin" size={18} /> : <Save size={22} />}
+                </Button>
+             </div>
           </div>
-        </div>
+        </Card>
       </div>
     </div>
   );
