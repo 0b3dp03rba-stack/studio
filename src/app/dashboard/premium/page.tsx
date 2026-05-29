@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -7,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sparkles, CheckCircle2, ShieldCheck, Zap, Globe, Loader2, Save, ExternalLink, AlertCircle, ArrowRight, ReceiptText, Clock } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
-import { doc, updateDoc, serverTimestamp, collection, addDoc, query, where, limit, orderBy } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, collection, addDoc, query, where, limit } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '@/lib/utils-app';
 import { useRouter } from 'next/navigation';
@@ -25,18 +24,17 @@ export default function PremiumPage() {
   const globalStatsRef = useMemoFirebase(() => doc(db, 'appConfig', 'globalStats'), [db]);
   const { data: globalStats } = useDoc(globalStatsRef);
 
-  // Cek apakah user punya transaksi pending yang masih berlaku
+  // Perbaikan Kueri: Dibuat sesederhana mungkin agar tidak bentrok dengan Security Rules
   const pendingPaymentsQuery = useMemoFirebase(() => 
     user ? query(
       collection(db, 'payments'),
       where('userId', '==', user.uid),
       where('status', '==', 'pending'),
-      orderBy('createdAt', 'desc'),
       limit(1)
     ) : null,
     [db, user?.uid]
   );
-  const { data: pendingPayments } = useCollection(pendingPaymentsQuery);
+  const { data: pendingPayments, isLoading: isPaymentsLoading } = useCollection(pendingPaymentsQuery);
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [customDomain, setCustomDomain] = useState('');
@@ -53,7 +51,6 @@ export default function PremiumPage() {
   const handleCreateInvoice = async () => {
     if (!user || isProcessing) return;
 
-    // Jika ada invoice pending, arahkan ke sana saja daripada buat baru (Mencegah Spam)
     if (pendingPayments && pendingPayments.length > 0) {
       router.push(`/dashboard/premium/pay/${pendingPayments[0].depositId}`);
       return;
@@ -211,7 +208,7 @@ export default function PremiumPage() {
 
             <Button 
               onClick={handleCreateInvoice} 
-              disabled={isProcessing} 
+              disabled={isProcessing || isPaymentsLoading} 
               className="w-full h-16 neon-gradient text-background font-black rounded-3xl glow-primary shadow-2xl uppercase tracking-[0.2em] text-sm active:scale-95 transition-all"
             >
               {isProcessing ? <Loader2 className="animate-spin" /> : (pendingPayments && pendingPayments.length > 0 ? "LANJUTKAN PEMBAYARAN" : "BAYAR SEKARANG")}
