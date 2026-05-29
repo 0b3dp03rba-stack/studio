@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -53,7 +54,6 @@ export default function ProfilPage() {
   const [bio, setBio] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [socialLinks, setSocialLinks] = useState<any[]>([]);
-  const [customDomain, setCustomDomain] = useState('');
   
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -76,7 +76,6 @@ export default function ProfilPage() {
       setBio(profile.bio || '');
       setAvatarUrl(profile.avatarUrl || '');
       setSocialLinks(profile.socialLinks || []);
-      setCustomDomain(profile.customDomain || '');
       
       if (profile.username) {
         setPublicUrl(getPublicUrl(profile.username, profile.customDomain));
@@ -135,7 +134,6 @@ export default function ProfilPage() {
         bio,
         avatarUrl,
         socialLinks,
-        customDomain: customDomain.trim().toLowerCase(),
         updatedAt: serverTimestamp()
       });
       toast({ title: "Tersimpan", description: "Detail identitas diperbarui." });
@@ -160,8 +158,6 @@ export default function ProfilPage() {
     setSocialLinks(updated);
     setIsEditing(true);
   };
-
-  const isActuallyPremium = profile?.isPremium || profile?.role === 'Admin';
 
   return (
     <div className="space-y-8 animate-in pb-24">
@@ -211,20 +207,6 @@ export default function ProfilPage() {
                     </div>
                  </div>
                  
-                 {isActuallyPremium && (
-                   <div className="space-y-1.5 pt-2">
-                      <div className="flex items-center gap-2 mb-1">
-                        <label className="text-[10px] font-black text-primary uppercase ml-1">Custom Domain (Premium)</label>
-                        <ShieldCheck size={12} className="text-primary" />
-                      </div>
-                      <div className="relative">
-                        <Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-primary" size={14} />
-                        <Input value={customDomain} onChange={(e) => { setCustomDomain(e.target.value); setIsEditing(true); }} className="bg-white/5 h-14 border-none pl-12 font-bold text-sm rounded-2xl placeholder:text-white/10" placeholder="contoh: budi.com (opsional)" />
-                      </div>
-                      <p className="text-[8px] font-black uppercase text-white/30 tracking-widest ml-1 mt-1 leading-relaxed">Penting: Arahkan DNS domain Anda ke CNAME: cname.vercel-dns.com</p>
-                   </div>
-                 )}
-
                  <div className="space-y-1.5">
                     <label className="text-[10px] font-black text-muted-foreground uppercase ml-1">Bio Singkat</label>
                     <Textarea value={bio} onChange={(e) => { setBio(e.target.value); setIsEditing(true); }} className="bg-white/5 h-24 border-none text-xs font-medium rounded-2xl" placeholder="Ceritakan siapa Anda..." />

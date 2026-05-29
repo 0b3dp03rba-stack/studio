@@ -1,80 +1,101 @@
 
 "use client";
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Users, Eye, Link as LinkIcon, Globe, Clock, ArrowUpRight, Settings, ExternalLink } from 'lucide-react';
+import { Users, Eye, Link as LinkIcon, Globe, Clock, ArrowUpRight, Settings, ExternalLink, DollarSign, Save, Loader2 } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, limit, doc, collectionGroup } from 'firebase/firestore';
+import { collection, query, limit, doc, collectionGroup, updateDoc, serverTimestamp, where } from 'firebase/firestore';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 
 export default function AdminDashboard() {
   const db = useFirestore();
+  const { toast } = useToast();
+  const [isSavingPrice, setIsSavingPrice] = useState(false);
+  const [newPrice, setNewPrice] = useState<number | string>('');
 
   // 1. Data User Profiles
   const usersQuery = useMemoFirebase(() => query(collection(db, 'userProfiles'), limit(1000)), [db]);
   const { data: allUsers, isLoading: isUsersLoading } = useCollection(usersQuery);
 
-  // 2. Data Global Stats
+  // 2. Data Global Stats & Config
   const globalStatsRef = useMemoFirebase(() => doc(db, 'appConfig', 'globalStats'), [db]);
   const { data: globalStats } = useDoc(globalStatsRef);
 
-  // 3. Data Link Global
+  // 3. Data Transaksi (Success Only for Revenue)
+  const paymentsQuery = useMemoFirebase(() => query(collection(db, 'payments'), where('status', '==', 'success')), [db]);
+  const { data: successfulPayments } = useCollection(paymentsQuery);
+
+  // 4. Data Link Global
   const linksQuery = useMemoFirebase(() => query(collectionGroup(db, 'links'), limit(50)), [db]);
   const { data: rawLinks } = useCollection(linksQuery);
 
+  const totalRevenue = useMemo(() => {
+    return successfulPayments?.reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0;
+  }, [successfulPayments]);
+
+  const handleUpdatePrice = async () => {
+    if (!newPrice || isNaN(Number(newPrice))) return;
+    setIsSavingPrice(true);
+    try {
+      await updateDoc(globalStatsRef!, {
+        premiumPrice: Number(newPrice),
+        updatedAt: serverTimestamp()
+      });
+      toast({ title: "HARGA DIPERBARUI", description: `Harga premium sekarang Rp ${Number(newPrice).toLocaleString()}` });
+      setNewPrice('');
+    } catch (e) {
+      toast({ variant: "destructive", title: "GAGAL", description: "Gagal update harga config." });
+    } finally {
+      setIsSavingPrice(false);
+    }
+  };
+
   const recentLinks = useMemo(() => {
     if (!rawLinks) return [];
-    return [...rawLinks].sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)).slice(0, 10);
+    return [...rawLinks].sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)).slice(0, 5);
   }, [rawLinks]);
 
-  const totalUsers = allUsers?.length || 0;
-  const totalPublicViews = useMemo(() => {
-    return allUsers?.reduce((acc, user) => acc + (user.views || 0), 0) || 0;
-  }, [allUsers]);
-
   const stats = [
-    { label: 'Total Pengguna', value: totalUsers, icon: Users, color: 'text-primary' },
-    { label: 'Total Views Profil', value: totalPublicViews, icon: Eye, color: 'text-secondary' },
+    { label: 'Total Pengguna', value: allUsers?.length || 0, icon: Users, color: 'text-primary' },
+    { label: 'Total Revenue', value: `Rp ${totalRevenue.toLocaleString()}`, icon: DollarSign, color: 'text-green-500' },
+    { label: 'Total Penjualan', value: successfulPayments?.length || 0, icon: Clock, color: 'text-secondary' },
     { label: 'Views Homepage', value: globalStats?.landingPageViews || 0, icon: Globe, color: 'text-white' },
-    { label: 'Tautan Terdaftar', value: rawLinks?.length || 0, icon: LinkIcon, color: 'text-primary' },
-  ];
-
-  const adminMenus = [
-    { label: 'Manajemen User', icon: Users, href: '/admin/users', desc: 'Kelola basis data & hapus pengguna' },
   ];
 
   if (isUsersLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-4">
         <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-[10px] font-black uppercase tracking-widest text-primary/50">Sinkronisasi Admin...</p>
+        <p className="text-[10px] font-black uppercase tracking-widest text-primary/50">Membuka Vault Admin...</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-10 animate-in">
+    <div className="space-y-10 animate-in pb-20">
       <div className="space-y-2">
-        <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 rounded-full mb-2">
+        <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 rounded-full mb-2 border border-primary/20">
            <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-           <span className="text-[9px] font-black uppercase tracking-widest text-primary">Admin Secure</span>
+           <span className="text-[9px] font-black uppercase tracking-widest text-primary">Master Control active</span>
         </div>
-        <h1 className="text-4xl font-black tracking-tighter uppercase text-white">Linku Control Panel</h1>
-        <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.3em]">ADMINISTRATOR ACCESS ONLY</p>
+        <h1 className="text-4xl font-black tracking-tighter uppercase text-white">Linku Analytics</h1>
+        <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.3em]">Business & User Performance Metrics</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((item, i) => (
-          <Card key={i} className="glass-card border-none rounded-[2rem] p-6 shadow-2xl relative overflow-hidden group hover:scale-[1.02] transition-transform">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full -mr-12 -mt-12 blur-2xl group-hover:bg-primary/10 transition-colors" />
+          <Card key={i} className="glass-card border-none rounded-[2rem] p-6 shadow-2xl relative overflow-hidden group">
             <CardContent className="p-0 space-y-4 relative z-10 text-left">
               <div className={`w-10 h-10 rounded-2xl bg-white/5 flex items-center justify-center ${item.color}`}>
                 <item.icon size={20} />
               </div>
               <div>
-                <p className="text-3xl font-black tracking-tighter text-white">{item.value.toLocaleString()}</p>
+                <p className="text-2xl font-black tracking-tighter text-white">{item.value}</p>
                 <p className="text-[8px] font-black uppercase text-white/30 tracking-[0.2em] mt-1">{item.label}</p>
               </div>
             </CardContent>
@@ -83,66 +104,98 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="space-y-6">
-           <h3 className="font-black text-xs uppercase tracking-widest text-white/50 flex items-center gap-2 px-2">
-             <Settings size={16} className="text-primary" /> Management Console
-           </h3>
-           <div className="grid gap-3">
-              {adminMenus.map((menu, i) => (
-                <Link key={i} href={menu.href}>
-                  <Card className="glass-card border-none rounded-2xl p-4 hover:bg-white/[0.08] transition-all group shadow-xl text-left">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center group-hover:neon-gradient group-hover:text-background transition-all">
-                        <menu.icon size={20} />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-xs font-black uppercase tracking-tight text-white">{menu.label}</p>
-                        <p className="text-[8px] font-bold text-white/30 uppercase">{menu.desc}</p>
-                      </div>
-                      <ArrowUpRight size={14} className="text-white/20 group-hover:text-primary transition-colors" />
-                    </div>
-                  </Card>
-                </Link>
-              ))}
+        <div className="space-y-8">
+           <div className="space-y-6">
+              <h3 className="font-black text-xs uppercase tracking-widest text-white/50 flex items-center gap-2 px-2">
+                <DollarSign size={16} className="text-primary" /> Premium Settings
+              </h3>
+              <Card className="glass-card border-none rounded-[2rem] p-6 space-y-4">
+                <div className="space-y-1.5">
+                   <label className="text-[10px] font-black uppercase text-white/40 ml-1">Harga Premium Saat Ini</label>
+                   <p className="text-2xl font-black text-primary tracking-tighter">Rp {(globalStats?.premiumPrice || 10000).toLocaleString()}</p>
+                </div>
+                <div className="space-y-3 pt-2">
+                   <label className="text-[9px] font-black uppercase text-muted-foreground ml-1">Ubah Harga (IDR)</label>
+                   <div className="flex gap-2">
+                      <Input 
+                        type="number" 
+                        placeholder="Contoh: 15000" 
+                        value={newPrice}
+                        onChange={(e) => setNewPrice(e.target.value)}
+                        className="bg-white/5 border-none h-11 rounded-xl text-xs font-bold"
+                      />
+                      <Button onClick={handleUpdatePrice} disabled={isSavingPrice || !newPrice} className="h-11 w-11 rounded-xl neon-gradient text-background shrink-0">
+                         {isSavingPrice ? <Loader2 className="animate-spin" size={16} /> : <Save size={18} />}
+                      </Button>
+                   </div>
+                </div>
+              </Card>
+           </div>
+
+           <div className="space-y-6">
+              <h3 className="font-black text-xs uppercase tracking-widest text-white/50 flex items-center gap-2 px-2">
+                <Settings size={16} className="text-primary" /> Operations
+              </h3>
+              <Link href="/admin/users">
+                <Card className="glass-card border-none rounded-2xl p-5 hover:bg-white/[0.08] transition-all group shadow-xl flex items-center gap-4 text-left">
+                  <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center group-hover:neon-gradient group-hover:text-background transition-all shadow-lg">
+                    <Users size={24} />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs font-black uppercase tracking-tight text-white">Database Pengguna</p>
+                    <p className="text-[8px] font-bold text-white/30 uppercase">Kelola & Moderasi User</p>
+                  </div>
+                  <ArrowUpRight size={14} className="text-white/20 group-hover:text-primary transition-colors" />
+                </Card>
+              </Link>
            </div>
         </div>
 
         <div className="lg:col-span-2 space-y-6">
           <div className="flex items-center justify-between px-2">
              <h3 className="font-black text-xs uppercase tracking-widest text-white/50 flex items-center gap-2">
-               <Clock size={16} className="text-primary" /> Global Activity Feed
+               <Clock size={16} className="text-primary" /> Recent Platform Activity
              </h3>
-             <Badge variant="outline" className="text-[8px] font-black uppercase border-white/10 text-white/40">LINK TERBARU</Badge>
+             <Badge variant="outline" className="text-[8px] font-black uppercase border-white/10 text-white/40">LIVE FEED</Badge>
           </div>
           
           <div className="space-y-3">
             {recentLinks.map((link) => (
-              <Card key={link.id} className="glass-card border-none rounded-2xl p-4 flex items-center gap-4 group hover:bg-white/[0.05] transition-colors text-left">
-                 <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/5 shrink-0">
+              <Card key={link.id} className="glass-card border-none rounded-3xl p-4 flex items-center gap-4 group hover:bg-white/[0.05] transition-colors text-left">
+                 <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/5 shrink-0 shadow-inner">
                     {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <LinkIcon size={20} className="text-primary/50" />}
                  </div>
                  <div className="flex-1 min-w-0">
                     <h4 className="font-bold text-white text-sm truncate uppercase tracking-tight">{link.title}</h4>
                     <p className="text-[9px] text-white/20 truncate uppercase font-mono mt-0.5">{link.url}</p>
-                    {link.userId && (
-                      <Link 
-                        href={`/u/${link.userId}`} 
-                        target="_blank"
-                        className="inline-flex items-center gap-1 text-[8px] font-black text-primary uppercase mt-1.5 hover:underline"
-                      >
-                        <ExternalLink size={8} /> View Creator Profile
-                      </Link>
-                    )}
                  </div>
                  <div className="text-right shrink-0">
-                    <p className="text-[10px] font-black text-primary uppercase">{link.clicks || 0} CLICKS</p>
-                    <p className="text-[7px] text-white/10 uppercase mt-1">ID: {link.id.slice(0, 8)}</p>
+                    <p className="text-sm font-black text-primary tabular-nums">{link.clicks || 0}</p>
+                    <p className="text-[8px] font-black text-white/20 uppercase">CLICKS</p>
                  </div>
               </Card>
             ))}
             {recentLinks.length === 0 && (
-              <div className="py-20 text-center opacity-10 font-black uppercase text-[10px] tracking-widest border border-dashed border-white/10 rounded-[2rem]">Belum ada aktivitas global.</div>
+              <div className="py-20 text-center opacity-10 font-black uppercase text-[10px] tracking-widest border border-dashed border-white/10 rounded-[2rem]">Belum ada feed aktivitas.</div>
             )}
+          </div>
+
+          <div className="pt-6">
+            <h3 className="font-black text-xs uppercase tracking-widest text-white/50 mb-4 px-2">Pembelian Terbaru</h3>
+            <div className="space-y-3">
+               {successfulPayments?.slice(0, 3).map((pay) => (
+                 <div key={pay.id} className="p-4 bg-green-500/5 border border-green-500/10 rounded-2xl flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                       <div className="w-8 h-8 rounded-full bg-green-500/20 text-green-500 flex items-center justify-center"><DollarSign size={14} /></div>
+                       <div>
+                          <p className="text-[10px] font-black text-white uppercase tracking-tight">Upgrade Premium</p>
+                          <p className="text-[8px] text-white/40 uppercase">UID: {pay.userId.slice(0, 10)}...</p>
+                       </div>
+                    </div>
+                    <p className="text-xs font-black text-green-500">Rp {pay.amount?.toLocaleString()}</p>
+                 </div>
+               ))}
+            </div>
           </div>
         </div>
       </div>
