@@ -1,9 +1,10 @@
+
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Loader2, Clock, ShieldCheck, ChevronLeft, Download, Info, Copy } from 'lucide-react';
+import { RefreshCw, Loader2, Clock, ShieldCheck, ChevronLeft, Download, Info, Copy, QrCode, X } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, serverTimestamp, collection, query, where, limit } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
@@ -11,6 +12,7 @@ import { formatCurrency } from '@/lib/utils-app';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { differenceInSeconds, parseISO } from 'date-fns';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 export default function PaymentClient({ depositId }: { depositId: string }) {
   const { user } = useUser();
@@ -22,9 +24,9 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
   const [timeLeft, setTimeLeft] = useState<string>('');
   const [isExpired, setIsExpired] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Filter userId agar sesuai dengan Security Rules
   const paymentsQuery = useMemoFirebase(() => 
     user ? query(
       collection(db, 'payments'), 
@@ -38,7 +40,6 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
   const { data: payments, isLoading: isPaymentsLoading } = useCollection(paymentsQuery);
   const payment = payments?.[0];
 
-  // Hitung rincian nominal
   const breakdown = useMemo(() => {
     if (!payment) return null;
     const basePrice = payment.amount || 0;
@@ -48,7 +49,7 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
   }, [payment]);
 
   useEffect(() => {
-    if (!payment || isExpired) return;
+    if (!payment || isExpired || payment.status !== 'pending') return;
 
     const timer = setInterval(() => {
       const now = new Date();
@@ -163,10 +164,10 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
         link.href = canvas.toDataURL('image/jpeg', 0.9);
         link.click();
         
-        toast({ title: "Tersimpan", description: "QRIS berhasil diunduh ke perangkat Anda." });
+        toast({ title: "Tersalin ke Galeri", description: "QRIS berhasil diunduh." });
       }
     } catch (e) {
-      toast({ variant: "destructive", title: "Gagal Unduh", description: "Terjadi kesalahan saat memproses gambar." });
+      toast({ variant: "destructive", title: "Gagal Unduh", description: "Terjadi kesalahan sistem." });
     } finally {
       setIsDownloading(false);
     }
@@ -201,8 +202,8 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
              <Link href="/dashboard/premium"><ChevronLeft size={24} /></Link>
            </Button>
            <div className="text-right">
-              <p className="text-[8px] font-black text-primary uppercase tracking-[0.3em]">Identity Checkout</p>
-              <h2 className="text-lg font-black text-white uppercase tracking-tighter">ID: {depositId}</h2>
+              <p className="text-[8px] font-black text-primary uppercase tracking-[0.3em]">Billing Authentication</p>
+              <h2 className="text-lg font-black text-white uppercase tracking-tighter">INV-{depositId.slice(-6).toUpperCase()}</h2>
            </div>
         </div>
 
@@ -211,105 +212,108 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
           <CardContent className="p-8 space-y-8 text-center">
              
              <div className="space-y-6">
-                <div className="bg-white p-5 rounded-[2.5rem] shadow-2xl inline-block relative overflow-hidden group">
-                   <img src={payment.qrImage} alt="QRIS" className={`w-64 h-64 mx-auto transition-opacity duration-500 ${isExpired ? 'opacity-10 grayscale' : 'opacity-100'}`} />
-                   
-                   {checkingStatus && (
-                     <div className="absolute inset-0 z-20 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center gap-3">
-                       <Loader2 className="text-primary animate-spin" size={48} />
-                       <p className="text-[10px] font-black text-white uppercase tracking-widest">Memvalidasi...</p>
-                     </div>
-                   )}
-
-                   {isExpired && (
-                     <div className="absolute inset-0 z-30 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center p-8 gap-4">
-                        <Clock size={48} className="text-destructive animate-pulse" />
-                        <h3 className="text-xl font-black text-white uppercase tracking-tighter">Waktu Habis</h3>
-                        <p className="text-[9px] font-bold text-white/40 leading-relaxed uppercase">Invoice telah kedaluwarsa.</p>
-                     </div>
-                   )}
-                   
-                   {!isExpired && (
-                     <button 
-                       onClick={handleDownloadQRIS}
-                       disabled={isDownloading}
-                       className="absolute bottom-2 right-2 w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-background shadow-xl active:scale-95 transition-transform"
-                     >
-                       {isDownloading ? <Loader2 className="animate-spin" size={18} /> : <Download size={20} />}
-                     </button>
-                   )}
-                </div>
-
-                <div className="space-y-4">
-                   <div className="space-y-1">
-                      <div className="flex items-center justify-center gap-2 text-xs font-black text-white/70 uppercase">
-                        Selesaikan Dalam: <div className="p-1 bg-primary/20 text-primary rounded-md flex items-center gap-1.5 text-[9px] px-2 font-mono">{timeLeft}</div>
+                <div className="space-y-1">
+                   <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em]">Total Tagihan</p>
+                   <h3 className="text-5xl font-black text-primary tracking-tighter tabular-nums leading-none">
+                     {formatCurrency(payment.totalAmount)}
+                   </h3>
+                   <div className="flex items-center justify-center gap-2 mt-4">
+                      <div className="px-3 py-1 bg-white/5 rounded-full flex items-center gap-2">
+                        <div className={`w-1.5 h-1.5 rounded-full ${payment.status === 'success' ? 'bg-green-500' : 'bg-primary animate-pulse'}`} />
+                        <span className="text-[9px] font-black text-white/60 uppercase tracking-widest">{payment.status.toUpperCase()}</span>
                       </div>
-                      <h3 className="text-5xl font-black text-primary tracking-tighter tabular-nums leading-none">
-                        {formatCurrency(payment.totalAmount)}
-                      </h3>
-                      <button onClick={handleCopyAmount} className="inline-flex items-center gap-1.5 text-[8px] font-black text-white/20 uppercase tracking-widest mt-2 hover:text-primary transition-colors">
-                        <Copy size={10} /> Salin Nominal Persis
-                      </button>
-                   </div>
-
-                   {/* RINCIAN NOMINAL */}
-                   <div className="bg-white/5 rounded-2xl border border-white/5 p-4 space-y-3">
-                      <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider">
-                         <span className="text-white/40">Harga Lisensi</span>
-                         <span className="text-white">{formatCurrency(breakdown?.basePrice || 0)}</span>
-                      </div>
-                      <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider">
-                         <span className="text-white/40">Kode Unik Verifikasi</span>
-                         <span className="text-primary">+{breakdown?.uniqueCode}</span>
-                      </div>
-                      <div className="h-px bg-white/10 w-full" />
-                      <div className="flex justify-between items-center text-[11px] font-black uppercase tracking-widest">
-                         <span className="text-white">Total Tagihan</span>
-                         <span className="text-primary">{formatCurrency(breakdown?.total || 0)}</span>
+                      <div className="px-3 py-1 bg-white/5 rounded-full flex items-center gap-2">
+                        <Clock size={10} className="text-white/40" />
+                        <span className="text-[9px] font-black text-white/60 uppercase tracking-widest">{timeLeft}</span>
                       </div>
                    </div>
                 </div>
-             </div>
 
-             <div className="p-5 bg-primary/5 rounded-[2rem] border border-primary/20 text-left space-y-3 relative overflow-hidden">
-                <p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2">
-                   <ShieldCheck size={14} /> Security Protocol
-                </p>
-                <ol className="space-y-2 relative z-10">
-                   <li className="text-[9px] font-bold text-white/60 leading-relaxed uppercase flex gap-3">
-                      <span className="text-primary font-black">1.</span> Transfer <span className="text-white">Persis</span> hingga digit terakhir.
-                   </li>
-                   <li className="text-[9px] font-bold text-white/60 leading-relaxed uppercase flex gap-3">
-                      <span className="text-primary font-black">2.</span> Scan via <span className="text-white">M-Banking</span> atau <span className="text-white">E-Wallet</span>.
-                   </li>
-                   <li className="text-[9px] font-bold text-white/60 leading-relaxed uppercase flex gap-3">
-                      <span className="text-primary font-black">3.</span> Lisensi aktif otomatis <span className="text-white">tanpa konfirmasi</span> manual.
-                   </li>
-                </ol>
-             </div>
-
-             <div className="flex flex-col gap-3">
-                {!isExpired ? (
-                  <div className="grid grid-cols-1 gap-3">
-                    <Button onClick={() => verifyPayment()} disabled={checkingStatus} className="h-16 bg-primary/10 hover:bg-primary/20 text-primary font-black rounded-2xl border border-primary/20 uppercase text-[10px] tracking-[0.2em] shadow-xl active:scale-95 transition-all">
-                      {checkingStatus ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw size={18} className="mr-2" />} CEK STATUS TRANSAKSI
-                    </Button>
-                    <Button onClick={handleDownloadQRIS} variant="outline" className="h-12 border-white/10 bg-white/5 text-white/60 font-black rounded-xl uppercase text-[9px] tracking-widest">
-                       <Download size={14} className="mr-2" /> SIMPAN QRIS KE GALERI
-                    </Button>
+                <div className="bg-white/5 rounded-2xl border border-white/5 p-5 space-y-4 text-left">
+                  <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider">
+                     <span className="text-white/40">Harga Lisensi</span>
+                     <span className="text-white">{formatCurrency(breakdown?.basePrice || 0)}</span>
                   </div>
-                ) : (
-                  <Button asChild className="w-full h-16 bg-white/5 hover:bg-white/10 text-white font-black rounded-2xl border border-white/10 uppercase text-[10px] tracking-widest">
-                    <Link href="/dashboard/premium">KEMBALI KE DASHBOARD</Link>
+                  <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider">
+                     <span className="text-white/40">Kode Verifikasi</span>
+                     <span className="text-primary">+{breakdown?.uniqueCode}</span>
+                  </div>
+                  <div className="h-px bg-white/10 w-full" />
+                  <div className="flex justify-between items-center text-[11px] font-black uppercase tracking-widest">
+                     <span className="text-white">ID Transaksi</span>
+                     <span className="text-white/60">{depositId}</span>
+                  </div>
+                </div>
+             </div>
+
+             <div className="grid grid-cols-1 gap-4">
+                {payment.status === 'pending' && !isExpired && (
+                  <Button onClick={() => setIsQrModalOpen(true)} className="h-16 neon-gradient text-background font-black rounded-2xl glow-primary uppercase text-[11px] tracking-[0.2em] shadow-xl active:scale-95 transition-all">
+                    <QrCode size={20} className="mr-2" /> TAMPILKAN QRIS
                   </Button>
                 )}
                 
-                <p className="text-[8px] font-black uppercase text-white/10 tracking-[0.4em] pt-2">Powered by Linku Secure Engine</p>
+                <Button onClick={() => verifyPayment()} disabled={checkingStatus || isExpired} variant="outline" className="h-14 border-white/10 bg-white/5 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest">
+                  {checkingStatus ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw size={16} className="mr-2" />} CEK STATUS PEMBAYARAN
+                </Button>
+
+                {isExpired && (
+                  <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-2xl">
+                    <p className="text-[10px] font-black text-destructive uppercase tracking-widest">Waktu Pembayaran Telah Habis</p>
+                  </div>
+                )}
              </div>
+
+             <div className="p-5 bg-primary/5 rounded-[2rem] border border-primary/20 text-left space-y-3">
+                <p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2">
+                   <ShieldCheck size={14} /> Security Protocol
+                </p>
+                <ul className="space-y-2">
+                   <li className="text-[9px] font-bold text-white/40 uppercase flex gap-3">
+                      <span className="text-primary font-black">•</span> Jangan tutup halaman ini sampai pembayaran diverifikasi.
+                   </li>
+                   <li className="text-[9px] font-bold text-white/40 uppercase flex gap-3">
+                      <span className="text-primary font-black">•</span> Pastikan nominal yang Anda scan <span className="text-white">sama persis</span>.
+                   </li>
+                </ul>
+             </div>
+             
+             <p className="text-[8px] font-black uppercase text-white/10 tracking-[0.4em]">Powered by Linku Secure Engine</p>
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={isQrModalOpen} onOpenChange={setIsQrModalOpen}>
+        <DialogContent className="glass-card border-none rounded-[2.5rem] bg-black/95 backdrop-blur-3xl p-8 shadow-2xl max-w-[90%] sm:max-w-sm mx-auto overflow-hidden text-center border-white/10">
+          <div className="absolute top-0 left-0 w-full h-1.5 neon-gradient" />
+          <DialogHeader className="mb-6">
+            <DialogTitle className="text-xl font-black uppercase tracking-tighter text-white">QRIS PEMBAYARAN</DialogTitle>
+            <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.4em]">Scan atau Unduh QRIS di bawah ini</p>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            <div className="bg-white p-6 rounded-[2rem] shadow-2xl inline-block relative aspect-square w-full max-w-[280px]">
+               <img src={payment.qrImage} alt="QRIS" className="w-full h-full object-contain" />
+               {isExpired && (
+                 <div className="absolute inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center rounded-[2rem]">
+                    <p className="text-xs font-black text-white uppercase tracking-widest">KEDALUWARSA</p>
+                 </div>
+               )}
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex flex-col gap-3">
+                 <Button onClick={handleDownloadQRIS} disabled={isDownloading} className="h-14 bg-white text-background hover:bg-white/90 font-black rounded-2xl uppercase text-[10px] tracking-widest shadow-xl">
+                   {isDownloading ? <Loader2 className="animate-spin mr-2" /> : <Download size={18} className="mr-2" />} SIMPAN KE GALERI
+                 </Button>
+                 <Button variant="ghost" onClick={() => setIsQrModalOpen(false)} className="h-12 text-white/40 hover:text-white font-black uppercase text-[10px] tracking-widest">
+                    <X size={16} className="mr-2" /> TUTUP POPUP
+                 </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

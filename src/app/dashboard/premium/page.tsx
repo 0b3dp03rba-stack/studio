@@ -1,15 +1,17 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Sparkles, CheckCircle2, ShieldCheck, Zap, Globe, Loader2, Save, ExternalLink, AlertCircle } from 'lucide-react';
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, updateDoc, serverTimestamp, collection, addDoc } from 'firebase/firestore';
+import { Sparkles, CheckCircle2, ShieldCheck, Zap, Globe, Loader2, Save, ExternalLink, AlertCircle, ArrowRight, ReceiptText, Clock } from 'lucide-react';
+import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
+import { doc, updateDoc, serverTimestamp, collection, addDoc, query, where, limit, orderBy } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '@/lib/utils-app';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export default function PremiumPage() {
   const { user } = useUser();
@@ -23,6 +25,19 @@ export default function PremiumPage() {
   const globalStatsRef = useMemoFirebase(() => doc(db, 'appConfig', 'globalStats'), [db]);
   const { data: globalStats } = useDoc(globalStatsRef);
 
+  // Cek apakah user punya transaksi pending yang masih berlaku
+  const pendingPaymentsQuery = useMemoFirebase(() => 
+    user ? query(
+      collection(db, 'payments'),
+      where('userId', '==', user.uid),
+      where('status', '==', 'pending'),
+      orderBy('createdAt', 'desc'),
+      limit(1)
+    ) : null,
+    [db, user?.uid]
+  );
+  const { data: pendingPayments } = useCollection(pendingPaymentsQuery);
+
   const [isProcessing, setIsProcessing] = useState(false);
   const [customDomain, setCustomDomain] = useState('');
   const [isSavingDomain, setIsSavingDomain] = useState(false);
@@ -35,10 +50,16 @@ export default function PremiumPage() {
     }
   }, [profile]);
 
-  const handleUpgradeClick = async () => {
+  const handleCreateInvoice = async () => {
     if (!user || isProcessing) return;
-    setIsProcessing(true);
 
+    // Jika ada invoice pending, arahkan ke sana saja daripada buat baru (Mencegah Spam)
+    if (pendingPayments && pendingPayments.length > 0) {
+      router.push(`/dashboard/premium/pay/${pendingPayments[0].depositId}`);
+      return;
+    }
+
+    setIsProcessing(true);
     try {
       const res = await fetch('/api/deposit', {
         method: 'POST',
@@ -51,7 +72,6 @@ export default function PremiumPage() {
       if (result.success && result.data) {
         const data = result.data;
         
-        // Simpan ke Firestore sebagai draft transaksi
         await addDoc(collection(db, 'payments'), {
           userId: user.uid,
           depositId: data.depositId,
@@ -63,10 +83,9 @@ export default function PremiumPage() {
           createdAt: serverTimestamp(),
         });
 
-        // Arahkan ke halaman pembayaran khusus
         router.push(`/dashboard/premium/pay/${data.depositId}`);
       } else {
-        toast({ variant: "destructive", title: "Gagal", description: result.error || "Gagal membuat QRIS." });
+        toast({ variant: "destructive", title: "Gagal", description: result.error || "Gagal membuat invoice." });
       }
     } catch (e) {
       toast({ variant: "destructive", title: "Error", description: "Terjadi kesalahan sistem." });
@@ -136,30 +155,6 @@ export default function PremiumPage() {
                       </Button>
                    </div>
                 </div>
-                
-                {profile?.customDomain && (
-                  <div className="pt-2 flex items-center justify-between px-1">
-                     <div className="text-left">
-                        <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mb-1">Active Pointing</p>
-                        <p className="text-[11px] font-black text-primary uppercase flex items-center gap-1.5">
-                           <Globe size={10} /> {profile.customDomain}
-                        </p>
-                     </div>
-                     <Button variant="ghost" asChild className="h-10 px-4 text-[9px] font-black uppercase bg-white/5 hover:bg-white/10 text-white rounded-xl">
-                        <a href={`https://${profile.customDomain}`} target="_blank" rel="noreferrer">Kunjungi <ExternalLink size={10} className="ml-1.5" /></a>
-                     </Button>
-                  </div>
-                )}
-             </div>
-          </Card>
-
-          <Card className="glass-card border-none rounded-[2.5rem] p-8 text-center space-y-4">
-             <div className="p-6 bg-white/[0.02] rounded-3xl border border-white/5 space-y-2">
-                <CheckCircle2 size={32} className="text-green-500 mx-auto" />
-                <p className="text-sm font-bold text-white uppercase tracking-tight">Lisensi Seumur Hidup Aktif</p>
-                <p className="text-[10px] font-black text-white/30 uppercase tracking-widest leading-relaxed mt-2 px-4">
-                  Terima kasih telah mendukung Linku Engine. Semua fitur premium dan visual neon mewah kini milik Anda sepenuhnya.
-                </p>
              </div>
           </Card>
         </div>
@@ -174,41 +169,73 @@ export default function PremiumPage() {
         <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/70">Single Payment. Eternal Legacy.</p>
       </div>
 
-      <Card className="glass-card border-none rounded-[2.5rem] overflow-hidden relative shadow-2xl">
-        <div className="absolute top-0 left-0 w-full h-1.5 neon-gradient" />
-        <CardContent className="p-8 space-y-8 text-center">
-          <div className="space-y-2">
-             <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em]">Investasi Identitas</p>
-             <h2 className="text-6xl font-black text-white tracking-tighter">{formatCurrency(PREMIUM_PRICE)}</h2>
-             <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 border border-primary/20 rounded-full mt-3">
-                <Sparkles size={12} className="text-primary" />
-                <span className="text-[9px] font-black uppercase tracking-widest text-primary">Limited Lifetime Access</span>
-             </div>
-          </div>
+      <div className="grid gap-6">
+        <Card className="glass-card border-none rounded-[2.5rem] overflow-hidden relative shadow-2xl">
+          <div className="absolute top-0 left-0 w-full h-1.5 neon-gradient" />
+          <CardContent className="p-8 space-y-8">
+            <div className="text-center space-y-2">
+               <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em]">Investasi Identitas</p>
+               <h2 className="text-6xl font-black text-white tracking-tighter">{formatCurrency(PREMIUM_PRICE)}</h2>
+               <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 border border-primary/20 rounded-full mt-3">
+                  <Sparkles size={12} className="text-primary" />
+                  <span className="text-[9px] font-black uppercase tracking-widest text-primary">Limited Lifetime Access</span>
+               </div>
+            </div>
 
-          <div className="space-y-4 pt-6 text-left border-t border-white/5">
-            {[
-              { t: 'Custom Domain', d: 'Hubungkan domain pribadi Anda (budi.com).', i: Globe },
-              { t: 'Branding Bersih', d: 'Hapus watermark "Powering with Linku".', i: ShieldCheck },
-              { t: 'Prioritas AI', d: 'Akses generator visual & konten tercanggih.', i: Zap },
-            ].map((f, i) => (
-              <div key={i} className="flex gap-4 items-center p-4 bg-white/[0.02] rounded-2xl border border-white/5 transition-colors hover:bg-white/[0.05]">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0 shadow-lg"><f.i size={20} /></div>
-                <div>
-                  <h3 className="text-xs font-black text-white uppercase tracking-tight">{f.t}</h3>
-                  <p className="text-[10px] font-medium text-white/40 mt-0.5 leading-relaxed">{f.d}</p>
+            <div className="space-y-4 pt-6 border-t border-white/5">
+               <p className="text-[10px] font-black uppercase text-white/40 tracking-widest ml-1">Ringkasan Fitur:</p>
+              {[
+                { t: 'Custom Domain', d: 'Gunakan domain pribadi Anda sendiri.', i: Globe },
+                { t: 'Branding Bersih', d: 'Hapus watermark Linku seumur hidup.', i: ShieldCheck },
+                { t: 'Prioritas AI', d: 'Akses generator visual paling cerdas.', i: Zap },
+              ].map((f, i) => (
+                <div key={i} className="flex gap-4 items-center p-4 bg-white/[0.02] rounded-2xl border border-white/5">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0"><f.i size={20} /></div>
+                  <div>
+                    <h3 className="text-xs font-black text-white uppercase">{f.t}</h3>
+                    <p className="text-[10px] text-white/40">{f.d}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="p-5 bg-white/5 rounded-3xl border border-white/10 space-y-3">
+               <div className="flex items-center gap-2 text-primary">
+                 <Clock size={16} />
+                 <p className="text-[10px] font-black uppercase tracking-widest">Informasi Pembayaran:</p>
+               </div>
+               <p className="text-[9px] font-bold text-white/40 leading-relaxed uppercase">
+                 Pembayaran diproses secara otomatis via QRIS. Lisensi akan aktif dalam hitungan detik setelah dana diterima sistem.
+               </p>
+            </div>
+
+            <Button 
+              onClick={handleCreateInvoice} 
+              disabled={isProcessing} 
+              className="w-full h-16 neon-gradient text-background font-black rounded-3xl glow-primary shadow-2xl uppercase tracking-[0.2em] text-sm active:scale-95 transition-all"
+            >
+              {isProcessing ? <Loader2 className="animate-spin" /> : (pendingPayments && pendingPayments.length > 0 ? "LANJUTKAN PEMBAYARAN" : "BAYAR SEKARANG")}
+            </Button>
+            
+            <p className="text-[8px] font-black uppercase text-white/10 text-center tracking-widest">Powered by Rams API Secure Payment</p>
+          </CardContent>
+        </Card>
+
+        {pendingPayments && pendingPayments.length > 0 && (
+          <Link href={`/dashboard/premium/pay/${pendingPayments[0].depositId}`}>
+            <Card className="bg-primary/5 border border-primary/20 rounded-2xl p-4 flex items-center justify-between group active:scale-95 transition-all">
+              <div className="flex items-center gap-3">
+                <ReceiptText className="text-primary" size={20} />
+                <div className="text-left">
+                  <p className="text-[10px] font-black text-white uppercase">Invoice Tertunda</p>
+                  <p className="text-[8px] font-bold text-primary uppercase">ID: {pendingPayments[0].depositId}</p>
                 </div>
               </div>
-            ))}
-          </div>
-
-          <Button onClick={handleUpgradeClick} disabled={isProcessing} className="w-full h-16 neon-gradient text-background font-black rounded-3xl glow-primary shadow-2xl uppercase tracking-[0.2em] text-sm active:scale-95 transition-all">
-            {isProcessing ? <Loader2 className="animate-spin" /> : "AKTIFKAN SEKARANG"}
-          </Button>
-          
-          <p className="text-[8px] font-black uppercase text-white/10 tracking-widest">Secure transaction powered by Rams API</p>
-        </CardContent>
-      </Card>
+              <ArrowRight size={16} className="text-primary group-hover:translate-x-1 transition-transform" />
+            </Card>
+          </Link>
+        )}
+      </div>
     </div>
   );
 }
