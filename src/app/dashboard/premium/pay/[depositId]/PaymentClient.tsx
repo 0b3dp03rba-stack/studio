@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Loader2, ArrowLeft, Clock, ShieldCheck, CheckCircle2, ChevronLeft } from 'lucide-react';
+import { RefreshCw, Loader2, Clock, ShieldCheck, ChevronLeft, Download } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, serverTimestamp, collection, query, where, limit } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
@@ -21,6 +21,7 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
   const [checkingStatus, setCheckingStatus] = useState(false);
   const [timeLeft, setTimeLeft] = useState<string>('');
   const [isExpired, setIsExpired] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
   // Cari data transaksi di Firestore berdasarkan depositId
@@ -104,6 +105,60 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
     }
   };
 
+  const handleDownloadQRIS = async () => {
+    if (!payment?.qrImage) return;
+    setIsDownloading(true);
+
+    try {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      
+      img.crossOrigin = "anonymous";
+      img.src = payment.qrImage;
+
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+      });
+
+      // Ukuran Canvas (QRIS asli + Padding Watermark)
+      canvas.width = img.width;
+      canvas.height = img.height + 80;
+
+      if (ctx) {
+        // Background Putih
+        ctx.fillStyle = "#FFFFFF";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Gambar QRIS
+        ctx.drawImage(img, 0, 0);
+
+        // Tambah Watermark Linku
+        ctx.fillStyle = "#ff0000"; // Primary Linku
+        ctx.font = "bold 24px Inter, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("LINKU ENGINE - PREMIUM HUB", canvas.width / 2, canvas.height - 45);
+        
+        ctx.fillStyle = "#666666";
+        ctx.font = "14px Inter, sans-serif";
+        ctx.fillText(`ID Transaksi: ${depositId}`, canvas.width / 2, canvas.height - 20);
+
+        // Trigger Download
+        const link = document.createElement('a');
+        link.download = `QRIS-LINKU-${depositId}.jpg`;
+        link.href = canvas.toDataURL('image/jpeg', 0.9);
+        link.click();
+        
+        toast({ title: "Tersimpan", description: "QRIS berhasil diunduh ke perangkat Anda." });
+      }
+    } catch (e) {
+      toast({ variant: "destructive", title: "Gagal Unduh", description: "Terjadi kesalahan saat memproses gambar." });
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   if (isPaymentsLoading) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
@@ -156,8 +211,18 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
                      <div className="absolute inset-0 z-30 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center p-8 gap-4">
                         <Clock size={48} className="text-destructive animate-pulse" />
                         <h3 className="text-xl font-black text-white uppercase tracking-tighter">Waktu Habis</h3>
-                        <p className="text-[9px] font-bold text-white/40 leading-relaxed uppercase">Invoice telah kedaluwarsa. Silakan buat permintaan upgrade baru di dashboard.</p>
+                        <p className="text-[9px] font-bold text-white/40 leading-relaxed uppercase">Invoice telah kedaluwarsa.</p>
                      </div>
+                   )}
+                   
+                   {!isExpired && (
+                     <button 
+                       onClick={handleDownloadQRIS}
+                       disabled={isDownloading}
+                       className="absolute bottom-2 right-2 w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-background shadow-xl active:scale-95 transition-transform"
+                     >
+                       {isDownloading ? <Loader2 className="animate-spin" size={18} /> : <Download size={20} />}
+                     </button>
                    )}
                 </div>
 
@@ -168,45 +233,43 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
                    <h3 className="text-5xl font-black text-primary tracking-tighter tabular-nums leading-none">
                      {formatCurrency(payment.totalAmount)}
                    </h3>
-                   <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/5 border border-white/10 rounded-full mt-2">
-                      <div className="w-1 h-1 rounded-full bg-primary animate-pulse" />
-                      <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white/40">Status: Pending Verification</span>
-                   </div>
                 </div>
              </div>
 
              <div className="p-5 bg-primary/5 rounded-[2rem] border border-primary/20 text-left space-y-3 relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-4 opacity-5">
-                   <ShieldCheck size={40} className="text-primary" />
-                </div>
                 <p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2">
                    <ShieldCheck size={14} /> Instruksi Penting
                 </p>
                 <ol className="space-y-2 relative z-10">
                    <li className="text-[9px] font-bold text-white/60 leading-relaxed uppercase flex gap-3">
-                      <span className="text-primary">1.</span> Pastikan nominal transfer <span className="text-white">Eksak</span> hingga digit terakhir.
+                      <span className="text-primary">1.</span> Pastikan nominal transfer <span className="text-white">Eksak</span>.
                    </li>
                    <li className="text-[9px] font-bold text-white/60 leading-relaxed uppercase flex gap-3">
-                      <span className="text-primary">2.</span> Sistem akan otomatis memproses pembayaran dalam <span className="text-white">8-60 detik</span>.
+                      <span className="text-primary">2.</span> Sistem otomatis memproses dalam <span className="text-white">8-60 detik</span>.
                    </li>
                    <li className="text-[9px] font-bold text-white/60 leading-relaxed uppercase flex gap-3">
-                      <span className="text-primary">3.</span> Jangan tutup halaman ini sampai status berubah menjadi sukses.
+                      <span className="text-primary">3.</span> Simpan gambar QRIS jika ingin membayar lewat galeri.
                    </li>
                 </ol>
              </div>
 
              <div className="flex flex-col gap-3">
                 {!isExpired ? (
-                  <Button onClick={() => verifyPayment()} disabled={checkingStatus} className="w-full h-16 bg-primary/10 hover:bg-primary/20 text-primary font-black rounded-2xl border border-primary/20 uppercase text-[10px] tracking-[0.2em] shadow-xl active:scale-95 transition-all">
-                    {checkingStatus ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw size={18} className="mr-2" />} CEK PEMBAYARAN MANUAL
-                  </Button>
+                  <div className="grid grid-cols-1 gap-3">
+                    <Button onClick={() => verifyPayment()} disabled={checkingStatus} className="h-16 bg-primary/10 hover:bg-primary/20 text-primary font-black rounded-2xl border border-primary/20 uppercase text-[10px] tracking-[0.2em] shadow-xl active:scale-95 transition-all">
+                      {checkingStatus ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw size={18} className="mr-2" />} CEK PEMBAYARAN MANUAL
+                    </Button>
+                    <Button onClick={handleDownloadQRIS} variant="outline" className="h-12 border-white/10 bg-white/5 text-white/60 font-black rounded-xl uppercase text-[9px] tracking-widest">
+                       <Download size={14} className="mr-2" /> SIMPAN QRIS KE GALERI
+                    </Button>
+                  </div>
                 ) : (
                   <Button asChild className="w-full h-16 bg-white/5 hover:bg-white/10 text-white font-black rounded-2xl border border-white/10 uppercase text-[10px] tracking-widest">
                     <Link href="/dashboard/premium">KEMBALI KE DASHBOARD</Link>
                   </Button>
                 )}
                 
-                <p className="text-[8px] font-black uppercase text-white/10 tracking-[0.4em] pt-2">Powered by Linku Secure Engine & Rams API</p>
+                <p className="text-[8px] font-black uppercase text-white/10 tracking-[0.4em] pt-2">Powered by Linku Secure Engine</p>
              </div>
           </CardContent>
         </Card>
