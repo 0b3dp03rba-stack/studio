@@ -48,63 +48,65 @@ export default function Header() {
   const isAdminPage = pathname.startsWith('/admin');
 
   return (
-    <header className="sticky top-0 w-full h-24 bg-black/95 backdrop-blur-3xl px-6 flex items-center justify-between z-40 border-b border-white/5 shadow-2xl">
-      <div className="flex items-center gap-5">
-        <Link href="/dashboard" className="flex items-center gap-5 group">
-          <div className="w-14 h-14 bg-black rounded-2xl flex items-center justify-center border border-white/10 shadow-xl relative overflow-hidden transition-transform group-active:scale-95">
-              <div className="relative flex items-center justify-center">
-                <Link2 size={32} className={isAdminPage ? "text-primary" : "text-primary"} />
-                <div className="absolute -bottom-1 -right-1 bg-black rounded-sm flex items-center justify-center p-0.5">
-                  <Check size={12} className="text-primary" strokeWidth={5} />
+    <header className="fixed top-0 left-0 right-0 h-24 bg-black/95 backdrop-blur-3xl px-6 flex items-center justify-between z-[100] border-b border-white/5 shadow-2xl">
+      <div className="max-w-4xl mx-auto w-full flex items-center justify-between">
+        <div className="flex items-center gap-5">
+          <Link href="/dashboard" className="flex items-center gap-5 group">
+            <div className="w-14 h-14 bg-black rounded-2xl flex items-center justify-center border border-white/10 shadow-xl relative overflow-hidden transition-transform group-active:scale-95">
+                <div className="relative flex items-center justify-center">
+                  <Link2 size={32} className="text-primary" />
+                  <div className="absolute -bottom-1 -right-1 bg-black rounded-sm flex items-center justify-center p-0.5">
+                    <Check size={12} className="text-primary" strokeWidth={5} />
+                  </div>
                 </div>
-              </div>
-          </div>
-          <div className="flex flex-col">
-            <span className="font-black text-3xl tracking-tighter text-white leading-none">
-              Linku
-            </span>
-            <span className="text-[9px] font-black uppercase tracking-[0.4em] text-primary/70 leading-none mt-1.5 animate-pulse">
-              {isAdminPage ? 'MASTER PANEL' : (isAdmin ? 'ADMIN CONTROL' : 'PREMIUM HUB')}
-            </span>
-          </div>
-        </Link>
-      </div>
-      
-      <div className="flex items-center gap-2">
-        {isAdmin && !isAdminPage && (
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            asChild
-            className="h-12 w-12 rounded-2xl text-white/40 hover:text-primary hover:bg-primary/10 transition-all"
-          >
-            <Link href="/admin">
-              <ShieldAlert size={22} />
-            </Link>
-          </Button>
-        )}
-
-        {isAdminPage && (
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            asChild
-            className="h-12 w-12 rounded-2xl text-white/40 hover:text-primary hover:bg-primary/10 transition-all"
-          >
-            <Link href="/dashboard">
-              <LayoutDashboard size={22} />
-            </Link>
-          </Button>
-        )}
+            </div>
+            <div className="flex flex-col">
+              <span className="font-black text-3xl tracking-tighter text-white leading-none">
+                Linku
+              </span>
+              <span className="text-[9px] font-black uppercase tracking-[0.4em] text-primary/70 leading-none mt-1.5 animate-pulse">
+                {isAdminPage ? 'MASTER PANEL' : (isAdmin ? 'ADMIN CONTROL' : 'PREMIUM HUB')}
+              </span>
+            </div>
+          </Link>
+        </div>
         
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={handleLogout}
-          className="text-white/40 hover:text-destructive transition-all rounded-2xl hover:bg-white/5 h-12 w-12"
-        >
-          <LogOut size={22} />
-        </Button>
+        <div className="flex items-center gap-2">
+          {isAdmin && !isAdminPage && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              asChild
+              className="h-12 w-12 rounded-2xl text-white/40 hover:text-primary hover:bg-primary/10 transition-all"
+            >
+              <Link href="/admin">
+                <ShieldAlert size={22} />
+              </Link>
+            </Button>
+          )}
+
+          {isAdminPage && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              asChild
+              className="h-12 w-12 rounded-2xl text-white/40 hover:text-primary hover:bg-primary/10 transition-all"
+            >
+              <Link href="/dashboard">
+                <LayoutDashboard size={22} />
+              </Link>
+            </Button>
+          )}
+          
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={handleLogout}
+            className="text-white/40 hover:text-destructive transition-all rounded-2xl hover:bg-white/5 h-12 w-12"
+          >
+            <LogOut size={22} />
+          </Button>
+        </div>
       </div>
     </header>
   );

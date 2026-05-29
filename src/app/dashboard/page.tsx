@@ -1,16 +1,16 @@
-
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { MousePointer2, Eye, Star, TrendingUp, Sparkles, LayoutGrid, ArrowRight, Link as LinkIcon, Loader2, X } from 'lucide-react';
+import { MousePointer2, Eye, Star, TrendingUp, Sparkles, LayoutGrid, ArrowRight, Link as LinkIcon, Loader2, X, ShieldAlert, ArrowUpRight } from 'lucide-react';
 import { useUser, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, setDoc, doc, serverTimestamp, onSnapshot, Unsubscribe } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Bar, BarChart, XAxis, ResponsiveContainer, Cell, Tooltip } from 'recharts';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import Link from 'next/link';
 
 export default function DashboardPage() {
   const { user } = useUser();
@@ -46,7 +46,6 @@ export default function DashboardPage() {
 
     const groupUnsubs: Record<string, Unsubscribe> = {};
 
-    // 1. Ambil Link Mandiri
     const unsubStandalone = onSnapshot(collection(db, 'userProfiles', user.uid, 'links'), (snap) => {
       const standaloneData: Record<string, any> = {};
       snap.docs.forEach(d => {
@@ -54,24 +53,19 @@ export default function DashboardPage() {
       });
       setLinksMap(prev => {
         const cleaned = { ...prev };
-        // Hapus data standalone lama agar tidak duplikat saat refresh
         Object.keys(cleaned).forEach(key => { if(cleaned[key].isStandalone) delete cleaned[key]; });
         return { ...cleaned, ...standaloneData };
       });
     });
 
-    // 2. Ambil Link dalam Group (Folder)
     const unsubGroupsMaster = onSnapshot(collection(db, 'userProfiles', user.uid, 'linkGroups'), (groupsSnap) => {
       const currentGroupIds = groupsSnap.docs.map(d => d.id);
-      
-      // Bersihkan unsub yang sudah tidak ada groupnya
       Object.keys(groupUnsubs).forEach(gid => {
         if (!currentGroupIds.includes(gid)) {
           groupUnsubs[gid]();
           delete groupUnsubs[gid];
         }
       });
-
       groupsSnap.docs.forEach(groupDoc => {
         if (!groupUnsubs[groupDoc.id]) {
           groupUnsubs[groupDoc.id] = onSnapshot(collection(db, 'userProfiles', user!.uid, 'linkGroups', groupDoc.id, 'links'), (linkSnap) => {
@@ -81,7 +75,6 @@ export default function DashboardPage() {
             });
             setLinksMap(prev => {
               const cleaned = { ...prev };
-              // Hapus data lama dari group ini
               Object.keys(cleaned).forEach(key => { if(cleaned[key].groupId === groupDoc.id) delete cleaned[key]; });
               return { ...cleaned, ...groupedData };
             });
@@ -134,14 +127,35 @@ export default function DashboardPage() {
     }
   };
 
-  if (!mounted) return <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4"><Loader2 className="animate-spin text-primary" size={32} /></div>;
+  if (!mounted) return <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 pt-24"><Loader2 className="animate-spin text-primary" size={32} /></div>;
+
+  const isAdmin = profile?.role === 'Admin' || user?.email === 'creeppermoment@gmail.com';
 
   return (
-    <div className="space-y-8 animate-in pb-12">
+    <div className="space-y-8 animate-in pb-12 pt-24">
       <div className="space-y-1">
         <h1 className="text-4xl font-black tracking-tighter text-white uppercase">Overview</h1>
         <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/70">Real-time Performance Hub</p>
       </div>
+
+      {isAdmin && (
+        <Link href="/admin">
+          <Card className="neon-gradient border-none rounded-[2rem] p-6 shadow-2xl relative overflow-hidden group active:scale-95 transition-all mb-4">
+             <div className="relative z-10 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                   <div className="w-14 h-14 rounded-2xl bg-background flex items-center justify-center text-primary shadow-xl">
+                      <ShieldAlert size={32} />
+                   </div>
+                   <div>
+                      <p className="text-lg font-black text-background uppercase leading-none">Admin Control</p>
+                      <p className="text-[9px] font-black text-background/60 uppercase tracking-widest mt-1">Kelola Platform & Revenue</p>
+                   </div>
+                </div>
+                <ArrowUpRight className="text-background" size={24} />
+             </div>
+          </Card>
+        </Link>
+      )}
 
       <div className="grid grid-cols-2 gap-4">
         <Card className="glass-card border-none rounded-[2rem] p-5 shadow-2xl relative overflow-hidden group">
