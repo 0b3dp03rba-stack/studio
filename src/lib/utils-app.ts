@@ -35,13 +35,14 @@ export function getSmartSocialUrl(platform: string, handle: string): string {
 
 /**
  * Membangun URL publik pengguna secara REAL SUBDOMAIN atau CUSTOM DOMAIN.
+ * PRIORITAS: Custom Domain > Subdomain.
  */
 export function getPublicUrl(username: string, customDomain?: string): string {
   if (typeof window === 'undefined') return '';
   
-  // Jika user punya domain kustom dan premium, gunakan itu!
-  if (customDomain) {
-    return `https://${customDomain}`;
+  // Prioritas 1: Jika user punya domain kustom, gunakan itu!
+  if (customDomain && customDomain.trim()) {
+    return `https://${customDomain.trim().toLowerCase()}`;
   }
 
   const hostname = window.location.hostname;
@@ -53,13 +54,13 @@ export function getPublicUrl(username: string, customDomain?: string): string {
   const isProduction = hostname.includes('linku.biz.id');
   const isLocalhost = hostname.includes('localhost');
 
-  // Selalu utamakan format SUBDOMAIN jika di domain kita
+  // Prioritas 2: Selalu gunakan format SUBDOMAIN jika di domain kita
   if (isProduction || isLocalhost) {
     const domain = isProduction ? 'linku.biz.id' : 'localhost';
     return `${protocol}//${cleanUsername}.${domain}${port}`;
   }
 
-  // Fallback untuk Vercel Preview (Path-based)
+  // Fallback: Path-based
   return `${protocol}//${hostname}${port}/${cleanUsername}`;
 }
 

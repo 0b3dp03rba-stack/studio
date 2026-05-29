@@ -1,9 +1,8 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { User, LogOut, Mail, Edit3, Upload, AtSign, Loader2, Share2, Plus, Trash2, Instagram, Youtube, Facebook, MessageCircle, Link2, Globe, Copy, Sparkles, AlertCircle } from 'lucide-react';
+import { User, LogOut, Mail, Edit3, Upload, AtSign, Loader2, Share2, Plus, Trash2, Instagram, Youtube, Facebook, MessageCircle, Link2, Globe, Copy, Sparkles, AlertCircle, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -54,6 +53,7 @@ export default function ProfilPage() {
   const [bio, setBio] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [socialLinks, setSocialLinks] = useState<any[]>([]);
+  const [customDomain, setCustomDomain] = useState('');
   
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -67,7 +67,6 @@ export default function ProfilPage() {
     url: ''
   });
 
-  // Ambil URL Publik secara dinamis berdasarkan domain tempat app berjalan
   const [publicUrl, setPublicUrl] = useState('');
 
   useEffect(() => {
@@ -77,9 +76,10 @@ export default function ProfilPage() {
       setBio(profile.bio || '');
       setAvatarUrl(profile.avatarUrl || '');
       setSocialLinks(profile.socialLinks || []);
+      setCustomDomain(profile.customDomain || '');
       
       if (profile.username) {
-        setPublicUrl(getPublicUrl(profile.username));
+        setPublicUrl(getPublicUrl(profile.username, profile.customDomain));
       }
     }
   }, [profile]);
@@ -128,12 +128,14 @@ export default function ProfilPage() {
         if (profile?.username) await deleteDoc(doc(db, 'usernames', profile.username));
         await setDoc(usernameRef, { userId: user.uid, createdAt: serverTimestamp() });
       }
+
       await updateDoc(profileRef, {
         displayName,
         username: cleanUsername,
         bio,
         avatarUrl,
         socialLinks,
+        customDomain: customDomain.trim().toLowerCase(),
         updatedAt: serverTimestamp()
       });
       toast({ title: "Tersimpan", description: "Detail identitas diperbarui." });
@@ -159,18 +161,20 @@ export default function ProfilPage() {
     setIsEditing(true);
   };
 
+  const isActuallyPremium = profile?.isPremium || profile?.role === 'Admin';
+
   return (
     <div className="space-y-8 animate-in pb-24">
       <div className="space-y-1">
         <h1 className="text-4xl font-black tracking-tighter text-white uppercase">Profile Set</h1>
-        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/70">Identitas Publik Anda</p>
+        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/70">Identitas Publik Anda {profile?.role === 'Admin' && <span className="text-white opacity-50">(ADMIN)</span>}</p>
       </div>
 
       <div className="space-y-6">
         <Card className="glass-card border-none rounded-[2.5rem] p-6 shadow-2xl space-y-4">
            <div className="flex items-center justify-between">
               <div className="min-w-0 flex-1">
-                 <p className="text-[9px] font-black uppercase text-primary tracking-widest mb-1">URL PREMIUM KAMU</p>
+                 <p className="text-[9px] font-black uppercase text-primary tracking-widest mb-1">URL LIVE SAAT INI</p>
                  <p className="text-sm font-black text-white truncate pr-4">{publicUrl || 'Membangun URL...'}</p>
               </div>
               <Button variant="ghost" size="icon" onClick={handleCopyUrl} className="h-12 w-12 rounded-2xl bg-primary/10 hover:bg-primary/20 text-primary shadow-xl shrink-0">
@@ -200,12 +204,27 @@ export default function ProfilPage() {
                     <Input value={displayName} onChange={(e) => { setDisplayName(e.target.value); setIsEditing(true); }} className="bg-white/5 h-14 border-none font-bold text-sm rounded-2xl" placeholder="Nama Anda" />
                  </div>
                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-muted-foreground uppercase ml-1">Username Unik</label>
+                    <label className="text-[10px] font-black text-muted-foreground uppercase ml-1">Username Unik (Subdomain)</label>
                     <div className="relative">
                       <AtSign className="absolute left-4 top-1/2 -translate-y-1/2 text-primary" size={14} />
                       <Input value={username} onChange={(e) => { setUsername(e.target.value); setIsEditing(true); }} className="bg-white/5 h-14 border-none pl-12 font-bold text-sm rounded-2xl" placeholder="username" />
                     </div>
                  </div>
+                 
+                 {isActuallyPremium && (
+                   <div className="space-y-1.5 pt-2">
+                      <div className="flex items-center gap-2 mb-1">
+                        <label className="text-[10px] font-black text-primary uppercase ml-1">Custom Domain (Premium)</label>
+                        <ShieldCheck size={12} className="text-primary" />
+                      </div>
+                      <div className="relative">
+                        <Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-primary" size={14} />
+                        <Input value={customDomain} onChange={(e) => { setCustomDomain(e.target.value); setIsEditing(true); }} className="bg-white/5 h-14 border-none pl-12 font-bold text-sm rounded-2xl placeholder:text-white/10" placeholder="contoh: budi.com (opsional)" />
+                      </div>
+                      <p className="text-[8px] font-black uppercase text-white/30 tracking-widest ml-1 mt-1 leading-relaxed">Penting: Arahkan DNS domain Anda ke CNAME: cname.vercel-dns.com</p>
+                   </div>
+                 )}
+
                  <div className="space-y-1.5">
                     <label className="text-[10px] font-black text-muted-foreground uppercase ml-1">Bio Singkat</label>
                     <Textarea value={bio} onChange={(e) => { setBio(e.target.value); setIsEditing(true); }} className="bg-white/5 h-24 border-none text-xs font-medium rounded-2xl" placeholder="Ceritakan siapa Anda..." />
@@ -221,7 +240,7 @@ export default function ProfilPage() {
             
             <div className="p-4 bg-primary/10 rounded-2xl border border-primary/20 flex gap-4 items-start">
                <AlertCircle size={20} className="text-primary shrink-0 mt-0.5" />
-               <p className="text-[10px] font-black uppercase leading-relaxed text-primary/80">Masukkan username/ID saja. Sistem akan otomatis membuat link subdomain yang cerdas.</p>
+               <p className="text-[10px] font-black uppercase leading-relaxed text-primary/80">Masukkan username/ID saja. Sistem akan otomatis membuat link media yang cerdas.</p>
             </div>
 
             <div className="grid gap-3">

@@ -83,6 +83,8 @@ export default function GroupClient({ username, groupId }: { username: string; g
   const primaryColor = profile.themeColor || '#ff0000';
   const secondaryColor = profile.themeColorSecondary || '#ffea00';
   const dynamicGradient = `linear-gradient(-45deg, ${primaryColor} 0%, ${secondaryColor} 50%, ${primaryColor} 100%)`;
+  
+  const isUserPremium = profile.isPremium || profile.role === 'Admin';
 
   return (
     <div 
@@ -159,7 +161,7 @@ export default function GroupClient({ username, groupId }: { username: string; g
           )}
         </div>
 
-        {!profile.isPremium && (
+        {!isUserPremium && (
           <div className="pt-12 text-center opacity-30">
             <p className="text-[9px] font-black uppercase tracking-[0.4em] text-white">Powering with Linku Engine</p>
           </div>

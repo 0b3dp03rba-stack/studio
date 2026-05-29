@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
@@ -90,7 +89,6 @@ export default function PremiumPage() {
       const res = await fetch(`/api/deposit/${id}`);
       const result = await res.json();
       
-      // Rams API Response Format: { status: true, data: { status: "success" } }
       if (result.status && result.data?.status === 'success') {
         if (pollingRef.current) clearInterval(pollingRef.current);
         
@@ -115,7 +113,10 @@ export default function PremiumPage() {
     }
   };
 
-  if (profile?.isPremium) {
+  // LOGIKA PREMIUM OTOMATIS: Admin selalu dianggap premium
+  const isActuallyPremium = profile?.isPremium || profile?.role === 'Admin';
+
+  if (isActuallyPremium) {
     return (
       <div className="space-y-8 animate-in pb-20">
         <div className="text-center space-y-4 pt-10">
@@ -130,8 +131,11 @@ export default function PremiumPage() {
            <div className="p-6 bg-primary/10 rounded-3xl border border-primary/20 space-y-2">
               <CheckCircle2 size={32} className="text-primary mx-auto" />
               <p className="text-sm font-bold text-white uppercase">Status: Aktif Seumur Hidup</p>
-              <p className="text-[10px] font-black text-white/40 uppercase tracking-widest leading-relaxed">
-                Semua fitur premium kini terbuka. Nikmati profil tanpa watermark dan visual neon yang mewah.
+              {profile?.role === 'Admin' && (
+                <p className="text-[9px] font-black text-primary uppercase tracking-[0.2em] mt-1">Administrator Privileges Enabled</p>
+              )}
+              <p className="text-[10px] font-black text-white/40 uppercase tracking-widest leading-relaxed mt-2">
+                Semua fitur premium kini terbuka. Nikmati profil tanpa watermark, visual neon yang mewah, dan domain kustom.
               </p>
            </div>
            <Button asChild variant="ghost" className="w-full h-14 bg-white/5 hover:bg-white/10 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest">
@@ -161,7 +165,7 @@ export default function PremiumPage() {
           <div className="space-y-4 pt-4 border-t border-white/5">
             {[
               { t: 'Hapus Watermark Linku', d: 'Branding bersih 100% milik Anda.', i: ImageIcon },
-              { t: 'Subdomain Premium', d: 'Akses instan via username.linku.biz.id.', i: Globe },
+              { t: 'Domain Kustom / Subdomain', d: 'Point domain Anda sendiri ke Linku.', i: Globe },
               { t: 'Prioritas Fitur AI', d: 'Generator tema & konten lebih cerdas.', i: Zap },
             ].map((f, i) => (
               <div key={i} className="flex gap-4 items-start p-4 bg-white/[0.02] rounded-2xl border border-white/5">

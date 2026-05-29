@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, useMemo } from 'react';
@@ -154,6 +153,9 @@ export default function ProfileClient({ username }: { username: string }) {
   const primaryColor = profile.themeColor || '#ff0000';
   const secondaryColor = profile.themeColorSecondary || '#ffea00';
   const dynamicGradient = `linear-gradient(-45deg, ${primaryColor} 0%, ${secondaryColor} 50%, ${primaryColor} 100%)`;
+  
+  // LOGIKA PREMIUM OTOMATIS: Admin selalu premium
+  const isUserPremium = profile.isPremium || profile.role === 'Admin';
 
   return (
     <div 
@@ -298,7 +300,7 @@ export default function ProfileClient({ username }: { username: string }) {
           </div>
         </div>
 
-        {!profile.isPremium && (
+        {!isUserPremium && (
           <div className="pt-12 text-center">
             <Button asChild className="w-full h-14 neon-gradient text-background font-black rounded-2xl glow-primary text-[10px] uppercase tracking-widest shadow-2xl transition-all animate-flowing-gradient" style={{ backgroundImage: dynamicGradient, backgroundSize: '200% 200%' }}>
               <Link href="https://linku.biz.id"><User size={16} className="mr-2" /> Buat Linku Kamu Sekarang</Link>
