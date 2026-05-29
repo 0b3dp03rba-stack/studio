@@ -1,12 +1,13 @@
-
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, Loader2, Clock, ShieldCheck, ChevronLeft, Download, Info, Copy, QrCode, X, Trash2 } from 'lucide-react';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, updateDoc, serverTimestamp, collection, query, where, limit } from 'firebase/firestore';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '@/lib/utils-app';
 import { useRouter } from 'next/navigation';
@@ -29,18 +30,9 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
-  const paymentsQuery = useMemoFirebase(() => 
-    user ? query(
-      collection(db, 'payments'), 
-      where('depositId', '==', depositId),
-      where('userId', '==', user.uid),
-      limit(1)
-    ) : null,
-    [db, user?.uid, depositId]
-  );
-  
-  const { data: payments, isLoading: isPaymentsLoading } = useCollection(paymentsQuery);
-  const payment = payments?.[0];
+  // Gunakan useDoc langsung karena depositId adalah ID Dokumen sekarang
+  const paymentRef = useMemoFirebase(() => doc(db, 'payments', depositId), [db, depositId]);
+  const { data: payment, isLoading: isPaymentsLoading } = useDoc(paymentRef);
 
   const breakdown = useMemo(() => {
     if (!payment) return null;
@@ -51,21 +43,26 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
   }, [payment]);
 
   useEffect(() => {
-    if (!payment || isExpired || payment.status !== 'pending') return;
+    // GUARD: Pastikan payment dan expiredAt ada sebelum menjalankan timer
+    if (!payment || !payment.expiredAt || isExpired || payment.status !== 'pending') return;
 
     const timer = setInterval(() => {
-      const now = new Date();
-      const end = parseISO(payment.expiredAt);
-      const seconds = differenceInSeconds(end, now);
+      try {
+        const now = new Date();
+        const end = parseISO(payment.expiredAt);
+        const seconds = differenceInSeconds(end, now);
 
-      if (seconds <= 0) {
-        setIsExpired(true);
-        setTimeLeft('ED');
-        clearInterval(timer);
-      } else {
-        const m = Math.floor(seconds / 60);
-        const s = seconds % 60;
-        setTimeLeft(`${m}:${s < 10 ? '0' : ''}${s}`);
+        if (seconds <= 0) {
+          setIsExpired(true);
+          setTimeLeft('ED');
+          clearInterval(timer);
+        } else {
+          const m = Math.floor(seconds / 60);
+          const s = seconds % 60;
+          setTimeLeft(`${m}:${s < 10 ? '0' : ''}${s}`);
+        }
+      } catch (e) {
+        console.error("Timer Error:", e);
       }
     }, 1000);
 
@@ -99,14 +96,28 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
       if (result.status && result.data?.status === 'success') {
         if (pollingRef.current) clearInterval(pollingRef.current);
         
-        await updateDoc(doc(db, 'payments', payment.id), {
+        const docRef = doc(db, 'payments', depositId);
+        updateDoc(docRef, {
           status: 'success',
           paidAt: serverTimestamp()
+        }).catch(async (e) => {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'update',
+            requestResourceData: { status: 'success' }
+          }));
         });
 
-        await updateDoc(doc(db, 'userProfiles', user.uid), {
+        const profileRef = doc(db, 'userProfiles', user.uid);
+        updateDoc(profileRef, {
           isPremium: true,
           updatedAt: serverTimestamp()
+        }).catch(async (e) => {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: profileRef.path,
+            operation: 'update',
+            requestResourceData: { isPremium: true }
+          }));
         });
 
         toast({ title: "UPGRADE BERHASIL", description: "Status Premium Anda telah aktif selamanya!" });
@@ -124,18 +135,26 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
   const handleCancelPayment = async () => {
     if (!payment || isCancelling) return;
     setIsCancelling(true);
-    try {
-      await updateDoc(doc(db, 'payments', payment.id), {
-        status: 'cancelled',
-        cancelledAt: serverTimestamp()
-      });
+    
+    const docRef = doc(db, 'payments', depositId);
+    updateDoc(docRef, {
+      status: 'cancelled',
+      cancelledAt: serverTimestamp()
+    })
+    .then(() => {
       toast({ title: "PEMBAYARAN DIBATALKAN", description: "Anda bisa memulai tagihan baru jika diinginkan." });
       router.push('/dashboard/premium');
-    } catch (e) {
-      toast({ variant: "destructive", title: "GAGAL", description: "Gagal membatalkan tagihan." });
-    } finally {
+    })
+    .catch(async (e) => {
+      errorEmitter.emit('permission-error', new FirestorePermissionError({
+        path: docRef.path,
+        operation: 'update',
+        requestResourceData: { status: 'cancelled' }
+      }));
+    })
+    .finally(() => {
       setIsCancelling(false);
-    }
+    });
   };
 
   const handleDownloadQRIS = async () => {
@@ -244,7 +263,7 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
 
                 <div className="bg-white/5 rounded-2xl border border-white/5 p-5 space-y-4 text-left">
                   <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider">
-                     <span className="text-white/40">Harga Lisensi</span>
+                     <span className="text-white/40">Harga Dasar</span>
                      <span className="text-white">{formatCurrency(breakdown?.basePrice || 0)}</span>
                   </div>
                   <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider">

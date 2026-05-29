@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sparkles, CheckCircle2, ShieldCheck, Zap, Globe, Loader2, Save, ExternalLink, AlertCircle, ArrowRight, ReceiptText, Clock } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
-import { doc, updateDoc, serverTimestamp, collection, addDoc, query, where, limit } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, collection, setDoc, query, where, limit } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '@/lib/utils-app';
 import { useRouter } from 'next/navigation';
@@ -24,7 +24,7 @@ export default function PremiumPage() {
   const globalStatsRef = useMemoFirebase(() => doc(db, 'appConfig', 'globalStats'), [db]);
   const { data: globalStats } = useDoc(globalStatsRef);
 
-  // Kueri yang sangat sederhana agar pas dengan Security Rules
+  // Cari invoice pending dengan cara yang paling aman
   const pendingPaymentsQuery = useMemoFirebase(() => 
     user ? query(
       collection(db, 'payments'),
@@ -51,7 +51,6 @@ export default function PremiumPage() {
   const handleCreateInvoice = async () => {
     if (!user || isProcessing) return;
 
-    // Jika sudah ada invoice pending, arahkan langsung ke sana
     if (pendingPayments && pendingPayments.length > 0) {
       router.push(`/dashboard/premium/pay/${pendingPayments[0].depositId}`);
       return;
@@ -70,8 +69,9 @@ export default function PremiumPage() {
       if (result.success && result.data) {
         const data = result.data;
         
-        // Simpan ke Firestore
-        await addDoc(collection(db, 'payments'), {
+        // Gunakan depositId sebagai ID Dokumen agar mudah diakses tanpa query limit/index
+        await setDoc(doc(db, 'payments', data.depositId), {
+          id: data.depositId, // Simpan juga ID-nya di dalam data
           userId: user.uid,
           depositId: data.depositId,
           amount: data.amount,
