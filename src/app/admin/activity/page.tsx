@@ -1,12 +1,12 @@
-
 "use client";
 
 import { useMemo } from 'react';
 import { Card } from '@/components/ui/card';
-import { Link as LinkIcon, Clock } from 'lucide-react';
+import { Link as LinkIcon, Clock, AlertTriangle, ExternalLink } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { query, limit, collectionGroup, orderBy } from 'firebase/firestore';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 export default function AdminActivityPage() {
   const db = useFirestore();
@@ -17,13 +17,34 @@ export default function AdminActivityPage() {
     orderBy('createdAt', 'desc'),
     limit(100)
   ), [db]);
-  const { data: rawLinks, isLoading } = useCollection(linksQuery);
+  
+  const { data: rawLinks, isLoading, error } = useCollection(linksQuery);
 
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-4">
         <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
         <p className="text-[10px] font-black uppercase tracking-widest text-primary/50">Memuat Feed Aktivitas...</p>
+      </div>
+    );
+  }
+
+  // Jika index belum dibuat, tampilkan panduan yang user-friendly
+  if (error) {
+    return (
+      <div className="py-20 px-6 text-center space-y-6">
+        <div className="w-20 h-20 bg-primary/10 rounded-[2rem] flex items-center justify-center text-primary mx-auto shadow-2xl">
+          <AlertTriangle size={40} />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-xl font-black text-white uppercase tracking-tight">Index Diperlukan</h2>
+          <p className="text-xs font-medium text-white/40 leading-relaxed uppercase tracking-widest max-w-xs mx-auto">
+            Firestore butuh jalur khusus untuk memantau seluruh tautan. Klik tombol di bawah untuk membuatnya di Firebase Console.
+          </p>
+        </div>
+        <Button asChild className="neon-gradient text-background font-black rounded-2xl h-14 px-8 uppercase text-[10px] tracking-widest shadow-xl">
+           <a href="https://console.firebase.google.com" target="_blank" rel="noreferrer">Buka Firebase Console <ExternalLink size={14} className="ml-2" /></a>
+        </Button>
       </div>
     );
   }

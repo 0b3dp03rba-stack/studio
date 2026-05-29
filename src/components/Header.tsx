@@ -48,7 +48,7 @@ export default function Header() {
   const isAdminPage = pathname.startsWith('/admin');
 
   return (
-    <header className="fixed top-0 left-0 right-0 h-24 bg-black/95 backdrop-blur-3xl px-6 flex items-center justify-between z-[100] border-b border-white/5">
+    <header className="fixed top-0 left-0 right-0 h-24 bg-black/95 backdrop-blur-3xl px-6 flex items-center justify-center z-[100] border-b border-white/5">
       <div className="max-w-4xl mx-auto w-full flex items-center justify-between">
         <div className="flex items-center gap-5">
           <Link href="/dashboard" className="flex items-center gap-5 group">

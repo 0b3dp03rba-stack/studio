@@ -19,7 +19,6 @@ service cloud.firestore {
       
       match /links/{linkId} {
         allow read: if true;
-        // Izinkan update klik secara publik (hanya kolom clicks)
         allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['clicks']) || (request.auth != null && request.auth.uid == userId);
         allow create, delete: if request.auth != null && request.auth.uid == userId;
       }
@@ -34,6 +33,13 @@ service cloud.firestore {
           allow create, delete: if request.auth != null && request.auth.uid == userId;
         }
       }
+    }
+
+    // FIX: Izinkan user mencatat pembayaran mereka sendiri
+    match /payments/{paymentId} {
+      allow read: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAdmin();
     }
     
     match /appConfig/{docId} {
