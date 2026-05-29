@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Sparkles, CheckCircle2, ShieldCheck, Zap, Globe, Loader2, Save, ExternalLink, AlertCircle, ArrowRight, ReceiptText, Clock } from 'lucide-react';
+import { Sparkles, CheckCircle2, ShieldCheck, Zap, Globe, Loader2, Save, ExternalLink, AlertCircle, ArrowRight, ReceiptText, Clock, Info } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, updateDoc, serverTimestamp, collection, setDoc, query, where, limit } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
@@ -24,7 +24,7 @@ export default function PremiumPage() {
   const globalStatsRef = useMemoFirebase(() => doc(db, 'appConfig', 'globalStats'), [db]);
   const { data: globalStats } = useDoc(globalStatsRef);
 
-  // Cari invoice pending dengan cara yang paling aman
+  // Cari invoice pending - Hanya ambil yang benar-benar 'pending'
   const pendingPaymentsQuery = useMemoFirebase(() => 
     user ? query(
       collection(db, 'payments'),
@@ -51,8 +51,9 @@ export default function PremiumPage() {
   const handleCreateInvoice = async () => {
     if (!user || isProcessing) return;
 
+    // Jika sudah ada invoice pending, arahkan ke sana
     if (pendingPayments && pendingPayments.length > 0) {
-      router.push(`/dashboard/premium/pay/${pendingPayments[0].depositId}`);
+      router.push(`/dashboard/premium/pay/${pendingPayments[0].id}`);
       return;
     }
 
@@ -69,9 +70,10 @@ export default function PremiumPage() {
       if (result.success && result.data) {
         const data = result.data;
         
-        // Gunakan depositId sebagai ID Dokumen agar mudah diakses tanpa query limit/index
-        await setDoc(doc(db, 'payments', data.depositId), {
-          id: data.depositId, // Simpan juga ID-nya di dalam data
+        // Simpan dengan depositId sebagai ID Dokumen
+        const newPaymentRef = doc(db, 'payments', data.depositId);
+        await setDoc(newPaymentRef, {
+          id: data.depositId,
           userId: user.uid,
           depositId: data.depositId,
           amount: data.amount,
@@ -87,7 +89,7 @@ export default function PremiumPage() {
         toast({ variant: "destructive", title: "Gagal", description: result.error || "Gagal membuat invoice." });
       }
     } catch (e) {
-      toast({ variant: "destructive", title: "Error", description: "Terjadi kesalahan sistem." });
+      toast({ variant: "destructive", title: "Error", description: "Terjadi kesalahan saat menghubungi server." });
     } finally {
       setIsProcessing(false);
     }
@@ -161,6 +163,8 @@ export default function PremiumPage() {
     );
   }
 
+  const hasPending = pendingPayments && pendingPayments.length > 0;
+
   return (
     <div className="space-y-8 animate-in pb-24">
       <div className="space-y-1 text-center">
@@ -200,11 +204,11 @@ export default function PremiumPage() {
 
             <div className="p-5 bg-white/5 rounded-3xl border border-white/10 space-y-3">
                <div className="flex items-center gap-2 text-primary">
-                 <Clock size={16} />
-                 <p className="text-[10px] font-black uppercase tracking-widest">Informasi Pembayaran:</p>
+                 <Info size={16} />
+                 <p className="text-[10px] font-black uppercase tracking-widest">Sistem Verifikasi:</p>
                </div>
                <p className="text-[9px] font-bold text-white/40 leading-relaxed uppercase">
-                 Pembayaran diproses secara otomatis via QRIS. Lisensi akan aktif dalam hitungan detik setelah dana diterima sistem.
+                 Sistem akan menambahkan <span className="text-white">kode unik (1-500 IDR)</span> pada nominal akhir untuk verifikasi otomatis. Pastikan membayar nominal yang <span className="text-primary">persis sama</span>.
                </p>
             </div>
 
@@ -213,24 +217,29 @@ export default function PremiumPage() {
               disabled={isProcessing || isPaymentsLoading} 
               className="w-full h-16 neon-gradient text-background font-black rounded-3xl glow-primary shadow-2xl uppercase tracking-[0.2em] text-sm active:scale-95 transition-all"
             >
-              {isProcessing ? <Loader2 className="animate-spin" /> : (pendingPayments && pendingPayments.length > 0 ? "LANJUTKAN PEMBAYARAN" : "BAYAR SEKARANG")}
+              {isProcessing ? <Loader2 className="animate-spin" /> : (hasPending ? "LANJUTKAN PEMBAYARAN" : "AKTIFKAN SEKARANG")}
             </Button>
             
             <p className="text-[8px] font-black uppercase text-white/10 text-center tracking-widest">Powered by Rams API Secure Payment</p>
           </CardContent>
         </Card>
 
-        {pendingPayments && pendingPayments.length > 0 && (
-          <Link href={`/dashboard/premium/pay/${pendingPayments[0].depositId}`}>
-            <Card className="bg-primary/5 border border-primary/20 rounded-2xl p-4 flex items-center justify-between group active:scale-95 transition-all">
-              <div className="flex items-center gap-3">
-                <ReceiptText className="text-primary" size={20} />
+        {hasPending && (
+          <Link href={`/dashboard/premium/pay/${pendingPayments![0].id}`}>
+            <Card className="bg-primary/5 border border-primary/20 rounded-2xl p-5 flex items-center justify-between group active:scale-95 transition-all shadow-xl">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                  <ReceiptText size={24} />
+                </div>
                 <div className="text-left">
-                  <p className="text-[10px] font-black text-white uppercase">Invoice Tertunda</p>
-                  <p className="text-[8px] font-bold text-primary uppercase">ID: {pendingPayments[0].depositId}</p>
+                  <p className="text-[10px] font-black text-white uppercase">Invoice Masih Aktif</p>
+                  <p className="text-[8px] font-bold text-primary uppercase">ID: {pendingPayments![0].id}</p>
                 </div>
               </div>
-              <ArrowRight size={16} className="text-primary group-hover:translate-x-1 transition-transform" />
+              <div className="flex items-center gap-2">
+                 <span className="text-[9px] font-black text-primary uppercase tracking-widest">LANJUTKAN</span>
+                 <ArrowRight size={16} className="text-primary group-hover:translate-x-1 transition-transform" />
+              </div>
             </Card>
           </Link>
         )}
