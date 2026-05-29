@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "UserProfile": {
@@ -15,6 +14,8 @@
         "themeColor": { "type": "string" },
         "themeColorSecondary": { "type": "string" },
         "role": { "type": "string", "enum": ["User", "Admin"] },
+        "isPremium": { "type": "boolean", "description": "Status premium untuk hapus WM & domain kustom." },
+        "customDomain": { "type": "string", "description": "Domain pribadi user (contoh: budi.com)" },
         "views": { "type": "number" },
         "socialLinks": {
           "type": "array",

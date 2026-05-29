@@ -124,7 +124,6 @@ export default function ProfileClient({ username }: { username: string }) {
     return allLinks.filter(l => l.isStandalone && l.title.toLowerCase().includes(searchQuery.toLowerCase()));
   }, [allLinks, searchQuery]);
 
-  // Cegah Hydration Mismatch
   if (!mounted || isResolving || (resolvedUserId && isProfileLoading)) {
     return (
       <div className="min-h-screen bg-black flex flex-col items-center justify-center gap-4">
@@ -298,11 +297,13 @@ export default function ProfileClient({ username }: { username: string }) {
           </div>
         </div>
 
-        <div className="pt-12 text-center">
-          <Button asChild className="w-full h-14 neon-gradient text-background font-black rounded-2xl glow-primary text-[10px] uppercase tracking-widest shadow-2xl transition-all animate-flowing-gradient" style={{ backgroundImage: dynamicGradient, backgroundSize: '200% 200%' }}>
-            <Link href="https://linku.biz.id"><User size={16} className="mr-2" /> Buat Linku Kamu Sekarang</Link>
-          </Button>
-        </div>
+        {!profile.isPremium && (
+          <div className="pt-12 text-center">
+            <Button asChild className="w-full h-14 neon-gradient text-background font-black rounded-2xl glow-primary text-[10px] uppercase tracking-widest shadow-2xl transition-all animate-flowing-gradient" style={{ backgroundImage: dynamicGradient, backgroundSize: '200% 200%' }}>
+              <Link href="https://linku.biz.id"><User size={16} className="mr-2" /> Buat Linku Kamu Sekarang</Link>
+            </Button>
+          </div>
+        )}
       </div>
 
       <Dialog open={!!selectedSocial} onOpenChange={(open) => !open && setSelectedSocial(null)}>

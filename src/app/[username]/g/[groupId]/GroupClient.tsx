@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, useMemo } from 'react';
@@ -160,9 +159,11 @@ export default function GroupClient({ username, groupId }: { username: string; g
           )}
         </div>
 
-        <div className="pt-12 text-center opacity-30">
-          <p className="text-[9px] font-black uppercase tracking-[0.4em] text-white">Powering with Linku Engine</p>
-        </div>
+        {!profile.isPremium && (
+          <div className="pt-12 text-center opacity-30">
+            <p className="text-[9px] font-black uppercase tracking-[0.4em] text-white">Powering with Linku Engine</p>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -15,14 +15,18 @@ export default function Header() {
   const db = useFirestore();
   const router = useRouter();
   const pathname = usePathname();
-  const [isSubdomain, setIsSubdomain] = useState(false);
+  const [isSystemDomain, setIsSystemDomain] = useState(true);
 
   useEffect(() => {
     const host = window.location.hostname;
-    // Deteksi jika kita berada di subdomain (bukan domain utama)
-    if (host !== 'linku.biz.id' && host !== 'localhost' && host !== '127.0.0.1') {
-      setIsSubdomain(true);
-    }
+    const mainDomain = 'linku.biz.id';
+    
+    // Header hanya muncul jika kita berada di domain utama (dashboard/login/admin)
+    // Jika di subdomain atau custom domain, sembunyikan header system.
+    const isLocal = host.includes('localhost');
+    const isMain = host === mainDomain || host === `www.${mainDomain}` || (isLocal && host === 'localhost:9002');
+    
+    setIsSystemDomain(isMain);
   }, []);
 
   const profileRef = useMemoFirebase(() => 
@@ -38,9 +42,9 @@ export default function Header() {
 
   const isAdmin = profile?.role === 'Admin' || user?.email === 'creeppermoment@gmail.com';
 
-  if (!user || isSubdomain) return null;
+  // HANYA tampilkan jika di domain sistem DAN rute dashboard/admin
+  if (!user || !isSystemDomain) return null;
   
-  // Hanya tampilkan di rute dashboard/admin
   const isSystemPath = pathname.startsWith('/dashboard') || pathname.startsWith('/admin');
   if (!isSystemPath) return null;
 

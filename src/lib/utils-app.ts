@@ -34,11 +34,16 @@ export function getSmartSocialUrl(platform: string, handle: string): string {
 }
 
 /**
- * Membangun URL publik pengguna secara REAL SUBDOMAIN.
+ * Membangun URL publik pengguna secara REAL SUBDOMAIN atau CUSTOM DOMAIN.
  */
-export function getPublicUrl(username: string): string {
+export function getPublicUrl(username: string, customDomain?: string): string {
   if (typeof window === 'undefined') return '';
   
+  // Jika user punya domain kustom dan premium, gunakan itu!
+  if (customDomain) {
+    return `https://${customDomain}`;
+  }
+
   const hostname = window.location.hostname;
   const protocol = window.location.protocol;
   const port = window.location.port ? `:${window.location.port}` : '';
