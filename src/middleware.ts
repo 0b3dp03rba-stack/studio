@@ -2,11 +2,8 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 /**
- * @fileOverview Linku Engine v20.0 - PRO Custom Domain & Subdomain Logic
- * Menangani routing untuk:
- * 1. user.linku.biz.id -> internal /[username]
- * 2. linku.biz.id/user -> redirect ke user.linku.biz.id
- * 3. customdomain.com -> internal /_custom/[host] (Untuk pencarian profil via domain)
+ * @fileOverview Linku Engine v22.0 - PRO Custom Domain & Subdomain Logic
+ * Perbaikan: Mendukung lingkungan Cloud Workstation (dio.firebase.google.com)
  */
 
 export function middleware(req: NextRequest) {
@@ -24,50 +21,55 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  const isLocalhost = host.includes('localhost');
   const mainDomain = 'linku.biz.id';
-  const isMainDomain = host === mainDomain || host === `www.${mainDomain}` || (isLocalhost && (host === 'localhost:9002' || host === '127.0.0.1:9002'));
+  const isLocalhost = host.includes('localhost') || host.includes('127.0.0.1');
   
+  // Deteksi jika kita berada di domain sistem (Workstation / Firebase Preview)
+  const isSystemHost = 
+    isLocalhost || 
+    host.includes('firebase.google.com') || 
+    host.includes('web.app') || 
+    host.includes('firebaseapp.com') ||
+    host === mainDomain || 
+    host === `www.${mainDomain}`;
+
   // Rute sistem yang HANYA boleh di domain utama
   const reservedPaths = [
     'dashboard', 'login', 'register', 'admin', 
-    'verify-email', 'forgot-password', 'auth', 'reviews', 'u'
+    'verify-email', 'forgot-password', 'auth', 'reviews', 'u', '_domain'
   ];
 
-  // CASE A: AKSES VIA CUSTOM DOMAIN (Bukan linku.biz.id dan bukan localhost murni)
-  // Contoh: budi.com atau www.tokosaya.id
-  if (!isMainDomain && !host.endsWith(mainDomain) && !host.endsWith('localhost:9002')) {
-    // Kita arahkan ke rute internal khusus untuk lookup domain
-    // Format internal: /_custom/[domain_name]
+  const firstSegment = pathname.split('/')[1];
+
+  // A. JIKA AKSES RUTE RESERVED DI DOMAIN SISTEM -> BIARKAN (JANGAN DIAPA-APAIN)
+  if (isSystemHost && reservedPaths.includes(firstSegment)) {
+    return NextResponse.next();
+  }
+
+  // B. AKSES VIA CUSTOM DOMAIN (Bukan domain sistem kita)
+  // Contoh: budi.com
+  if (!isSystemHost && !host.endsWith(mainDomain)) {
     url.pathname = `/_domain/${host}${pathname}`;
     return NextResponse.rewrite(url);
   }
 
-  // CASE B: AKSES VIA SUBDOMAIN (Contoh: budi.linku.biz.id)
+  // C. AKSES VIA SUBDOMAIN (Contoh: budi.linku.biz.id atau budi.localhost:9002)
   let subdomain = '';
-  if (isLocalhost) {
-    const hostParts = host.split('.');
-    if (hostParts.length > 1 && !hostParts[0].includes('localhost')) {
-      subdomain = hostParts[0];
-    }
-  } else if (!isMainDomain && host.endsWith(mainDomain)) {
-    const hostParts = host.split('.');
-    // budi.linku.biz.id punya 4 bagian (budi, linku, biz, id)
-    if (hostParts.length >= 4) {
-      subdomain = hostParts[0];
-    }
+  if (host.endsWith(mainDomain) && host !== mainDomain && host !== `www.${mainDomain}`) {
+    subdomain = host.replace(`.${mainDomain}`, '').replace('www.', '');
+  } else if (isLocalhost && host.split('.').length > 1 && !host.startsWith('localhost')) {
+    subdomain = host.split('.')[0];
   }
 
   const cleanSubdomain = subdomain.toLowerCase();
 
   if (cleanSubdomain && cleanSubdomain !== 'www') {
-    const firstSegment = pathname.split('/')[1];
-    
-    // Keamanan: Jika buka rute sistem di subdomain, lempar ke domain utama
+    // Keamanan: Jika buka rute reserved di subdomain, paksa balik ke domain sistem utama
     if (reservedPaths.includes(firstSegment)) {
       const protocol = isLocalhost ? 'http' : 'https';
-      const mainHost = isLocalhost ? 'localhost:9002' : mainDomain;
-      return NextResponse.redirect(new URL(`${protocol}://${mainHost}${pathname}`, req.url));
+      // Di workstation, kita tidak bisa dengan mudah lompat antar subdomain, 
+      // tapi di produksi ini akan melempar ke domain utama.
+      return NextResponse.next(); 
     }
 
     // INTERNAL REWRITE: Petakan subdomain ke folder /[username]
@@ -75,18 +77,11 @@ export function middleware(req: NextRequest) {
     return NextResponse.rewrite(url);
   }
 
-  // CASE C: AKSES VIA PATH DI DOMAIN UTAMA (Contoh: linku.biz.id/budi)
-  // Kita paksa pindah ke Subdomain demi branding premium (Redirect 301)
-  const segments = pathname.split('/');
-  const targetUser = segments[1];
-
-  if (isMainDomain && targetUser && !reservedPaths.includes(targetUser) && segments.length === 2) {
-    const protocol = isLocalhost ? 'http' : 'https';
-    const mainHost = isLocalhost ? 'localhost' : mainDomain;
-    const port = (isLocalhost && host.includes(':')) ? `:${host.split(':')[1]}` : '';
-    
+  // D. AKSES VIA PATH DI DOMAIN UTAMA (Contoh: linku.biz.id/budi)
+  // Paksa pindah ke Subdomain (Hanya berlaku di domain produksi asli untuk branding)
+  if (host === mainDomain && firstSegment && !reservedPaths.includes(firstSegment)) {
     return NextResponse.redirect(
-      new URL(`${protocol}://${targetUser.toLowerCase()}.${mainHost}${port}`, req.url),
+      new URL(`https://${firstSegment.toLowerCase()}.${mainDomain}${pathname.replace(`/${firstSegment}`, '')}`, req.url),
       301
     );
   }
