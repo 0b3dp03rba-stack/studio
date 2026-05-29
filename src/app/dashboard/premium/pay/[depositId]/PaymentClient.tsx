@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Loader2, Clock, ShieldCheck, ChevronLeft, Download } from 'lucide-react';
+import { RefreshCw, Loader2, Clock, ShieldCheck, ChevronLeft, Download, Info, Copy } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, serverTimestamp, collection, query, where, limit } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
@@ -13,7 +13,7 @@ import Link from 'next/link';
 import { differenceInSeconds, parseISO } from 'date-fns';
 
 export default function PaymentClient({ depositId }: { depositId: string }) {
-  const { user } = useUser();
+  const { user } = user ? useUser() : { user: null }; // Gunakan hook dengan aman
   const db = useFirestore();
   const { toast } = useToast();
   const router = useRouter();
@@ -24,12 +24,12 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
   const [isDownloading, setIsDownloading] = useState(false);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
-  // FIX: Tambahkan filter userId agar sesuai dengan Security Rules (Rules are not filters)
+  // Filter userId agar sesuai dengan Security Rules
   const paymentsQuery = useMemoFirebase(() => 
     user ? query(
       collection(db, 'payments'), 
       where('depositId', '==', depositId),
-      where('userId', '==', user.uid), // Wajib ada agar diizinkan Security Rules
+      where('userId', '==', user.uid),
       limit(1)
     ) : null,
     [db, user?.uid, depositId]
@@ -37,6 +37,15 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
   
   const { data: payments, isLoading: isPaymentsLoading } = useCollection(paymentsQuery);
   const payment = payments?.[0];
+
+  // Hitung rincian nominal
+  const breakdown = useMemo(() => {
+    if (!payment) return null;
+    const basePrice = payment.amount || 0;
+    const total = payment.totalAmount || 0;
+    const uniqueCode = total - basePrice;
+    return { basePrice, uniqueCode, total };
+  }, [payment]);
 
   useEffect(() => {
     if (!payment || isExpired) return;
@@ -73,7 +82,7 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
     if (pollingRef.current) clearInterval(pollingRef.current);
     pollingRef.current = setInterval(async () => {
       await verifyPayment(true);
-    }, 10000); // Polling setiap 10 detik
+    }, 10000);
   };
 
   const verifyPayment = async (isAuto = false) => {
@@ -87,13 +96,11 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
       if (result.status && result.data?.status === 'success') {
         if (pollingRef.current) clearInterval(pollingRef.current);
         
-        // Update di Firestore payments
         await updateDoc(doc(db, 'payments', payment.id), {
           status: 'success',
           paidAt: serverTimestamp()
         });
 
-        // Update di UserProfile
         await updateDoc(doc(db, 'userProfiles', user.uid), {
           isPremium: true,
           updatedAt: serverTimestamp()
@@ -109,6 +116,12 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
     } finally {
       if (!isAuto) setCheckingStatus(false);
     }
+  };
+
+  const handleCopyAmount = () => {
+    if (!breakdown) return;
+    navigator.clipboard.writeText(breakdown.total.toString());
+    toast({ title: "Nominal Tersalin", description: "Tempelkan di aplikasi bank Anda." });
   };
 
   const handleDownloadQRIS = async () => {
@@ -188,7 +201,7 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
              <Link href="/dashboard/premium"><ChevronLeft size={24} /></Link>
            </Button>
            <div className="text-right">
-              <p className="text-[8px] font-black text-primary uppercase tracking-[0.3em]">Checkout</p>
+              <p className="text-[8px] font-black text-primary uppercase tracking-[0.3em]">Identity Checkout</p>
               <h2 className="text-lg font-black text-white uppercase tracking-tighter">ID: {depositId}</h2>
            </div>
         </div>
@@ -204,7 +217,7 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
                    {checkingStatus && (
                      <div className="absolute inset-0 z-20 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center gap-3">
                        <Loader2 className="text-primary animate-spin" size={48} />
-                       <p className="text-[10px] font-black text-white uppercase tracking-widest">Verifikasi...</p>
+                       <p className="text-[10px] font-black text-white uppercase tracking-widest">Memvalidasi...</p>
                      </div>
                    )}
 
@@ -227,29 +240,51 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
                    )}
                 </div>
 
-                <div className="space-y-2">
-                   <div className="flex items-center justify-center gap-2 text-xs font-black text-white/70 uppercase">
-                     Total Transfer: <div className="p-1 bg-primary/20 text-primary rounded-md flex items-center gap-1.5 text-[9px] px-2 font-mono">{timeLeft}</div>
+                <div className="space-y-4">
+                   <div className="space-y-1">
+                      <div className="flex items-center justify-center gap-2 text-xs font-black text-white/70 uppercase">
+                        Selesaikan Dalam: <div className="p-1 bg-primary/20 text-primary rounded-md flex items-center gap-1.5 text-[9px] px-2 font-mono">{timeLeft}</div>
+                      </div>
+                      <h3 className="text-5xl font-black text-primary tracking-tighter tabular-nums leading-none">
+                        {formatCurrency(payment.totalAmount)}
+                      </h3>
+                      <button onClick={handleCopyAmount} className="inline-flex items-center gap-1.5 text-[8px] font-black text-white/20 uppercase tracking-widest mt-2 hover:text-primary transition-colors">
+                        <Copy size={10} /> Salin Nominal Persis
+                      </button>
                    </div>
-                   <h3 className="text-5xl font-black text-primary tracking-tighter tabular-nums leading-none">
-                     {formatCurrency(payment.totalAmount)}
-                   </h3>
+
+                   {/* RINCIAN NOMINAL */}
+                   <div className="bg-white/5 rounded-2xl border border-white/5 p-4 space-y-3">
+                      <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider">
+                         <span className="text-white/40">Harga Lisensi</span>
+                         <span className="text-white">{formatCurrency(breakdown?.basePrice || 0)}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider">
+                         <span className="text-white/40">Kode Unik Verifikasi</span>
+                         <span className="text-primary">+{breakdown?.uniqueCode}</span>
+                      </div>
+                      <div className="h-px bg-white/10 w-full" />
+                      <div className="flex justify-between items-center text-[11px] font-black uppercase tracking-widest">
+                         <span className="text-white">Total Tagihan</span>
+                         <span className="text-primary">{formatCurrency(breakdown?.total || 0)}</span>
+                      </div>
+                   </div>
                 </div>
              </div>
 
              <div className="p-5 bg-primary/5 rounded-[2rem] border border-primary/20 text-left space-y-3 relative overflow-hidden">
                 <p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2">
-                   <ShieldCheck size={14} /> Instruksi Penting
+                   <ShieldCheck size={14} /> Security Protocol
                 </p>
                 <ol className="space-y-2 relative z-10">
                    <li className="text-[9px] font-bold text-white/60 leading-relaxed uppercase flex gap-3">
-                      <span className="text-primary">1.</span> Pastikan nominal transfer <span className="text-white">Eksak</span>.
+                      <span className="text-primary font-black">1.</span> Transfer <span className="text-white">Persis</span> hingga digit terakhir.
                    </li>
                    <li className="text-[9px] font-bold text-white/60 leading-relaxed uppercase flex gap-3">
-                      <span className="text-primary">2.</span> Sistem otomatis memproses dalam <span className="text-white">8-60 detik</span>.
+                      <span className="text-primary font-black">2.</span> Scan via <span className="text-white">M-Banking</span> atau <span className="text-white">E-Wallet</span>.
                    </li>
                    <li className="text-[9px] font-bold text-white/60 leading-relaxed uppercase flex gap-3">
-                      <span className="text-primary">3.</span> Simpan gambar QRIS jika ingin membayar lewat galeri.
+                      <span className="text-primary font-black">3.</span> Lisensi aktif otomatis <span className="text-white">tanpa konfirmasi</span> manual.
                    </li>
                 </ol>
              </div>
@@ -258,7 +293,7 @@ export default function PaymentClient({ depositId }: { depositId: string }) {
                 {!isExpired ? (
                   <div className="grid grid-cols-1 gap-3">
                     <Button onClick={() => verifyPayment()} disabled={checkingStatus} className="h-16 bg-primary/10 hover:bg-primary/20 text-primary font-black rounded-2xl border border-primary/20 uppercase text-[10px] tracking-[0.2em] shadow-xl active:scale-95 transition-all">
-                      {checkingStatus ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw size={18} className="mr-2" />} CEK PEMBAYARAN MANUAL
+                      {checkingStatus ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw size={18} className="mr-2" />} CEK STATUS TRANSAKSI
                     </Button>
                     <Button onClick={handleDownloadQRIS} variant="outline" className="h-12 border-white/10 bg-white/5 text-white/60 font-black rounded-xl uppercase text-[9px] tracking-widest">
                        <Download size={14} className="mr-2" /> SIMPAN QRIS KE GALERI
