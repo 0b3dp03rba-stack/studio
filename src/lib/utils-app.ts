@@ -35,7 +35,7 @@ export function getSmartSocialUrl(platform: string, handle: string): string {
 
 /**
  * Membangun URL publik pengguna secara ADAPTIF.
- * Linku Engine mendeteksi environment untuk memberikan format link terbaik.
+ * Menghasilkan format https://username.linku.biz.id untuk branding premium.
  */
 export function getPublicUrl(username: string): string {
   if (typeof window === 'undefined') return '';
@@ -48,13 +48,13 @@ export function getPublicUrl(username: string): string {
   const isProduction = hostname.includes('linku.biz.id');
   const isLocalhost = hostname.includes('localhost') || hostname === '127.0.0.1';
 
-  // Format SUBDOMAIN untuk Produksi & Localhost
+  // Jika di Produksi atau Localhost, gunakan format SUBDOMAIN (Real)
   if (isProduction || isLocalhost) {
     const domain = isProduction ? 'linku.biz.id' : 'localhost';
     return `${protocol}//${cleanUsername}.${domain}${port}`;
   }
 
-  // Format PATH untuk Workstation / Vercel Preview (Mencegah SSL Error)
+  // Fallback untuk Vercel Preview/Workstation (Path-based) agar tidak SSL Error
   return `${protocol}//${hostname}${port}/${cleanUsername}`;
 }
 
