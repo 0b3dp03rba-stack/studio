@@ -47,6 +47,7 @@ export default function ProfileClient({ username }: { username: string }) {
         }
         if (uid) {
           setResolvedUserId(uid);
+          // Silently try to increment views
           updateDoc(doc(db, 'userProfiles', uid), { views: increment(1) }).catch(() => {});
         }
       } catch (e) { console.error(e); } finally { setIsResolving(false); }
@@ -58,6 +59,7 @@ export default function ProfileClient({ username }: { username: string }) {
   const { data: profile } = useDoc(profileRef);
 
   // SPOTLIGHT (GLOBAL LATEST LINK ACROSS ALL FOLDERS)
+  // This query requires a composite index on collection group 'links' with fields: userId ASC, createdAt DESC
   const spotlightQuery = useMemoFirebase(() => {
     if (!resolvedUserId) return null;
     return query(collectionGroup(db, 'links'), where('userId', '==', resolvedUserId), orderBy('createdAt', 'desc'), limit(1));
@@ -138,7 +140,7 @@ export default function ProfileClient({ username }: { username: string }) {
               
               {profile.layout_type === 'split' ? (
                 <div className="flex justify-between items-start gap-4">
-                   <div className="flex flex-col gap-6 flex-1 min-w-0">
+                   <div className="flex flex-col gap-6 flex-1 min-w-0 text-left">
                       <div className={cn("p-1 shadow-2xl animate-flowing-gradient shrink-0 w-24 h-24", avatarClass)} style={{ backgroundImage: `linear-gradient(45deg, ${primaryColor}, ${secondaryColor})` }}>
                          <div className={cn("w-full h-full bg-background flex items-center justify-center overflow-hidden border-4 border-background", avatarClass)}>
                             {profile.avatarUrl ? <img src={profile.avatarUrl} className="w-full h-full object-cover" alt="Avatar" /> : <User size={40} className="text-white/20" />}

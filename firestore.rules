@@ -14,7 +14,7 @@ service cloud.firestore {
 
     // CRITICAL: Collection Group Rule for Spotlight & Admin Activity Feed
     // This allows public read access to all 'links' collections across the database.
-    // MUST BE AT THE TOP to override more specific rules.
+    // MUST BE AT THE TOP to allow guest users to see the "Spotlight" (Latest Link).
     match /{path=**}/links/{linkId} {
       allow read: if true;
     }
@@ -36,6 +36,11 @@ service cloud.firestore {
           allow read: if true;
           allow write: if isOwner(userId) || isAdmin();
         }
+      }
+
+      match /linkGroups/{groupId}/links/{linkId} {
+        allow read: if true;
+        allow write: if isOwner(userId) || isAdmin();
       }
     }
 
