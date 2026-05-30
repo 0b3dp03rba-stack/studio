@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 /**
- * @fileOverview Linku Engine v59.0 - PRODUCTION STABLE ROUTING
+ * @fileOverview Linku Engine v60.0 - PRODUCTION STABLE ROUTING
  * Menangani Subdomain, Custom Domain, dan Redirect Jalur Lama.
  */
 
@@ -34,16 +34,16 @@ export function middleware(req: NextRequest) {
     hostname.includes('cloudworkstations.dev') ||
     hostname.includes('firebase.google.com');
 
-  if (isSystemHost) {
-    const pathSegments = url.pathname.split('/').filter(Boolean);
-    const firstSegment = pathSegments[0];
+  const pathSegments = url.pathname.split('/').filter(Boolean);
+  const firstSegment = pathSegments[0];
 
-    // Rute yang dilindungi (Dashboard/Auth)
-    const reservedPaths = [
-      'dashboard', 'login', 'register', 'auth', 'premium', 
-      'admin', 'reviews', 'verify-email', 'forgot-password'
-    ];
-    
+  // Rute yang dilindungi (Dashboard/Auth)
+  const reservedPaths = [
+    'dashboard', 'login', 'register', 'auth', 'premium', 
+    'admin', 'reviews', 'verify-email', 'forgot-password'
+  ];
+
+  if (isSystemHost) {
     // Jika akses root atau rute sistem, biarkan normal
     if (!firstSegment || reservedPaths.includes(firstSegment)) {
       return NextResponse.next();
@@ -83,6 +83,7 @@ export function middleware(req: NextRequest) {
   }
 
   // 4. LOGIKA CUSTOM DOMAIN (d:domain.com)
+  // Jika host bukan milik sistem & bukan subdomain, maka otomatis dianggap Custom Domain Premium
   const cleanCustomDomain = hostname.replace('www.', '');
   url.pathname = `/unified/d:${cleanCustomDomain}${url.pathname}`;
   return NextResponse.rewrite(url);

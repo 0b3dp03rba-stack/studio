@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Sparkles, ShieldCheck, Zap, Globe, Loader2, Save, ReceiptText, ArrowRight, Info, Network, CheckCircle2, Trash2 } from 'lucide-react';
+import { Sparkles, ShieldCheck, Zap, Globe, Loader2, Save, ReceiptText, ArrowRight, Info, Network, CheckCircle2, Trash2, AlertCircle } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, updateDoc, serverTimestamp, collection, setDoc, query, where, limit } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
@@ -145,7 +145,7 @@ export default function PremiumPage() {
                   </div>
                   
                   <p className="text-[10px] font-bold text-white/60 leading-relaxed uppercase">
-                    Hubungkan domain Anda ke infrastruktur Linku dengan menambahkan record berikut di panel DNS Anda:
+                    Hubungkan domain pribadi Anda ke infrastruktur Linku dengan mengatur DNS di panel domain Anda (seperti Cloudflare/GoDaddy):
                   </p>
 
                   <div className="bg-black/40 rounded-2xl overflow-hidden border border-white/10 shadow-inner">
@@ -160,7 +160,7 @@ export default function PremiumPage() {
                       <tbody className="font-bold text-white uppercase">
                         <tr className="border-t border-white/5">
                           <td className="p-4 border-r border-white/5 text-primary">CNAME</td>
-                          <td className="p-4 border-r border-white/5">@ <span className="text-[8px] opacity-40">(atau subdomain)</span></td>
+                          <td className="p-4 border-r border-white/5">@ <span className="text-[8px] opacity-40">(atau www)</span></td>
                           <td className="p-4 text-primary">linku.biz.id</td>
                         </tr>
                       </tbody>
@@ -170,7 +170,7 @@ export default function PremiumPage() {
                   <div className="flex gap-4 p-4 bg-white/5 rounded-2xl">
                     <CheckCircle2 size={20} className="text-primary shrink-0" />
                     <p className="text-[9px] font-bold text-white/40 uppercase leading-relaxed">
-                      Sistem akan otomatis mendeteksi konfigurasi Anda. Subdomain standar Anda kini akan otomatis mengalihkan traffic ke domain kustom ini demi SEO yang lebih baik.
+                      Catatan: Linku bukan penyedia domain. Anda harus memiliki domain sendiri untuk menggunakan fitur ini. Linku hanya menangani pemetaan traffic dari domain tersebut ke profil Anda.
                     </p>
                   </div>
                 </div>
