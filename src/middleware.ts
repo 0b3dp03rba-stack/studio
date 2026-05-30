@@ -1,19 +1,17 @@
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import type { NextRequest } from 'next/request';
 
 /**
- * @fileOverview Linku Engine v52.0 - UNIFIED ROUTE RESOLUTION
- * Mengatasi 404 dengan isolasi rute internal yang bersih.
+ * @fileOverview Linku Engine v53.0 - FINAL STABLE ROUTING
+ * Memperbaiki deteksi domain sistem dan menghilangkan loop pada rute internal.
  */
 
 export function middleware(req: NextRequest) {
   const url = req.nextUrl.clone();
-  
-  // 1. Ambil Hostname asli dan bersihkan
   const rawHost = req.headers.get('host') || '';
   const hostname = rawHost.toLowerCase().trim().split(':')[0];
 
-  // 2. TAMENG UTAMA: Loloskan aset statis, API, dan rute internal Next.js
+  // 1. TAMENG ASET & API: Loloskan langsung
   if (
     url.pathname.startsWith('/_next') || 
     url.pathname.startsWith('/api') ||
@@ -22,21 +20,29 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // 3. TAMENG LOOP: Jika sudah di rute internal _view, jangan diproses lagi
+  // 2. TAMENG INTERNAL REWRITE: Cegah Loop jika sudah di rute internal
   if (url.pathname.startsWith('/_view')) {
     return NextResponse.next();
   }
 
   const mainDomain = 'linku.biz.id';
   
-  // 4. LOGIKA DOMAIN UTAMA (Dashboard & Landing Page)
-  const isMainDomain = hostname === mainDomain || hostname === `www.${mainDomain}`;
+  // 3. DAFTAR DOMAIN SISTEM (Dashboard & Preview Mode)
+  // Menambahkan pengecekan untuk lingkungan pengembangan dan preview Firebase
+  const isSystemHost = 
+    hostname === mainDomain || 
+    hostname === `www.${mainDomain}` ||
+    hostname === 'localhost' ||
+    hostname.includes('firebaseapp.com') ||
+    hostname.includes('web.app') ||
+    hostname.includes('cloudworkstations.dev') ||
+    hostname.includes('firebase.google.com');
 
-  if (isMainDomain) {
+  if (isSystemHost) {
     const pathSegments = url.pathname.split('/').filter(Boolean);
     const firstSegment = pathSegments[0];
 
-    // Daftar rute sistem yang dilindungi
+    // Rute yang dilindungi di domain utama
     const reservedPaths = [
       'dashboard', 'login', 'register', 'auth', 'premium', 
       'admin', 'reviews', 'verify-email', 'forgot-password'
@@ -47,17 +53,21 @@ export function middleware(req: NextRequest) {
     }
 
     // Redirect link lama linku.biz.id/username ke username.linku.biz.id
-    const remainingPath = url.pathname.replace(`/${firstSegment}`, '');
-    const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
+    // HANYA jika di linku.biz.id asli (bukan localhost/preview)
+    if (hostname.includes(mainDomain)) {
+      const remainingPath = url.pathname.replace(`/${firstSegment}`, '');
+      const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
+      return NextResponse.redirect(
+        new URL(`${protocol}://${firstSegment}.${mainDomain}${remainingPath}${url.search}`, req.url),
+        301
+      );
+    }
     
-    return NextResponse.redirect(
-      new URL(`${protocol}://${firstSegment}.${mainDomain}${remainingPath}${url.search}`, req.url),
-      301
-    );
+    return NextResponse.next();
   }
 
-  // 5. LOGIKA SUBDOMAIN & CUSTOM DOMAIN (Melayani Halaman Publik)
-  const isSubdomain = !isMainDomain && hostname.endsWith(mainDomain);
+  // 4. LOGIKA SUBDOMAIN (username.linku.biz.id)
+  const isSubdomain = hostname.endsWith(mainDomain) && hostname !== mainDomain;
   
   if (isSubdomain) {
     const subdomain = hostname.replace(`.${mainDomain}`, '').replace('www.', '');
@@ -67,21 +77,15 @@ export function middleware(req: NextRequest) {
       return NextResponse.next();
     }
 
-    // Rewrite ke dapur internal dengan label u:
+    // REWRITE ke dapur internal dengan label u:
     url.pathname = `/_view/u:${subdomain}${url.pathname}`;
     return NextResponse.rewrite(url);
   }
 
-  // 6. LOGIKA CUSTOM DOMAIN PREMIUM
-  if (!isMainDomain && !isSubdomain) {
-    const cleanCustomDomain = hostname.replace('www.', '');
-    
-    // Rewrite ke dapur internal dengan label d:
-    url.pathname = `/_view/d:${cleanCustomDomain}${url.pathname}`;
-    return NextResponse.rewrite(url);
-  }
-
-  return NextResponse.next();
+  // 5. LOGIKA CUSTOM DOMAIN (Premium)
+  const cleanCustomDomain = hostname.replace('www.', '');
+  url.pathname = `/_view/d:${cleanCustomDomain}${url.pathname}`;
+  return NextResponse.rewrite(url);
 }
 
 export const config = {

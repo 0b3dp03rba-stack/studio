@@ -10,7 +10,7 @@ import ProfileClient from '@/app/[username]/ProfileClient';
  */
 export default function UnifiedProfilePage({ params }: { params: Promise<{ username: string }> }) {
   const { username } = use(params);
-  // Decode param jika mengandung karakter khusus
+  // Decode param jika mengandung karakter khusus (seperti titik dua)
   const decodedUsername = decodeURIComponent(username);
   
   return <ProfileClient username={decodedUsername} />;

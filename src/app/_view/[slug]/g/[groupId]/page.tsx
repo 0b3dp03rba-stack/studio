@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 
 /**
- * @fileOverview File ini dihapus karena konflik dengan folder [username].
+ * @fileOverview FILE INI DIHAPUS TOTAL UNTUK MENGHINDARI KONFLIK RUTE.
  */
 export default function DeletedSlugGroupPage() {
   return notFound();

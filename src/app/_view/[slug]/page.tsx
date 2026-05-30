@@ -1,8 +1,9 @@
 import { notFound } from 'next/navigation';
 
 /**
- * @fileOverview File ini dihapus karena konflik dengan folder [username].
- * Menghindari 404 akibat tabrakan rute dinamis.
+ * @fileOverview FILE INI DIHAPUS TOTAL UNTUK MENGHINDARI KONFLIK RUTE.
+ * Next.js tidak mengizinkan dua folder dinamis [slug] dan [username] 
+ * berada di level yang sama.
  */
 export default function DeletedSlugPage() {
   return notFound();
