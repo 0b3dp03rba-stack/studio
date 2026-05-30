@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Sparkles, ShieldCheck, Zap, Globe, Loader2, Save, ReceiptText, ArrowRight, Info, Network, CheckCircle2, Trash2 } from 'lucide-react';
+import { Sparkles, ShieldCheck, Zap, Globe, Loader2, Save, ReceiptText, ArrowRight, Info, Network, CheckCircle2, Trash2, SearchCheck, ExternalLink } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, updateDoc, serverTimestamp, collection, setDoc, query, where, limit } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
@@ -34,6 +34,7 @@ export default function PremiumPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [customDomain, setCustomDomain] = useState('');
   const [isSavingDomain, setIsSavingDomain] = useState(false);
+  const [isCheckingDNS, setIsCheckingDNS] = useState(false);
   
   const PREMIUM_PRICE = globalStats?.premiumPrice || 10000;
 
@@ -100,6 +101,34 @@ export default function PremiumPage() {
     } finally { setIsSavingDomain(false); }
   };
 
+  const handleCheckDNS = async () => {
+    if (!profile?.customDomain) return;
+    setIsCheckingDNS(true);
+    try {
+      // Menggunakan Google DNS API untuk memeriksa CNAME secara publik
+      const res = await fetch(`https://dns.google/resolve?name=${profile.customDomain}&type=CNAME`);
+      const data = await res.json();
+      
+      const isPointing = data.Answer?.some((ans: any) => 
+        ans.data.toLowerCase().includes('linku.biz.id')
+      );
+
+      if (isPointing) {
+        toast({ title: "KONEKSI BERHASIL", description: `Domain ${profile.customDomain} sudah terhubung ke Linku Engine!` });
+      } else {
+        toast({ 
+          variant: "destructive", 
+          title: "BELUM TERHUBUNG", 
+          description: "CNAME belum ditemukan. Pastikan sudah diatur di panel domain Anda dan tunggu proses propagasi." 
+        });
+      }
+    } catch (e) {
+      toast({ variant: "destructive", title: "ERROR", description: "Gagal melakukan verifikasi DNS saat ini." });
+    } finally {
+      setIsCheckingDNS(false);
+    }
+  };
+
   const isActuallyPremium = profile?.isPremium || profile?.role === 'Admin';
 
   if (isActuallyPremium) {
@@ -119,16 +148,18 @@ export default function PremiumPage() {
                 <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-xl"><Globe size={24} /></div>
                 <h3 className="font-black text-base uppercase text-white">Custom Domain</h3>
               </div>
-              {profile?.customDomain && (
-                <Button variant="ghost" size="icon" onClick={handleDeleteDomain} disabled={isSavingDomain} className="h-12 w-12 rounded-2xl text-destructive/40 hover:text-destructive hover:bg-destructive/10 transition-all border border-white/5">
-                   {isSavingDomain ? <Loader2 className="animate-spin" size={20} /> : <Trash2 size={20} />}
-                </Button>
-              )}
            </div>
            
            <div className="space-y-6">
               <div className="space-y-3">
-                 <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Domain / Subdomain Anda:</label>
+                 <div className="flex justify-between items-center px-1">
+                    <label className="text-[10px] font-black uppercase text-muted-foreground">Domain Anda:</label>
+                    {profile?.customDomain && (
+                      <button onClick={handleDeleteDomain} disabled={isSavingDomain} className="text-[9px] font-black text-destructive uppercase hover:underline flex items-center gap-1">
+                        {isSavingDomain ? <Loader2 className="animate-spin" size={10} /> : <Trash2 size={10} />} Hapus Domain
+                      </button>
+                    )}
+                 </div>
                  <div className="flex gap-2">
                     <Input placeholder="contoh: budi.com" value={customDomain} onChange={(e) => setCustomDomain(e.target.value)} className="bg-white/5 border-none h-16 rounded-2xl font-bold text-base px-6 focus-visible:ring-primary/20" />
                     <Button onClick={handleSaveDomain} disabled={isSavingDomain || !customDomain} className="h-16 w-16 rounded-2xl neon-gradient text-background shrink-0 active:scale-95 transition-transform shadow-xl">
@@ -137,15 +168,26 @@ export default function PremiumPage() {
                  </div>
               </div>
 
-              {customDomain && customDomain === profile?.customDomain && (
+              {profile?.customDomain && (
                 <div className="p-6 bg-primary/5 rounded-[2rem] border border-primary/20 space-y-6 animate-in slide-in-from-bottom-4 duration-500">
-                  <div className="flex items-center gap-3 text-primary">
-                    <Network size={20} />
-                    <p className="text-xs font-black uppercase tracking-widest">Panduan DNS (White-Label):</p>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3 text-primary">
+                      <Network size={20} />
+                      <p className="text-xs font-black uppercase tracking-widest">Panduan DNS:</p>
+                    </div>
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      onClick={handleCheckDNS} 
+                      disabled={isCheckingDNS}
+                      className="h-8 bg-primary/10 text-primary font-black uppercase text-[8px] tracking-widest rounded-lg hover:bg-primary/20"
+                    >
+                      {isCheckingDNS ? <Loader2 className="animate-spin mr-2" size={12} /> : <SearchCheck size={12} className="mr-2" />} Cek Koneksi DNS
+                    </Button>
                   </div>
                   
                   <p className="text-[10px] font-bold text-white/60 leading-relaxed uppercase">
-                    Arahkan domain pribadi Anda ke infrastruktur Linku melalui panel penyedia domain Anda:
+                    Arahkan domain pribadi Anda melalui panel penyedia domain (Rumahweb/Niagahoster/dll):
                   </p>
 
                   <div className="bg-black/40 rounded-2xl overflow-hidden border border-white/10 shadow-inner">
@@ -170,7 +212,7 @@ export default function PremiumPage() {
                   <div className="flex gap-4 p-4 bg-white/5 rounded-2xl">
                     <CheckCircle2 size={20} className="text-primary shrink-0" />
                     <p className="text-[9px] font-bold text-white/40 uppercase leading-relaxed">
-                      Catatan: Pengaturan ini akan memetakan domain Anda ke gateway Linku. Pastikan Anda sudah menambahkan domain ini ke project Vercel/Firebase Master jika diperlukan SSL khusus.
+                      Sistem akan menangkap domain Anda secara otomatis begitu DNS terdeteksi. Gunakan tombol "Cek Koneksi" di atas untuk memantau status.
                     </p>
                   </div>
                 </div>
