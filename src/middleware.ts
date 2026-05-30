@@ -1,17 +1,18 @@
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/request';
+import type { NextRequest } from 'next/server';
 
 /**
- * @fileOverview Linku Engine v53.0 - FINAL STABLE ROUTING
- * Memperbaiki deteksi domain sistem dan menghilangkan loop pada rute internal.
+ * @fileOverview Linku Engine v54.0 - UNIFIED ROUTING SYSTEM
+ * Mengarahkan Subdomain dan Custom Domain ke satu "Dapur" (_view) dengan label instruksi.
  */
 
 export function middleware(req: NextRequest) {
   const url = req.nextUrl.clone();
   const rawHost = req.headers.get('host') || '';
+  // Bersihkan hostname dari port dan spasi
   const hostname = rawHost.toLowerCase().trim().split(':')[0];
 
-  // 1. TAMENG ASET & API: Loloskan langsung
+  // 1. TAMENG ASET & API: Loloskan langsung tanpa proses
   if (
     url.pathname.startsWith('/_next') || 
     url.pathname.startsWith('/api') ||
@@ -20,15 +21,14 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // 2. TAMENG INTERNAL REWRITE: Cegah Loop jika sudah di rute internal
+  // 2. TAMENG INTERNAL: Jika sudah di rute internal _view, hentikan agar tidak loop
   if (url.pathname.startsWith('/_view')) {
     return NextResponse.next();
   }
 
   const mainDomain = 'linku.biz.id';
   
-  // 3. DAFTAR DOMAIN SISTEM (Dashboard & Preview Mode)
-  // Menambahkan pengecekan untuk lingkungan pengembangan dan preview Firebase
+  // 3. DAFTAR DOMAIN SISTEM (Dashboard & Google Preview)
   const isSystemHost = 
     hostname === mainDomain || 
     hostname === `www.${mainDomain}` ||
@@ -52,13 +52,11 @@ export function middleware(req: NextRequest) {
       return NextResponse.next();
     }
 
-    // Redirect link lama linku.biz.id/username ke username.linku.biz.id
-    // HANYA jika di linku.biz.id asli (bukan localhost/preview)
+    // Redirect link LAMA linku.biz.id/username ke username.linku.biz.id (301)
     if (hostname.includes(mainDomain)) {
       const remainingPath = url.pathname.replace(`/${firstSegment}`, '');
-      const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
       return NextResponse.redirect(
-        new URL(`${protocol}://${firstSegment}.${mainDomain}${remainingPath}${url.search}`, req.url),
+        new URL(`https://${firstSegment}.${mainDomain}${remainingPath}${url.search}`, req.url),
         301
       );
     }
@@ -66,9 +64,9 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // 4. LOGIKA SUBDOMAIN (username.linku.biz.id)
+  // 4. LOGIKA SUBDOMAIN (u:username)
+  // Menangani subdomain.linku.biz.id
   const isSubdomain = hostname.endsWith(mainDomain) && hostname !== mainDomain;
-  
   if (isSubdomain) {
     const subdomain = hostname.replace(`.${mainDomain}`, '').replace('www.', '');
     const systemSubdomains = ['admin', 'sys', 'apps', 'www'];
@@ -77,12 +75,13 @@ export function middleware(req: NextRequest) {
       return NextResponse.next();
     }
 
-    // REWRITE ke dapur internal dengan label u:
+    // REWRITE ke dapur tunggal dengan label u:
     url.pathname = `/_view/u:${subdomain}${url.pathname}`;
     return NextResponse.rewrite(url);
   }
 
-  // 5. LOGIKA CUSTOM DOMAIN (Premium)
+  // 5. LOGIKA CUSTOM DOMAIN (d:domain.com)
+  // Semua yang bukan domain sistem dan bukan subdomain linku
   const cleanCustomDomain = hostname.replace('www.', '');
   url.pathname = `/_view/d:${cleanCustomDomain}${url.pathname}`;
   return NextResponse.rewrite(url);
