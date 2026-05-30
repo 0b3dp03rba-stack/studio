@@ -5,13 +5,14 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Sparkles, ShieldCheck, Zap, Globe, Loader2, Save, ReceiptText, ArrowRight, Info, Network, CheckCircle2, Trash2, SearchCheck, AlertTriangle, ExternalLink } from 'lucide-react';
+import { Sparkles, ShieldCheck, Zap, Globe, Loader2, Save, ReceiptText, ArrowRight, Info, Network, CheckCircle2, Trash2, SearchCheck, AlertTriangle, ExternalLink, Lock } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, updateDoc, serverTimestamp, collection, setDoc, query, where, limit } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '@/lib/utils-app';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { addDomainToVercel, removeDomainFromVercel } from './domain-actions';
 
 export default function PremiumPage() {
   const { user } = useUser();
@@ -80,22 +81,45 @@ export default function PremiumPage() {
       toast({ variant: "destructive", title: "DOMAIN TIDAK VALID", description: "Masukkan domain yang benar (contoh: budi.com)" });
       return;
     }
+    
     setIsSavingDomain(true);
+    const domainToSave = customDomain.trim().toLowerCase();
+
     try {
-      await updateDoc(profileRef, { customDomain: customDomain.trim().toLowerCase(), updatedAt: serverTimestamp() });
-      toast({ title: "DOMAIN DISIMPAN", description: "Identitas kustom Anda telah diperbarui." });
-    } catch (e) {
-      toast({ variant: "destructive", title: "GAGAL MENYIMPAN" });
-    } finally { setIsSavingDomain(false); }
+      // 1. OTOMATISASI: Daftarkan ke Vercel Infrastructure
+      const vercelResult = await addDomainToVercel(domainToSave);
+      
+      if (!vercelResult.success) {
+        toast({ 
+          variant: "destructive", 
+          title: "SERVER ERROR", 
+          description: vercelResult.error || "Gagal mendaftarkan domain ke sistem pusat." 
+        });
+        setIsSavingDomain(false);
+        return;
+      }
+
+      // 2. Simpan ke database jika Vercel sukses
+      await updateDoc(profileRef, { customDomain: domainToSave, updatedAt: serverTimestamp() });
+      toast({ title: "DOMAIN AKTIF", description: "Sistem pusat telah mengizinkan domain Anda. Menunggu propagasi SSL." });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "GAGAL MENYIMPAN", description: e.message });
+    } finally {
+      setIsSavingDomain(false);
+    }
   };
 
   const handleDeleteDomain = async () => {
-    if (!profileRef) return;
+    if (!profileRef || !profile?.customDomain) return;
     setIsSavingDomain(true);
     try {
+      // 1. Hapus dari Vercel Infrastructure
+      await removeDomainFromVercel(profile.customDomain);
+      
+      // 2. Update Firestore
       await updateDoc(profileRef, { customDomain: "", updatedAt: serverTimestamp() });
       setCustomDomain('');
-      toast({ title: "DOMAIN DIHAPUS", description: "Profil Anda kini kembali menggunakan subdomain standar." });
+      toast({ title: "DOMAIN DIHAPUS", description: "Pendaftaran domain telah dicabut dari sistem pusat." });
     } catch (e) {
       toast({ variant: "destructive", title: "GAGAL MENGHAPUS" });
     } finally { setIsSavingDomain(false); }
@@ -145,7 +169,7 @@ export default function PremiumPage() {
            <div className="flex items-center justify-between border-b border-white/5 pb-6">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-xl"><Globe size={24} /></div>
-                <h3 className="font-black text-base uppercase text-white">Custom Domain</h3>
+                <h3 className="font-black text-base uppercase text-white">Auto Domain System</h3>
               </div>
            </div>
            
@@ -155,36 +179,43 @@ export default function PremiumPage() {
                     <label className="text-[10px] font-black uppercase text-muted-foreground">Domain Anda:</label>
                     {profile?.customDomain && (
                       <button onClick={handleDeleteDomain} disabled={isSavingDomain} className="text-[9px] font-black text-destructive uppercase hover:underline flex items-center gap-1">
-                        {isSavingDomain ? <Loader2 className="animate-spin" size={10} /> : <Trash2 size={10} />} Hapus Domain
+                        {isSavingDomain ? <Loader2 className="animate-spin" size={10} /> : <Trash2 size={10} />} Hapus Pendaftaran
                       </button>
                     )}
                  </div>
                  <div className="flex gap-2">
-                    <Input placeholder="contoh: budi.com" value={customDomain} onChange={(e) => setCustomDomain(e.target.value)} className="bg-white/5 border-none h-16 rounded-2xl font-bold text-base px-6 focus-visible:ring-primary/20" />
-                    <Button onClick={handleSaveDomain} disabled={isSavingDomain || !customDomain} className="h-16 w-16 rounded-2xl neon-gradient text-background shrink-0 active:scale-95 transition-transform shadow-xl">
-                      {isSavingDomain ? <Loader2 className="animate-spin" /> : <Save size={28} />}
-                    </Button>
+                    <Input 
+                      placeholder="contoh: budi.com" 
+                      value={customDomain} 
+                      onChange={(e) => setCustomDomain(e.target.value)} 
+                      disabled={!!profile?.customDomain}
+                      className="bg-white/5 border-none h-16 rounded-2xl font-bold text-base px-6 focus-visible:ring-primary/20 disabled:opacity-50" 
+                    />
+                    {!profile?.customDomain && (
+                      <Button onClick={handleSaveDomain} disabled={isSavingDomain || !customDomain} className="h-16 w-16 rounded-2xl neon-gradient text-background shrink-0 active:scale-95 transition-transform shadow-xl">
+                        {isSavingDomain ? <Loader2 className="animate-spin" /> : <Save size={28} />}
+                      </Button>
+                    )}
                  </div>
               </div>
 
               {profile?.customDomain && (
                 <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
-                  <div className="p-6 bg-red-500/10 rounded-[2rem] border border-red-500/30 space-y-4">
-                    <div className="flex items-center gap-3 text-red-500">
-                      <AlertTriangle size={20} />
-                      <p className="text-xs font-black uppercase tracking-widest leading-none">Langkah Terakhir (Penting!)</p>
+                  <div className="p-6 bg-green-500/10 rounded-[2rem] border border-green-500/30 space-y-4 text-center">
+                    <div className="flex items-center justify-center gap-3 text-green-500">
+                      <Lock size={20} />
+                      <p className="text-xs font-black uppercase tracking-widest leading-none">Pendaftaran Otomatis Berhasil</p>
                     </div>
                     <p className="text-[10px] font-bold text-white/80 leading-relaxed uppercase">
-                      DNS Master sudah terverifikasi, tapi server butuh izin SSL. Kirim pesan ke Admin via <Link href="/dashboard/chat" className="text-primary underline">Live Chat</Link> agar domain <span className="text-primary">{profile.customDomain}</span> segera didaftarkan ke server utama kami.
+                      Domain <span className="text-primary">{profile.customDomain}</span> telah didaftarkan ke sistem pusat secara otomatis. Silakan selesaikan konfigurasi DNS di bawah ini agar web Anda bisa diakses dengan SSL Aman.
                     </p>
-                    <p className="text-[9px] font-medium text-white/40 uppercase italic">Tanpa langkah ini, web akan muncul error "Connection Closed".</p>
                   </div>
 
                   <div className="p-6 bg-primary/5 rounded-[2rem] border border-primary/20 space-y-6">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3 text-primary">
                         <Network size={20} />
-                        <p className="text-xs font-black uppercase tracking-widest">Status Koneksi:</p>
+                        <p className="text-xs font-black uppercase tracking-widest">Konfigurasi DNS:</p>
                       </div>
                       <Button 
                         size="sm" 
