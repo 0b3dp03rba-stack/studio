@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc, collection, updateDoc, increment, getDoc, query, orderBy, onSnapshot, where, limit, getDocs, collectionGroup } from 'firebase/firestore';
-import { User, Share2, MousePointer2, Link2, LayoutGrid, ChevronRight, Search, Instagram, Youtube, Facebook, MessageCircle, Globe, Mail, Sparkles, ExternalLink, Ghost, Home } from 'lucide-react';
+import { User, Share2, MousePointer2, Link2, LayoutGrid, ChevronRight, Search, Instagram, Youtube, Facebook, MessageCircle, Globe, Mail, Sparkles, ExternalLink, Ghost, Home, Layers, Columns, Layout } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -108,70 +108,129 @@ export default function ProfileClient({ username }: { username: string }) {
       backgroundPosition: 'center',
       backgroundAttachment: 'fixed'
     }}>
-      {/* OVERLAY WALLPAPER AGAR TEXT TETAP TERBACA */}
       {profile.wallpaperUrl && <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" />}
 
       <div className="max-w-md mx-auto relative z-10 p-4 pb-24 pt-6 space-y-8">
         
-        {/* IDENTITY CARD (SAMPUL) */}
-        <div className="relative glass-card border-none rounded-[3rem] overflow-hidden shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)]">
+        {/* IDENTITY CARD - THE MASTER PIECE */}
+        <div className={cn(
+          "relative glass-card border-none rounded-[3rem] overflow-hidden shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] transition-all duration-500",
+          "before:absolute before:inset-0 before:p-[1px] before:rounded-[3rem] before:bg-gradient-to-br before:from-white/10 before:to-transparent before:-z-10"
+        )}>
            {/* Background Banner Inside Card */}
            {profile.bannerUrl ? (
              <div className="absolute inset-0 z-0">
-                <img src={profile.bannerUrl} className="w-full h-full object-cover opacity-40" alt="Card Cover" />
-                <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/40 to-black/90" />
+                <img src={profile.bannerUrl} className="w-full h-full object-cover opacity-30" alt="Card Cover" />
+                <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/40 to-black/95" />
              </div>
            ) : (
              <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-secondary/10 z-0" />
            )}
 
-           <div className="relative z-10 p-8 flex flex-col items-center text-center">
+           <div className="relative z-10 p-8">
               {/* Share Action */}
-              <div className="absolute top-6 right-6">
+              <div className="absolute top-6 right-6 z-20">
                  <Button 
                    variant="ghost" 
                    size="icon" 
                    onClick={() => { navigator.clipboard.writeText(window.location.href); toast({title: "Link Tersalin"}); }} 
-                   className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/20 transition-all"
+                   className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/20 transition-all active:scale-90"
                  >
                    <Share2 size={18} />
                  </Button>
               </div>
 
-              {/* Avatar Section */}
-              <div className={cn(
-                "p-1 shadow-2xl animate-flowing-gradient relative mb-6",
-                avatarShapeClass,
-                "w-28 h-28"
-              )} style={{ backgroundImage: `linear-gradient(45deg, ${primaryColor}, ${secondaryColor})` }}>
-                 <div className={cn("w-full h-full bg-background flex items-center justify-center overflow-hidden border-4 border-background", avatarShapeClass)}>
-                    {profile.avatarUrl ? <img src={profile.avatarUrl} className="w-full h-full object-cover" alt="Avatar" /> : <User size={48} className="text-white/20" />}
-                 </div>
-              </div>
+              {/* RENDER TEMPLATE CONTENT BERDASARKAN layout_type */}
+              {isSplit ? (
+                /* TEMPLATE: MODERN SPLIT (Avatar Left, Info Right) */
+                <div className="flex flex-col gap-6">
+                   <div className="flex items-center gap-6 text-left">
+                      <div className={cn(
+                        "p-1 shadow-2xl animate-flowing-gradient relative shrink-0",
+                        avatarShapeClass,
+                        "w-24 h-24"
+                      )} style={{ backgroundImage: `linear-gradient(45deg, ${primaryColor}, ${secondaryColor})` }}>
+                         <div className={cn("w-full h-full bg-background flex items-center justify-center overflow-hidden border-4 border-background", avatarShapeClass)}>
+                            {profile.avatarUrl ? <img src={profile.avatarUrl} className="w-full h-full object-cover" alt="Avatar" /> : <User size={40} className="text-white/20" />}
+                         </div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                         <h1 className="text-2xl font-black text-white tracking-tighter uppercase leading-tight mb-1">{profile.displayName}</h1>
+                         {profile.bio && <p className="text-[9px] font-bold text-white/50 leading-relaxed uppercase tracking-widest line-clamp-3">{profile.bio}</p>}
+                      </div>
+                   </div>
+                   {/* Social Bar for Split */}
+                   {profile.socialLinks && profile.socialLinks.length > 0 && (
+                     <div className="flex flex-wrap gap-2 pt-4 border-t border-white/5">
+                        {profile.socialLinks.map((social: any, i: number) => {
+                          const Icon = platformIcons[social.platform] || Globe;
+                          return (
+                            <a key={i} href={getSmartSocialUrl(social.platform, social.label)} target="_blank" rel="noreferrer" className="w-9 h-9 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:text-primary transition-all">
+                              <Icon size={16} />
+                            </a>
+                          );
+                        })}
+                     </div>
+                   )}
+                </div>
+              ) : isMinimal ? (
+                /* TEMPLATE: MINIMAL (Essential Top-Down) */
+                <div className="flex flex-col items-center text-center space-y-4">
+                   <div className={cn(
+                        "p-0.5 shadow-xl relative",
+                        avatarShapeClass,
+                        "w-20 h-20"
+                      )} style={{ backgroundColor: primaryColor }}>
+                         <div className={cn("w-full h-full bg-background flex items-center justify-center overflow-hidden border-2 border-background", avatarShapeClass)}>
+                            {profile.avatarUrl ? <img src={profile.avatarUrl} className="w-full h-full object-cover" alt="Avatar" /> : <User size={32} className="text-white/20" />}
+                         </div>
+                   </div>
+                   <div className="space-y-1">
+                      <h1 className="text-xl font-black text-white tracking-widest uppercase">{profile.displayName}</h1>
+                      {profile.bio && <p className="text-[8px] font-bold text-white/40 uppercase tracking-[0.3em]">{profile.bio}</p>}
+                   </div>
+                   {/* Compact Social Bar */}
+                   <div className="flex gap-4 pt-2">
+                      {profile.socialLinks?.slice(0, 5).map((social: any, i: number) => {
+                        const Icon = platformIcons[social.platform] || Globe;
+                        return (
+                          <a key={i} href={getSmartSocialUrl(social.platform, social.label)} target="_blank" rel="noreferrer" className="text-white/20 hover:text-primary transition-colors">
+                            <Icon size={14} />
+                          </a>
+                        );
+                      })}
+                   </div>
+                </div>
+              ) : (
+                /* TEMPLATE: CLASSIC (Centered Hero) */
+                <div className="flex flex-col items-center text-center">
+                   <div className={cn(
+                    "p-1 shadow-2xl animate-flowing-gradient relative mb-6",
+                    avatarShapeClass,
+                    "w-28 h-28"
+                  )} style={{ backgroundImage: `linear-gradient(45deg, ${primaryColor}, ${secondaryColor})` }}>
+                     <div className={cn("w-full h-full bg-background flex items-center justify-center overflow-hidden border-4 border-background", avatarShapeClass)}>
+                        {profile.avatarUrl ? <img src={profile.avatarUrl} className="w-full h-full object-cover" alt="Avatar" /> : <User size={48} className="text-white/20" />}
+                     </div>
+                  </div>
 
-              {/* Info Section */}
-              <div className="space-y-2">
-                 <h1 className="text-3xl font-black text-white tracking-tighter uppercase leading-none">{profile.displayName}</h1>
-                 {profile.bio && <p className="text-[10px] font-bold text-white/60 leading-relaxed max-w-[240px] mx-auto uppercase tracking-widest">{profile.bio}</p>}
-              </div>
+                  <div className="space-y-2">
+                     <h1 className="text-3xl font-black text-white tracking-tighter uppercase leading-none">{profile.displayName}</h1>
+                     {profile.bio && <p className="text-[10px] font-bold text-white/60 leading-relaxed max-w-[240px] mx-auto uppercase tracking-widest">{profile.bio}</p>}
+                  </div>
 
-              {/* Social Links Bar */}
-              {profile.socialLinks && profile.socialLinks.length > 0 && (
-                <div className="flex flex-wrap justify-center gap-3 mt-8 pt-6 border-t border-white/5 w-full">
-                  {profile.socialLinks.map((social: any, i: number) => {
-                    const Icon = platformIcons[social.platform] || Globe;
-                    return (
-                      <a 
-                        key={i} 
-                        href={getSmartSocialUrl(social.platform, social.label)} 
-                        target="_blank" 
-                        rel="noreferrer"
-                        className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:text-primary hover:border-primary/50 hover:bg-primary/10 transition-all active:scale-90"
-                      >
-                        <Icon size={18} />
-                      </a>
-                    );
-                  })}
+                  {profile.socialLinks && profile.socialLinks.length > 0 && (
+                    <div className="flex flex-wrap justify-center gap-3 mt-8 pt-6 border-t border-white/5 w-full">
+                      {profile.socialLinks.map((social: any, i: number) => {
+                        const Icon = platformIcons[social.platform] || Globe;
+                        return (
+                          <a key={i} href={getSmartSocialUrl(social.platform, social.label)} target="_blank" rel="noreferrer" className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:text-primary hover:border-primary/50 hover:bg-primary/10 transition-all active:scale-90">
+                            <Icon size={18} />
+                          </a>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
            </div>

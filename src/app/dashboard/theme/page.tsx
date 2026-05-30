@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Palette, Sparkles, Loader2, Save, Upload, LayoutGrid, Circle, Square, Hexagon, Maximize, Image as ImageIcon, Trash2, Smartphone } from 'lucide-react';
+import { Palette, Sparkles, Loader2, Save, Upload, LayoutGrid, Circle, Square, Hexagon, Maximize, Image as ImageIcon, Trash2, Smartphone, Layout, Columns, Layers } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
@@ -92,10 +92,42 @@ export default function ThemePage() {
     <div className="space-y-8 animate-in pb-32 pt-24 px-4">
       <div className="space-y-1">
         <h1 className="text-4xl font-black tracking-tighter text-white uppercase leading-none">Visual Lab</h1>
-        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/70">Kustomisasi Identity Card Master</p>
+        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/70">Kustomisasi Identity Hub</p>
       </div>
 
       <div className="grid gap-6">
+        
+        {/* CARD LAYOUT TEMPLATE SELECTOR */}
+        <Card className="glass-card border-none rounded-[3rem] p-8 shadow-2xl space-y-6">
+           <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase tracking-widest">
+              <Layout size={16} /> <span>Card Content Template</span>
+           </div>
+           <div className="grid grid-cols-3 gap-3">
+              {[
+                { id: 'classic', label: 'Classic', icon: Layers, desc: 'Centered Hero' },
+                { id: 'split', label: 'Modern', icon: Columns, desc: 'Side-by-Side' },
+                { id: 'minimal', label: 'Elite', icon: LayoutGrid, desc: 'Compact Hub' }
+              ].map((layout) => (
+                <button 
+                  key={layout.id}
+                  onClick={() => setLocalProfile({...localProfile, layout_type: layout.id})}
+                  className={cn(
+                    "flex flex-col items-center gap-3 p-4 rounded-2xl border-2 transition-all group",
+                    localProfile.layout_type === layout.id 
+                    ? "bg-primary/10 border-primary text-primary shadow-[0_0_20px_rgba(255,0,0,0.2)]" 
+                    : "bg-white/5 border-white/5 text-white/40 hover:border-white/20 hover:text-white"
+                  )}
+                >
+                  <layout.icon size={24} className={cn(localProfile.layout_type === layout.id ? "animate-pulse" : "")} />
+                  <div className="text-center">
+                    <p className="text-[9px] font-black uppercase tracking-tighter">{layout.label}</p>
+                    <p className="text-[7px] font-bold opacity-40 uppercase tracking-widest mt-0.5 hidden sm:block">{layout.desc}</p>
+                  </div>
+                </button>
+              ))}
+           </div>
+        </Card>
+
         {/* IDENTITY CARD EDITOR (SAMPUL) */}
         <Card className="glass-card border-none rounded-[3rem] overflow-hidden p-8 shadow-2xl space-y-6">
            <div className="flex items-center justify-between">
@@ -116,7 +148,6 @@ export default function ThemePage() {
                  <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageSelect(e, 'banner')} />
               </label>
            </div>
-           <p className="text-[9px] font-bold text-white/30 uppercase text-center leading-relaxed">Identity Cover akan menjadi latar belakang dari kartu informasi utama (Avatar, Nama, dan Sosmed).</p>
         </Card>
 
         {/* WALLPAPER EDITOR */}
@@ -130,7 +161,7 @@ export default function ThemePage() {
               )}
            </div>
            <div className="flex gap-6 items-center">
-              <div className="w-32 aspect-[9/16] bg-white/5 rounded-[1.5rem] overflow-hidden border border-white/10 relative group shrink-0 shadow-2xl">
+              <div className="w-24 aspect-[9/16] bg-white/5 rounded-[1.5rem] overflow-hidden border border-white/10 relative group shrink-0 shadow-2xl">
                 {localProfile.wallpaperUrl ? <img src={localProfile.wallpaperUrl} className="w-full h-full object-cover" alt="Wallpaper Preview" /> : <div className="w-full h-full flex items-center justify-center text-white/5"><Smartphone size={24} /></div>}
                 <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity backdrop-blur-sm">
                    <Upload className="text-white" size={20} />
@@ -138,13 +169,13 @@ export default function ThemePage() {
                 </label>
               </div>
               <div className="space-y-2">
-                 <p className="text-xs font-black text-white uppercase tracking-tight">Latar Belakang Penuh</p>
-                 <p className="text-[10px] text-white/40 leading-relaxed uppercase font-medium">Unggah wallpaper untuk memberikan atmosfer yang lebih personal dan imersif pada seluruh halaman Master.</p>
+                 <p className="text-xs font-black text-white uppercase tracking-tight">Atmosfer Profil</p>
+                 <p className="text-[9px] text-white/40 leading-relaxed uppercase font-medium">Unggah latar belakang penuh untuk memberikan kesan eksklusif pada seluruh halaman Master.</p>
               </div>
            </div>
         </Card>
 
-        {/* SHAPE & LAYOUT */}
+        {/* SHAPE & PUBLISH */}
         <Card className="glass-card border-none rounded-[3rem] p-8 shadow-2xl space-y-8">
            <div className="space-y-4">
               <label className="text-[10px] font-black uppercase text-white/30 tracking-[0.3em] ml-1">Avatar Frame Shape</label>
@@ -164,20 +195,6 @@ export default function ThemePage() {
                   </button>
                 ))}
               </div>
-           </div>
-
-           <div className="space-y-4">
-              <label className="text-[10px] font-black uppercase text-white/30 tracking-[0.3em] ml-1">Identity Layout</label>
-              <Select value={localProfile.layout_type} onValueChange={(v) => setLocalProfile({...localProfile, layout_type: v})}>
-                <SelectTrigger className="bg-white/5 border-none h-14 rounded-2xl font-black uppercase text-[10px] tracking-widest px-6">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="glass-card border-none rounded-[1.5rem]">
-                   <SelectItem value="classic" className="text-xs uppercase font-bold py-3">Classic (Centered Hub)</SelectItem>
-                   <SelectItem value="split" className="text-xs uppercase font-bold py-3">Modern (Split View)</SelectItem>
-                   <SelectItem value="minimal" className="text-xs uppercase font-bold py-3">Minimal (Essential)</SelectItem>
-                </SelectContent>
-              </Select>
            </div>
            
            <div className="pt-4">
