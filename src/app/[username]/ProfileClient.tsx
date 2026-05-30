@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, useMemo } from 'react';
@@ -56,9 +57,10 @@ export default function ProfileClient({ username }: { username: string }) {
   const profileRef = useMemoFirebase(() => resolvedUserId ? doc(db, 'userProfiles', resolvedUserId) : null, [db, resolvedUserId]);
   const { data: profile } = useDoc(profileRef);
 
-  // SPOTLIGHT (TAUTAN TERBARU DARI MANAPUN)
+  // SPOTLIGHT (GLOBAL LATEST LINK ACROSS ALL FOLDERS)
   const spotlightQuery = useMemoFirebase(() => {
     if (!resolvedUserId) return null;
+    // We use collectionGroup('links') to find the latest link even if nested inside linkGroups
     return query(collectionGroup(db, 'links'), where('userId', '==', resolvedUserId), orderBy('createdAt', 'desc'), limit(1));
   }, [db, resolvedUserId]);
   const { data: spotlightLinks, error: spotlightError } = useCollection(spotlightQuery);
@@ -120,7 +122,7 @@ export default function ProfileClient({ username }: { username: string }) {
 
       <div className="max-w-md mx-auto relative z-10 p-4 pb-24 pt-6 space-y-8">
         
-        {/* IDENTITY CARD - TATA LETAK CUSTOM */}
+        {/* IDENTITY CARD - DYNAMIC LAYOUTS */}
         <div className={cn(
           "relative glass-card border-none overflow-hidden shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] transition-all duration-500",
           getShapeClass('card'),

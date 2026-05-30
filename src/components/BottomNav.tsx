@@ -1,21 +1,19 @@
+
 "use client";
 
-import { LayoutDashboard, User, Palette, FolderKanban, Zap, LogOut } from 'lucide-react';
+import { LayoutDashboard, User, Palette, FolderKanban, Zap } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { useUser, useAuth } from '@/firebase';
-import { signOut } from 'firebase/auth';
+import { useUser } from '@/firebase';
 
 /**
- * @fileOverview Bottom Navigation Linku Engine v88.0
+ * @fileOverview Bottom Navigation Linku Engine v89.0
  * 5 Menu Utama: Dash, Manage, Premium, Visual Lab, User Set.
  */
 
 export default function BottomNav() {
   const { user } = useUser();
-  const auth = useAuth();
-  const router = useRouter();
   const pathname = usePathname();
 
   if (!user) return null;
@@ -25,11 +23,6 @@ export default function BottomNav() {
   // Sembunyikan di profil publik
   const isPublicProfile = pathname.startsWith('/u/') || pathname.startsWith('/unified/') || (pathname.length > 1 && !pathname.startsWith('/dashboard') && !isAdminPath && !pathname.startsWith('/editor'));
   if (isPublicProfile) return null;
-
-  const handleLogout = async () => {
-    await signOut(auth);
-    router.push('/');
-  };
 
   const navItems = [
     { label: 'Dash', icon: LayoutDashboard, href: '/dashboard' },

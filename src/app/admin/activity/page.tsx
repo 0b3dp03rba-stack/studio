@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useMemo } from 'react';
@@ -11,7 +12,7 @@ import { Button } from '@/components/ui/button';
 export default function AdminActivityPage() {
   const db = useFirestore();
 
-  // Activity Feed Query
+  // Activity Feed Query (Collection Group)
   const linksQuery = useMemoFirebase(() => query(
     collectionGroup(db, 'links'), 
     orderBy('createdAt', 'desc'),

@@ -11,6 +11,8 @@ import {
   CollectionReference,
 } from 'firebase/firestore';
 import { toast } from '@/hooks/use-toast';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 export type WithId<T> = T & { id: string };
 
@@ -54,16 +56,24 @@ export function useCollection<T = any>(
         setError(null);
         setIsLoading(false);
       },
-      (err: FirestoreError) => {
+      async (err: FirestoreError) => {
         setError(err);
         setData(null);
         setIsLoading(false);
+
+        // Handle Permission Errors Contextually for LLM Debugging
+        if (err.code === 'permission-denied') {
+          const permissionError = new FirestorePermissionError({
+            path: 'collectionGroup' in memoizedTargetRefOrQuery ? '(collectionGroup)/links' : (memoizedTargetRefOrQuery as any).path || 'query',
+            operation: 'list',
+          } satisfies SecurityRuleContext);
+          errorEmitter.emit('permission-error', permissionError);
+        }
 
         const errorKey = `col:${err.code}`;
         const now = Date.now();
         const lastToastTime = globalErrorMap.get(errorKey) || 0;
 
-        // AGGRESSIVE THROTTLING: Hanya tampilkan toast jika belum ada dalam 10 detik
         if (now - lastToastTime > 10000) {
           globalErrorMap.set(errorKey, now);
           toast({
