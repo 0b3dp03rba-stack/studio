@@ -1,35 +1,30 @@
 
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import type { NextRequest } from 'next/request';
 
 /**
- * @fileOverview Linku Engine v57.0 - UNIFIED ROUTING SYSTEM
- * Mengarahkan Subdomain dan Custom Domain ke satu "Dapur" (_view) dengan label u: atau d:.
+ * @fileOverview Linku Engine v58.0 - PRO ROUTING SYSTEM
+ * Menangani Subdomain, Custom Domain, dan Preview Mode (Firebase Studio).
  */
 
 export function middleware(req: NextRequest) {
   const url = req.nextUrl.clone();
   const rawHost = req.headers.get('host') || '';
-  // Bersihkan hostname dari port dan spasi
   const hostname = rawHost.toLowerCase().trim().split(':')[0];
 
-  // 1. TAMENG ASET & API: Loloskan langsung tanpa proses
+  // 1. BYPASS: Loloskan aset statis, API, dan rute internal Next.js
   if (
     url.pathname.startsWith('/_next') || 
     url.pathname.startsWith('/api') ||
+    url.pathname.startsWith('/_view') || // Penting: Jangan olah rute yang sudah di-rewrite
     url.pathname.includes('.')
   ) {
     return NextResponse.next();
   }
 
-  // 2. TAMENG INTERNAL: Jika sudah di rute internal _view, hentikan agar tidak loop
-  if (url.pathname.startsWith('/_view')) {
-    return NextResponse.next();
-  }
-
   const mainDomain = 'linku.biz.id';
   
-  // 3. DAFTAR DOMAIN SISTEM (Dashboard & Firebase Studio Preview)
+  // 2. DETEKSI DOMAIN SISTEM (Dashboard & Preview Studio)
   const isSystemHost = 
     hostname === mainDomain || 
     hostname === `www.${mainDomain}` ||
@@ -43,30 +38,36 @@ export function middleware(req: NextRequest) {
     const pathSegments = url.pathname.split('/').filter(Boolean);
     const firstSegment = pathSegments[0];
 
-    // Rute yang dilindungi di domain utama
+    // Rute yang dilindungi (Dashboard/Auth)
     const reservedPaths = [
       'dashboard', 'login', 'register', 'auth', 'premium', 
       'admin', 'reviews', 'verify-email', 'forgot-password'
     ];
     
+    // Jika akses root atau rute sistem, biarkan normal
     if (!firstSegment || reservedPaths.includes(firstSegment)) {
       return NextResponse.next();
     }
 
-    // Redirect link LAMA linku.biz.id/username ke username.linku.biz.id (301)
-    if (hostname.includes(mainDomain)) {
-      const remainingPath = url.pathname.replace(`/${firstSegment}`, '');
-      return NextResponse.redirect(
-        new URL(`https://${firstSegment}.${mainDomain}${remainingPath}${url.search}`, req.url),
-        301
-      );
+    /**
+     * LOGIKA PREVIEW CERDAS:
+     * Jika di Localhost/Studio (System Host) dan user ketik /username, 
+     * jangan REDIRECT (karena subdomain lokal sering mati), tapi REWRITE internal.
+     */
+    if (hostname !== mainDomain && hostname !== `www.${mainDomain}`) {
+       url.pathname = `/_view/u:${firstSegment}${url.pathname.replace(`/${firstSegment}`, '') || '/'}`;
+       return NextResponse.rewrite(url);
     }
-    
-    return NextResponse.next();
+
+    // Jika di PRODUKSI (linku.biz.id) dan ketik /username, lempar ke subdomain resmi (301)
+    const remainingPath = url.pathname.replace(`/${firstSegment}`, '') || '/';
+    return NextResponse.redirect(
+      new URL(`https://${firstSegment}.${mainDomain}${remainingPath}${url.search}`, req.url),
+      301
+    );
   }
 
-  // 4. LOGIKA SUBDOMAIN (u:username)
-  // Menangani subdomain.linku.biz.id
+  // 3. LOGIKA SUBDOMAIN (u:username)
   const isSubdomain = hostname.endsWith(mainDomain) && hostname !== mainDomain;
   if (isSubdomain) {
     const subdomain = hostname.replace(`.${mainDomain}`, '').replace('www.', '');
@@ -76,13 +77,11 @@ export function middleware(req: NextRequest) {
       return NextResponse.next();
     }
 
-    // REWRITE ke dapur tunggal dengan label u:
     url.pathname = `/_view/u:${subdomain}${url.pathname}`;
     return NextResponse.rewrite(url);
   }
 
-  // 5. LOGIKA CUSTOM DOMAIN (d:domain.com)
-  // Semua yang bukan domain sistem dan bukan subdomain linku dianggap domain premium
+  // 4. LOGIKA CUSTOM DOMAIN (d:domain.com)
   const cleanCustomDomain = hostname.replace('www.', '');
   url.pathname = `/_view/d:${cleanCustomDomain}${url.pathname}`;
   return NextResponse.rewrite(url);

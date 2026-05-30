@@ -60,7 +60,6 @@ export default function ProfileClient({ username }: { username: string }) {
 
         if (uid) {
           setResolvedUserId(uid);
-          // Increment views secara silent
           updateDoc(doc(db, 'userProfiles', uid), { views: increment(1) }).catch(() => {});
         }
       } catch (e) {
@@ -75,12 +74,11 @@ export default function ProfileClient({ username }: { username: string }) {
   const profileRef = useMemoFirebase(() => resolvedUserId ? doc(db, 'userProfiles', resolvedUserId) : null, [db, resolvedUserId]);
   const { data: profile, isLoading: isProfileLoading } = useDoc(profileRef);
 
-  // LOGIKA AUTO-REDIRECT: Jika diakses via subdomain tapi punya domain kustom aktif
+  // LOGIKA AUTO-REDIRECT PREMIUM
   useEffect(() => {
     if (profile?.customDomain && (profile.isPremium || profile.role === 'Admin') && typeof window !== 'undefined') {
       const hostname = window.location.hostname;
       const mainDomain = 'linku.biz.id';
-      // Jika pengunjung menggunakan subdomain linku, lempar ke domain pribadinya
       if (hostname.endsWith(mainDomain) && hostname !== mainDomain) {
         const targetUrl = `https://${profile.customDomain}${window.location.pathname}${window.location.search}`;
         window.location.replace(targetUrl);
@@ -124,28 +122,10 @@ export default function ProfileClient({ username }: { username: string }) {
     return () => unsubStandalone();
   }, [resolvedUserId, groups, db]);
 
-  const newestLink = useMemo(() => {
-    if (allLinks.length === 0) return null;
-    return [...allLinks].sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))[0];
-  }, [allLinks]);
-
-  const handleLinkClick = (linkId: string, url: string, groupId?: string) => {
-    if (!resolvedUserId) return;
-    const linkRef = groupId 
-      ? doc(db, 'userProfiles', resolvedUserId, 'linkGroups', groupId, 'links', linkId)
-      : doc(db, 'userProfiles', resolvedUserId, 'links', linkId);
-    updateDoc(linkRef, { clicks: increment(1) }).catch(() => {});
-    window.open(url, '_blank', 'noopener,noreferrer');
-  };
-
-  const filteredGroups = useMemo(() => {
-    if (!groups) return [];
-    return groups.filter(g => g.title.toLowerCase().includes(searchQuery.toLowerCase()));
-  }, [groups, searchQuery]);
-
-  const filteredStandaloneLinks = useMemo(() => {
-    return allLinks.filter(l => l.isStandalone && l.title.toLowerCase().includes(searchQuery.toLowerCase()));
-  }, [allLinks, searchQuery]);
+  const primaryColor = profile?.themeColor || '#ff0000';
+  const secondaryColor = profile?.themeColorSecondary || '#ffea00';
+  const dynamicGradient = `linear-gradient(-45deg, ${primaryColor} 0%, ${secondaryColor} 50%, ${primaryColor} 100%)`;
+  const isUserPremium = profile?.isPremium || profile?.role === 'Admin';
 
   if (!mounted || isResolving || (resolvedUserId && isProfileLoading)) {
     return (
@@ -159,12 +139,12 @@ export default function ProfileClient({ username }: { username: string }) {
   if (!profile) {
     return (
       <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6 text-center space-y-8">
-        <div className="w-24 h-24 rounded-[2rem] bg-primary/10 flex items-center justify-center text-primary glow-primary animate-bounce">
+        <div className="w-24 h-24 rounded-[2rem] bg-primary/10 flex items-center justify-center text-primary glow-primary animate-bounce shadow-2xl">
           <Ghost size={48} />
         </div>
         <div className="space-y-4">
           <h1 className="text-4xl font-black text-white uppercase tracking-tighter">Identitas Gaib</h1>
-          <p className="text-sm font-medium text-white/40 max-w-xs mx-auto uppercase tracking-widest">Alamat yang Anda tuju tidak terdaftar di Linku Engine.</p>
+          <p className="text-sm font-medium text-white/40 max-w-xs mx-auto uppercase tracking-widest leading-relaxed">Profil "@ {username.replace('u:', '')}" belum terdaftar di Linku Engine.</p>
         </div>
         <Button asChild className="h-14 px-10 neon-gradient text-background font-black rounded-2xl uppercase text-[10px] tracking-[0.2em] shadow-2xl">
           <Link href="/"><Home size={16} className="mr-2" /> Kembali ke Markas</Link>
@@ -172,11 +152,6 @@ export default function ProfileClient({ username }: { username: string }) {
       </div>
     );
   }
-
-  const primaryColor = profile.themeColor || '#ff0000';
-  const secondaryColor = profile.themeColorSecondary || '#ffea00';
-  const dynamicGradient = `linear-gradient(-45deg, ${primaryColor} 0%, ${secondaryColor} 50%, ${primaryColor} 100%)`;
-  const isUserPremium = profile.isPremium || profile.role === 'Admin';
 
   return (
     <div 
@@ -244,38 +219,10 @@ export default function ProfileClient({ username }: { username: string }) {
         </div>
 
         <div className="space-y-6">
-          {!searchQuery && newestLink && (
-            <div className="space-y-3">
-              <p className="text-[10px] font-black text-primary uppercase tracking-[0.4em] ml-1 flex items-center gap-2">
-                <Sparkles size={12} className="animate-pulse" /> Update Terbaru
-              </p>
-              <button
-                onClick={() => handleLinkClick(newestLink.id, newestLink.url, newestLink.groupId)}
-                className="w-full p-1 rounded-[1.5rem] hover:scale-[1.02] transition-transform shadow-2xl animate-flowing-gradient relative overflow-hidden"
-                style={{ backgroundImage: dynamicGradient, backgroundSize: '200% 200%' }}
-              >
-                <div className="absolute top-0 right-0 p-2">
-                   <div className="bg-white text-background text-[8px] font-black px-2 py-0.5 rounded-full shadow-lg">NEW</div>
-                </div>
-                <div className="w-full h-24 bg-black/80 backdrop-blur-2xl rounded-[1.4rem] flex items-center px-6 gap-4 border border-white/10">
-                  <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10 shadow-xl shrink-0">
-                    {newestLink.imageUrl ? <img src={newestLink.imageUrl} className="w-full h-full object-cover" alt="Link" /> : <Link2 size={32} style={{ color: primaryColor }} />}
-                  </div>
-                  <div className="flex-1 text-left min-w-0">
-                    <span className="text-lg font-black text-white tracking-tight truncate block uppercase">{newestLink.title}</span>
-                    <p className="text-[8px] font-black text-primary uppercase tracking-widest mt-1">
-                      {newestLink.groupId ? 'Ditemukan di Koleksi' : 'Tautan Hub Utama'}
-                    </p>
-                  </div>
-                  <MousePointer2 size={24} style={{ color: primaryColor }} />
-                </div>
-              </button>
-            </div>
-          )}
-
-          <div className="space-y-4 pt-4 border-t border-white/5">
-             <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em] ml-1">Koleksi Konten</p>
-            {filteredGroups.map(group => (
+          <div className="space-y-4 pt-4">
+            <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em] ml-1">Konten Utama</p>
+            
+            {groups?.filter(g => g.title.toLowerCase().includes(searchQuery.toLowerCase())).map(group => (
               <Link key={group.id} href={`${window.location.pathname}/g/${group.id}`} className="block">
                 <div 
                   className="p-0.5 rounded-[2rem] animate-flowing-gradient transition-transform active:scale-95 shadow-xl"
@@ -294,16 +241,15 @@ export default function ProfileClient({ username }: { username: string }) {
                 </div>
               </Link>
             ))}
-          </div>
 
-          <div className="space-y-4 pt-4 border-t border-white/5">
-            {(!searchQuery || filteredStandaloneLinks.length > 0) && (
-              <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em] ml-1">Tautan Mandiri</p>
-            )}
-            {filteredStandaloneLinks.map(link => (
+            {allLinks.filter(l => l.isStandalone && l.title.toLowerCase().includes(searchQuery.toLowerCase())).map(link => (
               <button
                 key={link.id}
-                onClick={() => handleLinkClick(link.id, link.url)}
+                onClick={() => {
+                  const linkRef = doc(db, 'userProfiles', resolvedUserId!, 'links', link.id);
+                  updateDoc(linkRef, { clicks: increment(1) }).catch(() => {});
+                  window.open(link.url, '_blank', 'noopener,noreferrer');
+                }}
                 className="w-full p-0.5 rounded-2xl hover:scale-[1.02] transition-transform shadow-xl animate-flowing-gradient"
                 style={{ backgroundImage: dynamicGradient, backgroundSize: '200% 200%' }}
               >
@@ -356,11 +302,7 @@ export default function ProfileClient({ username }: { username: string }) {
               className="w-full h-14 neon-gradient text-background font-black rounded-2xl glow-primary text-[10px] uppercase tracking-[0.2em] shadow-xl active:scale-95 transition-all"
               style={{ backgroundImage: dynamicGradient, backgroundSize: '200% 200%' }}
             >
-              <a 
-                href={selectedSocial ? getSmartSocialUrl(selectedSocial.platform, selectedSocial.label) : '#'} 
-                target="_blank" 
-                rel="noopener noreferrer"
-              >
+              <a href={selectedSocial ? getSmartSocialUrl(selectedSocial.platform, selectedSocial.label) : '#'} target="_blank" rel="noopener noreferrer">
                 Kunjungi Profil <ExternalLink size={14} className="ml-2" />
               </a>
             </Button>
