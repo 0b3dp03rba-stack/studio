@@ -1,8 +1,8 @@
 import { notFound } from 'next/navigation';
 
 /**
- * @fileOverview Fallback rute group di domain utama.
- * Dipindah ke _subdomain agar struktur lebih bersih.
+ * @fileOverview Jalur ini dimatikan total.
+ * Semua akses diarahkan ke subdomain via middleware.
  */
 export default function LegacyGroupPage() {
   return notFound();

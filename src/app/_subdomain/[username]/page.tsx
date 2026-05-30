@@ -4,8 +4,8 @@ import { doc, getDoc } from 'firebase/firestore';
 import ProfileClient from '@/app/[username]/ProfileClient';
 
 /**
- * @fileOverview Dedicated internal route for Subdomain Profile rendering.
- * Rute ini dipetakan dari username.linku.biz.id via middleware.
+ * @fileOverview Jalur Internal untuk Render Profil Subdomain.
+ * Middleware memetakan user.linku.biz.id ke sini.
  */
 
 export async function generateMetadata({ params }: { params: Promise<{ username: string }> }): Promise<Metadata> {

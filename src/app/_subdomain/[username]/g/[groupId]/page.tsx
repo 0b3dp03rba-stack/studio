@@ -4,8 +4,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import GroupClient from '@/app/[username]/g/[groupId]/GroupClient';
 
 /**
- * @fileOverview Dedicated internal route for Subdomain Group rendering.
- * Rute ini dipetakan dari username.linku.biz.id/g/[groupId] via middleware.
+ * @fileOverview Jalur Internal untuk Render Koleksi Subdomain.
  */
 
 export async function generateMetadata({ params }: { params: Promise<{ username: string; groupId: string }> }): Promise<Metadata> {

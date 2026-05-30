@@ -1,9 +1,8 @@
 import { notFound } from 'next/navigation';
 
 /**
- * @fileOverview Fallback rute [username] di domain utama.
- * Middleware harusnya melakukan redirect 301 ke subdomain sebelum rute ini tercapai.
- * File ini dikosongkan agar tidak ada render di domain utama/username.
+ * @fileOverview Jalur ini dimatikan total.
+ * Semua akses diarahkan ke subdomain via middleware.
  */
 export default function LegacyProfilePage() {
   return notFound();

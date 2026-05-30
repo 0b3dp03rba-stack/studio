@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 /**
- * @fileOverview Linku Engine v39.1 - FIX IMPORT & SUBDOMAIN ARCHITECTURE
- * Memisahkan rute publik (redirect) dan rute subdomain (render).
+ * @fileOverview Linku Engine v40.0 - TOTAL SUBDOMAIN ARCHITECTURE
+ * Mematikan total rute path-based dan mewajibkan akses via subdomain.
  */
 
 export function middleware(req: NextRequest) {
@@ -32,15 +32,11 @@ export function middleware(req: NextRequest) {
   const firstSegment = pathname.split('/')[1];
 
   // A. IDENTIFIKASI SISTEM HOST
-  const isSystemHost = 
-    hostOnly === mainDomain || 
-    hostOnly.endsWith('.web.app') ||
-    hostOnly.endsWith('.firebaseapp.com') ||
-    hostOnly.includes('localhost') ||
-    hostOnly.includes('127.0.0.1');
+  const isLocal = hostOnly.includes('localhost') || hostOnly.includes('127.0.0.1');
+  const isMainDomain = hostOnly === mainDomain || hostOnly.endsWith('.web.app') || hostOnly.endsWith('.firebaseapp.com');
 
-  // B. LOGIKA CUSTOM DOMAIN (Domain luar milik user, misal: budi.com)
-  if (!isSystemHost && !hostOnly.endsWith(mainDomain)) {
+  // B. LOGIKA CUSTOM DOMAIN (Milik user, misal: budi.com)
+  if (!isMainDomain && !isLocal && !hostOnly.endsWith(mainDomain)) {
     if (pathname.startsWith('/_domain')) return NextResponse.next();
     url.pathname = `/_domain/${hostOnly}${pathname}`;
     return NextResponse.rewrite(url);
@@ -55,21 +51,26 @@ export function middleware(req: NextRequest) {
       return NextResponse.next();
     }
 
-    // INTERNAL REWRITE ke folder rahasia _subdomain
+    // INTERNAL REWRITE ke folder rahasia _subdomain (TIDAK AKAN LOOP)
     url.pathname = `/_subdomain/${subdomain}${pathname}`;
     return NextResponse.rewrite(url);
   }
 
   // D. LOGIKA REDIRECT (linku.biz.id/username -> username.linku.biz.id)
-  // Hanya berlaku di domain utama
-  if (hostOnly === mainDomain && firstSegment && !reservedPaths.includes(firstSegment)) {
-    // 301 Redirect ke subdomain untuk SEO dan UX yang lebih baik
+  // Hanya berlaku di domain utama jika segmen pertama bukan reserved path
+  if ((hostOnly === mainDomain || isLocal) && firstSegment && !reservedPaths.includes(firstSegment)) {
+    // PROTEKSI: Jangan redirect jika rute sudah di-rewrite internal
+    if (pathname.startsWith('/_subdomain') || pathname.startsWith('/_domain')) {
+      return NextResponse.next();
+    }
+
     const newHost = `${firstSegment}.${mainDomain}`;
     const newPath = pathname.replace(`/${firstSegment}`, '') || '/';
-    return NextResponse.redirect(
-      new URL(`${url.protocol}//${newHost}${newPath}`, req.url),
-      301
-    );
+    const redirectUrl = isLocal 
+      ? `${url.protocol}//${host.replace('localhost', `${firstSegment}.localhost`)}${newPath}`
+      : `${url.protocol}//${newHost}${newPath}`;
+
+    return NextResponse.redirect(new URL(redirectUrl, req.url), 301);
   }
 
   return NextResponse.next();
