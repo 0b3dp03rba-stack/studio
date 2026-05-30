@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useCallback } from 'react';
@@ -11,9 +12,10 @@ interface ImageCropperModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCropComplete: (croppedImage: string) => void;
+  aspect?: number;
 }
 
-export default function ImageCropperModal({ imageSrc, isOpen, onClose, onCropComplete }: ImageCropperModalProps) {
+export default function ImageCropperModal({ imageSrc, isOpen, onClose, onCropComplete, aspect = 1 }: ImageCropperModalProps) {
   const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
@@ -44,10 +46,12 @@ export default function ImageCropperModal({ imageSrc, isOpen, onClose, onCropCom
         image.onerror = reject;
       });
 
-      // Target size 400x400px (Optimized for Firestore storage)
-      const size = 400; 
-      canvas.width = size;
-      canvas.height = size;
+      // Target size based on aspect ratio
+      const width = aspect > 1 ? 1200 : (aspect < 1 ? 720 : 600);
+      const height = width / aspect;
+      
+      canvas.width = width;
+      canvas.height = height;
 
       if (ctx) {
         ctx.drawImage(
@@ -58,13 +62,12 @@ export default function ImageCropperModal({ imageSrc, isOpen, onClose, onCropCom
           croppedAreaPixels.height,
           0,
           0,
-          size,
-          size
+          width,
+          height
         );
       }
 
-      // Convert to Base64 String with 0.8 quality compression
-      const base64Image = canvas.toDataURL('image/jpeg', 0.8);
+      const base64Image = canvas.toDataURL('image/jpeg', 0.7);
       onCropComplete(base64Image);
       onClose();
     } catch (e) {
@@ -85,7 +88,7 @@ export default function ImageCropperModal({ imageSrc, isOpen, onClose, onCropCom
               image={imageSrc}
               crop={crop}
               zoom={zoom}
-              aspect={1 / 1}
+              aspect={aspect}
               onCropChange={onCropChange}
               onZoomChange={onZoomChange}
               onCropComplete={handleCropComplete}

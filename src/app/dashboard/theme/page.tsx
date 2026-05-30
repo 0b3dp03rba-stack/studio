@@ -3,14 +3,14 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Palette, Sparkles, Loader2, Save, Upload, LayoutGrid, Circle, Square, Hexagon, Maximize } from 'lucide-react';
+import { Palette, Sparkles, Loader2, Save, Upload, LayoutGrid, Circle, Square, Hexagon, Maximize, Image as ImageIcon, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import ImageCropperModal from '@/components/ImageCropperModal';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { cn } from '@/lib/utils-app';
+import { cn } from '@/lib/utils';
 
 export default function ThemePage() {
   const { user } = useUser();
@@ -23,7 +23,7 @@ export default function ThemePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [cropperOpen, setCropperOpen] = useState(false);
   const [tempImage, setTempImage] = useState<string | null>(null);
-  const [cropTarget, setActiveCropTarget] = useState<'avatar' | 'banner'>('avatar');
+  const [cropTarget, setActiveCropTarget] = useState<'avatar' | 'banner' | 'wallpaper'>('avatar');
 
   const [localProfile, setLocalProfile] = useState<any>({
     profile_shape: 'circle',
@@ -31,14 +31,15 @@ export default function ThemePage() {
     themeColor: '#ff0000',
     themeColorSecondary: '#ffea00',
     avatarUrl: '',
-    bannerUrl: ''
+    bannerUrl: '',
+    wallpaperUrl: ''
   });
 
   useEffect(() => {
     if (profile) setLocalProfile({ ...profile });
   }, [profile]);
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>, target: 'avatar' | 'banner') => {
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>, target: 'avatar' | 'banner' | 'wallpaper') => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
@@ -53,16 +54,39 @@ export default function ThemePage() {
 
   const onCropComplete = (cropped: string) => {
     if (cropTarget === 'avatar') setLocalProfile({ ...localProfile, avatarUrl: cropped });
-    else setLocalProfile({ ...localProfile, bannerUrl: cropped });
+    else if (cropTarget === 'banner') setLocalProfile({ ...localProfile, bannerUrl: cropped });
+    else setLocalProfile({ ...localProfile, wallpaperUrl: cropped });
   };
 
   const handleSave = async () => {
     if (!profileRef) return;
     setIsSaving(true);
     try {
-      await updateDoc(profileRef, { ...localProfile, updatedAt: serverTimestamp() });
-      toast({ title: "Visual Diperbarui" });
-    } catch (e) { toast({ variant: "destructive", title: "Gagal Simpan" }); } finally { setIsSaving(false); }
+      await updateDoc(profileRef, { 
+        profile_shape: localProfile.profile_shape || 'circle',
+        layout_type: localProfile.layout_type || 'classic',
+        avatarUrl: localProfile.avatarUrl || '',
+        bannerUrl: localProfile.bannerUrl || '',
+        wallpaperUrl: localProfile.wallpaperUrl || '',
+        updatedAt: serverTimestamp() 
+      });
+      toast({ title: "Visual Diperbarui", description: "Tampilan profil Anda telah diperbarui." });
+    } catch (e) { 
+      toast({ variant: "destructive", title: "Gagal Simpan" }); 
+    } finally { 
+      setIsSaving(false); 
+    }
+  };
+
+  const handleRemoveImage = (target: 'banner' | 'wallpaper') => {
+    if (target === 'banner') setLocalProfile({ ...localProfile, bannerUrl: '' });
+    else setLocalProfile({ ...localProfile, wallpaperUrl: '' });
+  };
+
+  const getAspect = () => {
+    if (cropTarget === 'banner') return 3/1;
+    if (cropTarget === 'wallpaper') return 9/16;
+    return 1;
   };
 
   return (
@@ -75,13 +99,48 @@ export default function ThemePage() {
       <div className="grid gap-6">
         {/* BANNER EDITOR */}
         <Card className="glass-card border-none rounded-[2.5rem] overflow-hidden p-6 shadow-2xl space-y-6">
-           <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase tracking-widest"><Maximize size={16} /><span>Cover Banner</span></div>
+           <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase tracking-widest"><Maximize size={16} /><span>Cover Banner (3:1)</span></div>
+              {localProfile.bannerUrl && (
+                <button onClick={() => handleRemoveImage('banner')} className="text-[9px] font-black text-destructive uppercase flex items-center gap-1 hover:underline">
+                  <Trash2 size={10} /> Hapus
+                </button>
+              )}
+           </div>
            <div className="w-full aspect-[3/1] bg-white/5 rounded-2xl overflow-hidden border border-white/10 relative group">
-              {localProfile.bannerUrl ? <img src={localProfile.bannerUrl} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-white/10"><Sparkles size={32} /></div>}
+              {localProfile.bannerUrl ? <img src={localProfile.bannerUrl} className="w-full h-full object-cover" alt="Banner Preview" /> : <div className="w-full h-full flex items-center justify-center text-white/10"><ImageIcon size={32} /></div>}
               <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity">
-                 <Upload className="text-white" size={24} />
+                 <div className="flex flex-col items-center gap-2">
+                    <Upload className="text-white" size={24} />
+                    <span className="text-[10px] font-black text-white uppercase">Upload Banner</span>
+                 </div>
                  <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageSelect(e, 'banner')} />
               </label>
+           </div>
+        </Card>
+
+        {/* WALLPAPER EDITOR */}
+        <Card className="glass-card border-none rounded-[2.5rem] overflow-hidden p-6 shadow-2xl space-y-6">
+           <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase tracking-widest"><ImageIcon size={16} /><span>Wallpaper (9:16)</span></div>
+              {localProfile.wallpaperUrl && (
+                <button onClick={() => handleRemoveImage('wallpaper')} className="text-[9px] font-black text-destructive uppercase flex items-center gap-1 hover:underline">
+                  <Trash2 size={10} /> Hapus
+                </button>
+              )}
+           </div>
+           <div className="flex gap-6 items-center">
+              <div className="w-32 aspect-[9/16] bg-white/5 rounded-2xl overflow-hidden border border-white/10 relative group shrink-0">
+                {localProfile.wallpaperUrl ? <img src={localProfile.wallpaperUrl} className="w-full h-full object-cover" alt="Wallpaper Preview" /> : <div className="w-full h-full flex items-center justify-center text-white/5"><ImageIcon size={24} /></div>}
+                <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity">
+                   <Upload className="text-white" size={20} />
+                   <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageSelect(e, 'wallpaper')} />
+                </label>
+              </div>
+              <div className="space-y-2">
+                 <p className="text-xs font-bold text-white uppercase">Latar Belakang Penuh</p>
+                 <p className="text-[10px] text-white/40 leading-relaxed uppercase">Unggah wallpaper untuk membuat profil Anda jauh lebih imersif dan mewah.</p>
+              </div>
            </div>
         </Card>
 
@@ -126,7 +185,7 @@ export default function ThemePage() {
            </Button>
         </Card>
       </div>
-      <ImageCropperModal imageSrc={tempImage} isOpen={cropperOpen} onClose={() => setCropperOpen(false)} onCropComplete={onCropComplete} />
+      <ImageCropperModal imageSrc={tempImage} isOpen={cropperOpen} onClose={() => setCropperOpen(false)} onCropComplete={onCropComplete} aspect={getAspect()} />
     </div>
   );
 }

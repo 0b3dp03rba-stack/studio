@@ -4,17 +4,12 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc, collection, updateDoc, increment, getDoc, query, orderBy, onSnapshot, where, limit, getDocs, collectionGroup } from 'firebase/firestore';
-import { User, Share2, MousePointer2, Link2, LayoutGrid, ChevronRight, Search, X, Instagram, Youtube, Facebook, MessageCircle, Globe, Mail, Sparkles, ExternalLink, Ghost, Home, Hexagon } from 'lucide-react';
+import { User, Share2, MousePointer2, Link2, LayoutGrid, ChevronRight, Search, Instagram, Youtube, Facebook, MessageCircle, Globe, Mail, Sparkles, ExternalLink, Ghost, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import Link from 'next/link';
-import { getSmartSocialUrl, cn } from '@/lib/utils-app';
-
-const platformIcons: Record<string, any> = {
-  Instagram, YouTube, TikTok: Globe, Facebook, WhatsApp: MessageCircle, Email: Mail, Website: Globe
-};
+import { cn } from '@/lib/utils';
 
 export default function ProfileClient({ username }: { username: string }) {
   const db = useFirestore();
@@ -25,7 +20,6 @@ export default function ProfileClient({ username }: { username: string }) {
   const [isResolving, setIsResolving] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [allLinks, setAllLinks] = useState<any[]>([]);
-  const [selectedSocial, setSelectedSocial] = useState<any>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -55,7 +49,7 @@ export default function ProfileClient({ username }: { username: string }) {
   const profileRef = useMemoFirebase(() => resolvedUserId ? doc(db, 'userProfiles', resolvedUserId) : null, [db, resolvedUserId]);
   const { data: profile } = useDoc(profileRef);
 
-  // FIX PRIORITAS 1: SPOTLIGHT (TAUTAN TERBARU LINTAS FOLDER)
+  // SPOTLIGHT (TAUTAN TERBARU LINTAS FOLDER)
   const spotlightQuery = useMemoFirebase(() => {
     if (!resolvedUserId) return null;
     return query(collectionGroup(db, 'links'), where('userId', '==', resolvedUserId), orderBy('createdAt', 'desc'), limit(1));
@@ -97,28 +91,42 @@ export default function ProfileClient({ username }: { username: string }) {
   const isSplit = profile.layout_type === 'split';
 
   return (
-    <div className="min-h-screen relative overflow-x-hidden" style={{ backgroundColor: '#0a0a0a' }}>
+    <div className="min-h-screen relative overflow-x-hidden bg-black" style={{ 
+      backgroundImage: profile.wallpaperUrl ? `url(${profile.wallpaperUrl})` : 'none',
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundAttachment: 'fixed'
+    }}>
+      {/* OVERLAY WALLPAPER AGAR TEXT TETAP TERBACA */}
+      {profile.wallpaperUrl && <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />}
+
       {/* BANNER / COVER */}
       {profile.bannerUrl && (
-        <div className="absolute top-0 left-0 w-full h-64 overflow-hidden">
-           <img src={profile.bannerUrl} className="w-full h-full object-cover opacity-40 blur-[2px]" alt="Cover" />
+        <div className="absolute top-0 left-0 w-full h-64 overflow-hidden z-0">
+           <img src={profile.bannerUrl} className="w-full h-full object-cover opacity-80" alt="Cover" />
            <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#0a0a0a]" />
         </div>
       )}
 
       <div className={cn("max-w-md mx-auto relative z-10 p-6 pb-24", isMinimal ? "pt-12" : "pt-24")}>
         <div className="flex justify-end mb-4">
-           <Button variant="ghost" size="icon" onClick={() => { navigator.clipboard.writeText(window.location.href); toast({title: "Link Tersalin"}); }} className="glass-card text-white rounded-2xl"><Share2 size={20} /></Button>
+           <Button variant="ghost" size="icon" onClick={() => { navigator.clipboard.writeText(window.location.href); toast({title: "Link Tersalin"}); }} className="glass-card text-white rounded-2xl border-white/10"><Share2 size={20} /></Button>
         </div>
 
         <div className={cn("text-center space-y-6", isMinimal && "flex items-center gap-4 text-left space-y-0")}>
            <div className={cn(
              "mx-auto p-1 shadow-2xl animate-flowing-gradient relative",
-             profile.profile_shape === 'circle' ? "w-32 h-32 rounded-full" : "w-32 h-32 rounded-[2.5rem]",
+             profile.profile_shape === 'circle' ? "w-32 h-32 rounded-full" : 
+             profile.profile_shape === 'hexagon' ? "w-32 h-32 [clip-path:polygon(25%_0%,75%_0%,100%_50%,75%_100%,25%_100%,0%_50%)]" :
+             profile.profile_shape === 'rounded' ? "w-32 h-32 rounded-[2.5rem]" : "w-32 h-32 rounded-none",
              isMinimal && "mx-0 w-16 h-16"
            )} style={{ backgroundImage: `linear-gradient(45deg, ${primaryColor}, ${secondaryColor})` }}>
-              <div className={cn("w-full h-full bg-background flex items-center justify-center overflow-hidden border-4 border-background", profile.profile_shape === 'circle' ? "rounded-full" : "rounded-[2.3rem]")}>
-                 {profile.avatarUrl ? <img src={profile.avatarUrl} className="w-full h-full object-cover" /> : <User size={isMinimal ? 24 : 64} className="text-white/20" />}
+              <div className={cn("w-full h-full bg-background flex items-center justify-center overflow-hidden border-4 border-background", 
+                profile.profile_shape === 'circle' ? "rounded-full" : 
+                profile.profile_shape === 'hexagon' ? "[clip-path:polygon(25%_0%,75%_0%,100%_50%,75%_100%,25%_100%,0%_50%)]" :
+                profile.profile_shape === 'rounded' ? "rounded-[2.3rem]" : "rounded-none"
+              )}>
+                 {profile.avatarUrl ? <img src={profile.avatarUrl} className="w-full h-full object-cover" alt="Avatar" /> : <User size={isMinimal ? 24 : 64} className="text-white/20" />}
               </div>
            </div>
            
@@ -185,8 +193,11 @@ export default function ProfileClient({ username }: { username: string }) {
                   onClick={() => { updateDoc(doc(db, 'userProfiles', resolvedUserId!, 'links', link.id), { clicks: increment(1) }).catch(()=>{}); window.open(link.url, '_blank'); }}
                   className={cn(
                     "w-full p-4 flex items-center gap-4 transition-all active:scale-95 group",
-                    link.button_style === 'glassmorphism' ? "glass-card border-white/10 rounded-2xl" : "bg-white/5 border border-white/5 rounded-2xl",
-                    link.button_radius === 'pill' && "rounded-full"
+                    link.button_style === 'glassmorphism' ? "glass-card border-white/10 rounded-2xl" : 
+                    link.button_style === 'outline' ? "bg-transparent border border-white/20 rounded-2xl" :
+                    "bg-white/5 border border-white/5 rounded-2xl",
+                    link.button_radius === 'pill' && "rounded-full",
+                    link.button_radius === 'square' && "rounded-none"
                   )}
                 >
                   <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10">
