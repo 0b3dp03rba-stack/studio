@@ -4,19 +4,24 @@
     "UserProfile": {
       "title": "UserProfile",
       "type": "object",
-      "description": "Profil pengguna Linku. AvatarUrl disimpan sebagai Base64 string.",
+      "description": "Profil pengguna Linku dengan kustomisasi desain.",
       "properties": {
         "id": { "type": "string" },
         "email": { "type": "string", "format": "email" },
         "username": { "type": "string" },
         "displayName": { "type": "string" },
         "bio": { "type": "string" },
-        "avatarUrl": { "type": "string", "description": "Base64 encoded image string (max 400x400px)" },
-        "themeColor": { "type": "string" },
-        "themeColorSecondary": { "type": "string" },
+        "avatarUrl": { "type": "string", "description": "Base64 encoded image string" },
+        "bannerUrl": { "type": "string", "description": "Base64 encoded cover image" },
+        "themeColor": { "type": "string", "default": "#ff0000" },
+        "themeColorSecondary": { "type": "string", "default": "#ffea00" },
+        "profile_shape": { "type": "string", "enum": ["square", "circle", "rounded", "hexagon"], "default": "circle" },
+        "layout_type": { "type": "string", "enum": ["classic", "split", "minimal"], "default": "classic" },
+        "theme_style": { "type": "string", "enum": ["gradient", "glassmorphism", "solid", "neon"], "default": "gradient" },
+        "font_family": { "type": "string", "default": "Inter" },
         "role": { "type": "string", "enum": ["User", "Admin"] },
-        "isPremium": { "type": "boolean", "description": "Status premium untuk hapus WM & domain kustom." },
-        "customDomain": { "type": "string", "description": "Domain pribadi user (contoh: budi.com)" },
+        "isPremium": { "type": "boolean" },
+        "customDomain": { "type": "string" },
         "views": { "type": "number" },
         "socialLinks": {
           "type": "array",
@@ -29,39 +34,24 @@
           }
         },
         "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["id", "email", "username", "role"]
-    },
-    "Payment": {
-      "title": "Payment",
-      "type": "object",
-      "description": "Log transaksi pembayaran premium.",
-      "properties": {
-        "id": { "type": "string" },
-        "userId": { "type": "string" },
-        "amount": { "type": "number" },
-        "status": { "type": "string", "enum": ["pending", "success", "failed"] },
-        "method": { "type": "string" },
-        "qrisData": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
       }
     },
     "Link": {
       "title": "Link",
       "type": "object",
-      "description": "Tautan individu. ImageUrl disimpan sebagai Base64 string.",
       "properties": {
         "id": { "type": "string" },
         "userId": { "type": "string" },
         "groupId": { "type": "string" },
         "title": { "type": "string" },
         "url": { "type": "string" },
-        "imageUrl": { "type": "string", "description": "Base64 encoded image string" },
+        "imageUrl": { "type": "string" },
         "clicks": { "type": "number" },
         "isEnabled": { "type": "boolean" },
+        "button_style": { "type": "string", "enum": ["solid", "outline", "glassmorphism", "gradient"], "default": "solid" },
+        "button_radius": { "type": "string", "enum": ["square", "rounded", "pill"], "default": "rounded" },
         "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["id", "userId", "title", "url"]
+      }
     }
   },
   "auth": {
@@ -72,21 +62,13 @@
       "schema": { "$ref": "#/backend/entities/UserProfile" },
       "description": "Profil utama pengguna."
     },
-    "/payments/{paymentId}": {
-      "schema": { "$ref": "#/backend/entities/Payment" },
-      "description": "Data transaksi pembayaran user."
-    },
-    "/usernames/{username}": {
-      "schema": { "type": "object", "properties": { "userId": { "type": "string" } } },
-      "description": "Registri username unik untuk mencegah duplikasi."
-    },
     "/userProfiles/{userId}/links/{linkId}": {
       "schema": { "$ref": "#/backend/entities/Link" },
       "description": "Tautan mandiri."
     },
-    "/userProfiles/{userId}/linkGroups/{groupId}": {
-      "schema": { "type": "object" },
-      "description": "Folder/Kelompok link."
+    "/userProfiles/{userId}/linkGroups/{groupId}/links/{linkId}": {
+      "schema": { "$ref": "#/backend/entities/Link" },
+      "description": "Tautan dalam grup."
     }
   }
 }

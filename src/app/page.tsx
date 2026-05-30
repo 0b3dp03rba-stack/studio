@@ -1,195 +1,119 @@
+
 "use client";
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Link2, Sparkles, LayoutGrid, Palette, ArrowRight, Star, Quote } from 'lucide-react';
+import { Link2, Sparkles, LayoutGrid, ArrowRight, ShieldCheck, Zap, Globe, MousePointer2 } from 'lucide-react';
 import Link from 'next/link';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useUser } from '@/firebase';
 import { useRouter } from 'next/navigation';
-import { collection, query, orderBy, doc, increment, setDoc } from 'firebase/firestore';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-
-const StaticStarRating = ({ rating, size = 16 }: { rating: number, size?: number }) => {
-  return (
-    <div className="flex items-center gap-0.5">
-      {[1, 2, 3, 4, 5].map((i) => (
-        <Star 
-          key={i} 
-          size={size} 
-          className={i <= Math.round(rating) ? "text-primary fill-primary" : "text-white/10"} 
-        />
-      ))}
-    </div>
-  );
-};
 
 export default function LandingPage() {
   const { user, isUserLoading } = useUser();
-  const db = useFirestore();
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    const trackLandingVisit = async () => {
-      try {
-        const statsRef = doc(db, 'appConfig', 'globalStats');
-        await setDoc(statsRef, { landingPageViews: increment(1) }, { merge: true });
-      } catch (e) {
-        // Silent catch
-      }
-    };
-    trackLandingVisit();
-  }, [db]);
-
-  useEffect(() => {
-    if (user && !isUserLoading && user.emailVerified) {
-      router.push('/dashboard');
-    }
+    if (user && !isUserLoading && user.emailVerified) router.push('/dashboard');
   }, [user, isUserLoading, router]);
 
-  const reviewsQuery = useMemoFirebase(() => query(collection(db, 'platformReviews'), orderBy('createdAt', 'desc')), [db]);
-  const { data: allReviews, isLoading: isReviewsLoading } = useCollection(reviewsQuery);
-
-  const stats = useMemo(() => {
-    if (!allReviews || allReviews.length === 0) return { average: 0, total: 0 };
-    const sum = allReviews.reduce((acc, rev) => acc + (rev.rating || 0), 0);
-    return {
-      average: Number((sum / allReviews.length).toFixed(1)),
-      total: allReviews.length
-    };
-  }, [allReviews]);
-
-  const displayedReviews = useMemo(() => {
-    return allReviews?.slice(0, 3) || [];
-  }, [allReviews]);
-
-  if (!mounted) {
-    return <div className="min-h-screen bg-black" />;
-  }
+  if (!mounted) return <div className="min-h-screen bg-black" />;
 
   return (
-    <div className="min-h-screen bg-background overflow-hidden relative">
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/20 rounded-full blur-[120px] animate-pulse-glow" />
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-primary/20 rounded-full blur-[140px] animate-pulse-glow" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-secondary/20 rounded-full blur-[120px] animate-pulse-glow" />
 
-      <header className="fixed top-0 w-full h-20 px-6 flex items-center justify-between z-50 backdrop-blur-md border-b border-white/5">
+      <header className="fixed top-0 w-full h-20 px-6 flex items-center justify-between z-50 backdrop-blur-xl border-b border-white/5">
         <div className="flex items-center gap-3">
-          <div className="logo-box">
+          <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center border border-white/10 shadow-xl">
             <Link2 size={24} className="text-primary" />
           </div>
           <span className="text-2xl font-black tracking-tighter text-white">Linku</span>
         </div>
         <div className="flex items-center gap-4">
-          <Link href="/login" className="text-[10px] font-black uppercase tracking-widest text-white/60 hover:text-white">Masuk</Link>
-          <Button asChild className="neon-gradient text-background font-black text-[10px] uppercase tracking-widest px-6 rounded-xl h-10 shadow-xl">
-            <Link href="/register">Daftar</Link>
+          <Link href="/login" className="text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-colors">Log In</Link>
+          <Button asChild className="neon-gradient text-background font-black text-[10px] uppercase tracking-widest px-8 rounded-2xl h-12 shadow-2xl">
+            <Link href="/register">Buat Link Gratis</Link>
           </Button>
         </div>
       </header>
 
-      <main className="relative z-10 pt-40 pb-24 px-6 max-w-4xl mx-auto text-center space-y-24">
-        <div className="space-y-8">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-full mb-4 animate-in">
+      <main className="relative z-10 pt-44 pb-32 px-6 max-w-5xl mx-auto text-center space-y-32">
+        {/* HERO SECTION */}
+        <div className="space-y-12">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-full animate-in">
             <Sparkles size={14} className="text-primary" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-white/60">Platform Manajemen Tautan Premium</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-white/60">The Elite Link Management Platform</span>
           </div>
           
-          <h1 className="text-5xl md:text-7xl font-black text-white tracking-tighter leading-[0.95] animate-in" style={{ animationDelay: '0.1s' }}>
-            Tampilkan Semua <br/> 
-            <span className="neon-text-pulse">Dunia Anda</span> Dalam Satu Link.
-          </h1>
-          
-          <p className="text-sm md:text-base text-white/50 max-w-lg mx-auto font-medium leading-relaxed animate-in" style={{ animationDelay: '0.2s' }}>
-            Kelola portofolio, media sosial, dan bisnis online Anda dengan desain kotak melengkung modern dan warna tema otomatis yang menyesuaikan dengan foto Anda.
-          </p>
+          <div className="space-y-6">
+            <h1 className="text-6xl md:text-8xl font-black text-white tracking-tighter leading-[0.9] animate-in" style={{ animationDelay: '0.1s' }}>
+              Satu Link Untuk <br/> <span className="neon-text-pulse">Semua Jualanmu.</span>
+            </h1>
+            <p className="text-base md:text-xl text-white/50 max-w-2xl mx-auto font-medium leading-relaxed animate-in" style={{ animationDelay: '0.2s' }}>
+              Bangun identitas digital mewah dalam 2 menit. Kelola toko, portofolio, dan media sosial dengan desain interaktif yang cerdas.
+            </p>
+          </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4 animate-in" style={{ animationDelay: '0.3s' }}>
-            <Button asChild className="h-16 px-10 neon-gradient text-background font-black text-lg rounded-2xl glow-primary w-full sm:w-auto shadow-2xl active:scale-95 transition-transform">
-              <Link href="/register">Mulai Gratis <ArrowRight className="ml-2" /></Link>
-            </Button>
-            <Button variant="outline" asChild className="h-16 px-10 border-white/10 bg-white/5 text-white font-black text-lg rounded-2xl hover:bg-white/10 w-full sm:w-auto">
-              <Link href="/login">Masuk Sesi</Link>
+            <Button asChild className="h-20 px-12 neon-gradient text-background font-black text-xl rounded-[2rem] glow-primary shadow-2xl active:scale-95 transition-all">
+              <Link href="/register">MULAI SEKARANG <ArrowRight className="ml-3" /></Link>
             </Button>
           </div>
         </div>
 
-        {/* Reviews Section */}
-        <section className="space-y-12 py-12 animate-in" style={{ animationDelay: '0.4s' }}>
-          <div className="space-y-4">
-             <div className="space-y-1 text-center">
-                <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Wall of Love</h2>
-                <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/70">Apa kata mereka tentang Linku</p>
-             </div>
-             
-             {!isReviewsLoading && stats.total > 0 && (
-               <div className="flex flex-col items-center gap-2 py-4 animate-in">
-                  <div className="flex items-center gap-4">
-                    <span className="text-5xl font-black text-white tracking-tighter">{stats.average}</span>
-                    <div className="text-left">
-                      <StaticStarRating rating={stats.average} size={24} />
-                      <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mt-1">Total {stats.total} Ulasan</p>
-                    </div>
-                  </div>
-               </div>
-             )}
-          </div>
-
-          <div className="grid gap-6 max-w-2xl mx-auto">
-            {displayedReviews.map((review) => (
-              <div key={review.id} className="glass-card p-6 rounded-[2rem] text-left space-y-4 relative group hover:scale-[1.02] transition-transform">
-                <Quote className="absolute top-6 right-6 text-primary/10 w-12 h-12" />
-                <div className="flex items-center gap-4">
-                  <Avatar className="w-12 h-12 border-2 border-primary/20">
-                    <AvatarImage src={review.avatarUrl} />
-                    <AvatarFallback className="bg-primary/10 text-primary font-black uppercase text-xs">{review.username?.slice(0, 2)}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="text-sm font-black text-white uppercase tracking-tight">{review.displayName || review.username}</p>
-                    <StaticStarRating rating={review.rating} size={10} />
-                  </div>
+        {/* FEATURES GRID */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+           {[
+             { t: 'Desain Tanpa Batas', d: 'Kustomisasi bentuk, warna, dan layout sesuka hati Master.', i: LayoutGrid },
+             { t: 'Analitik Real-time', d: 'Pantau setiap klik dan pengunjung secara instan dari dashboard.', i: MousePointer2 },
+             { t: 'Domain Kustom', d: 'Gunakan domain pribadi Anda untuk branding yang lebih profesional.', i: Globe },
+           ].map((f, i) => (
+             <div key={i} className="glass-card p-10 rounded-[3rem] text-left space-y-6 animate-in" style={{ animationDelay: `${0.4 + (i*0.1)}s` }}>
+                <div className="w-16 h-16 bg-primary/10 rounded-[1.5rem] flex items-center justify-center text-primary border border-primary/20"><f.i size={32} /></div>
+                <div className="space-y-2">
+                   <h3 className="text-xl font-black text-white uppercase tracking-tight">{f.t}</h3>
+                   <p className="text-sm text-white/40 font-medium leading-relaxed">{f.d}</p>
                 </div>
-                <p className="text-sm text-white/70 italic font-medium leading-relaxed">"{review.comment}"</p>
-              </div>
-            ))}
-            
-            <div className="pt-8 text-center">
-              <Button asChild variant="ghost" className="h-14 px-10 glass-card rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] text-white hover:text-primary transition-all gap-2 group">
-                <Link href="/reviews">
-                  Lihat Semua Ulasan <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-                </Link>
-              </Button>
-            </div>
-          </div>
-        </section>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in" style={{ animationDelay: '0.5s' }}>
-          <div className="glass-card p-6 rounded-[2rem] space-y-4 text-left">
-            <div className="w-12 h-12 bg-primary/20 rounded-2xl flex items-center justify-center text-primary">
-              <LayoutGrid size={24} />
-            </div>
-            <h3 className="font-black text-white uppercase text-sm tracking-tight">Sistem Kelompok</h3>
-            <p className="text-xs text-white/40 leading-relaxed font-medium">Atur tautan Anda dalam folder yang rapi dengan navigasi sub-halaman yang elegan.</p>
-          </div>
-          <div className="glass-card p-6 rounded-[2rem] space-y-4 text-left">
-            <div className="w-12 h-12 bg-secondary/20 rounded-2xl flex items-center justify-center text-secondary">
-              <Palette size={24} />
-            </div>
-            <h3 className="font-black text-white uppercase text-sm tracking-tight">Warna Dinamis</h3>
-            <p className="text-xs text-white/40 leading-relaxed font-medium">Warna visual profil Anda akan otomatis menyesuaikan dengan foto profil yang Anda unggah.</p>
-          </div>
-          <div className="glass-card p-6 rounded-[2rem] space-y-4 text-left">
-            <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center text-white">
-              <Link2 size={24} />
-            </div>
-            <h3 className="font-black text-white uppercase text-sm tracking-tight">Domain Kustom</h3>
-            <p className="text-xs text-white/40 leading-relaxed font-medium">Bagikan URL unik Anda sendiri (linku.biz.id/username) dengan bangga ke seluruh dunia.</p>
-          </div>
+             </div>
+           ))}
         </div>
+
+        {/* PRICING PREVIEW */}
+        <section className="glass-card p-12 rounded-[4rem] border-primary/10 shadow-[0_0_100px_-20px_rgba(255,0,0,0.1)]">
+           <div className="space-y-12">
+              <h2 className="text-4xl font-black text-white uppercase tracking-tighter">Identity Investment</h2>
+              <div className="grid md:grid-cols-2 gap-8 text-left">
+                 <div className="bg-white/5 p-8 rounded-[2.5rem] space-y-6">
+                    <h4 className="font-black text-white/40 uppercase text-xs tracking-widest">FREE PLAN</h4>
+                    <p className="text-5xl font-black text-white tracking-tighter">Rp 0</p>
+                    <ul className="space-y-4">
+                       <li className="flex items-center gap-3 text-xs font-bold text-white/60"><ShieldCheck size={16} className="text-white/20" /> Unlimited Links</li>
+                       <li className="flex items-center gap-3 text-xs font-bold text-white/60"><ShieldCheck size={16} className="text-white/20" /> Standard Theme</li>
+                    </ul>
+                 </div>
+                 <div className="neon-gradient p-8 rounded-[2.5rem] space-y-6 shadow-2xl relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-6 opacity-20"><Zap size={80} /></div>
+                    <h4 className="font-black text-background/60 uppercase text-xs tracking-widest">PRO LICENSE</h4>
+                    <p className="text-5xl font-black text-background tracking-tighter">Lifetime</p>
+                    <ul className="space-y-4">
+                       <li className="flex items-center gap-3 text-xs font-black text-background"><Zap size={16} /> Custom Domain API</li>
+                       <li className="flex items-center gap-3 text-xs font-black text-background"><Zap size={16} /> No Linku Watermark</li>
+                       <li className="flex items-center gap-3 text-xs font-black text-background"><Zap size={16} /> Advanced Analytics</li>
+                    </ul>
+                 </div>
+              </div>
+              <Button asChild className="h-16 px-12 bg-white text-black font-black text-lg rounded-2xl shadow-xl hover:bg-white/90">
+                 <Link href="/register">Amankan Username Master Sekarang</Link>
+              </Button>
+           </div>
+        </section>
       </main>
 
-      <footer className="py-12 text-center text-[10px] font-black uppercase tracking-[0.4em] text-white/20">
-        &copy; {new Date().getFullYear()} Linku Engine &bull; Premium Experience
+      <footer className="py-24 text-center border-t border-white/5">
+        <p className="text-[10px] font-black uppercase tracking-[0.6em] text-white/20">&copy; {new Date().getFullYear()} Linku Secure Engine &bull; Premium Identity</p>
       </footer>
     </div>
   );

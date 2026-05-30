@@ -1,15 +1,9 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // FUNGSI UTAMA
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
     function isAdmin() {
       return isSignedIn() && (
         request.auth.token.email == 'creeppermoment@gmail.com' || 
@@ -18,43 +12,35 @@ service cloud.firestore {
       );
     }
 
-    // 1. ATURAN TRANSAKSI (Prioritas Tinggi)
-    match /payments/{paymentId} {
-      // Izinkan baca jika user adalah pemilik (berdasarkan field userId di dokumen)
-      allow read: if isSignedIn() && (resource == null || resource.data.userId == request.auth.uid || isAdmin());
-      // Izinkan buat jika userId di data baru adalah milik user sendiri
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      // Izinkan update status (cancel/success) jika user adalah pemilik
-      allow update: if isSignedIn() && resource.data.userId == request.auth.uid;
+    // Collection Group Rule untuk Spotlight & Admin Feed
+    match /{path=**}/links/{linkId} {
+      allow read: if true;
     }
 
-    // 2. ATURAN USER PROFILES
     match /userProfiles/{userId} {
       allow read: if true;
       allow write: if isOwner(userId) || isAdmin();
       
       match /links/{linkId} {
         allow read: if true;
-        allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['clicks']) || isOwner(userId) || isAdmin();
-        allow create, delete: if isOwner(userId) || isAdmin();
+        allow write: if isOwner(userId) || isAdmin();
       }
-
+      
       match /linkGroups/{groupId} {
         allow read: if true;
         allow write: if isOwner(userId) || isAdmin();
-
+        
         match /links/{linkId} {
           allow read: if true;
-          allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['clicks']) || isOwner(userId) || isAdmin();
-          allow create, delete: if isOwner(userId) || isAdmin();
+          allow write: if isOwner(userId) || isAdmin();
         }
       }
     }
 
-    // 3. ATURAN GLOBAL LAINNYA
-    match /appConfig/{docId} {
-      allow read: if true;
-      allow write: if isAdmin();
+    match /payments/{paymentId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
     }
 
     match /usernames/{username} {
@@ -66,11 +52,10 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isOwner(userId);
     }
-
-    match /messages/{msgId} {
-       allow read: if isSignedIn() && (request.auth.uid == resource.data.senderId || request.auth.uid == resource.data.receiverId || isAdmin());
-       allow create: if isSignedIn();
-       allow update: if isSignedIn() && (request.auth.uid == resource.data.receiverId || isAdmin());
+    
+    match /appConfig/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
   }
 }
