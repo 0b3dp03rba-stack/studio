@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc, collection, updateDoc, increment, getDoc, query, orderBy } from 'firebase/firestore';
+import { doc, collection, updateDoc, increment, getDoc, query, orderBy, where, limit, getDocs } from 'firebase/firestore';
 import { MousePointer2, Link2, ChevronLeft, Search, X, Ghost, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,10 +17,19 @@ export default function GroupClient({ username, groupId }: { username: string; g
   useEffect(() => {
     const resolveUser = async () => {
       try {
-        const userRef = doc(db, 'usernames', username.toLowerCase());
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) setResolvedUserId(userSnap.data().userId);
-        else setResolvedUserId(username);
+        let uid = null;
+        if (username.startsWith('d:')) {
+          const domain = username.replace('d:', '');
+          const q = query(collection(db, 'userProfiles'), where('customDomain', '==', domain), limit(1));
+          const snap = await getDocs(q);
+          if (!snap.empty) uid = snap.docs[0].id;
+        } else {
+          const cleanUsername = username.replace('u:', '').toLowerCase();
+          const userRef = doc(db, 'usernames', cleanUsername);
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) uid = userSnap.data().userId;
+        }
+        setResolvedUserId(uid);
       } catch (e) {
         console.error(e);
       } finally {
@@ -73,8 +82,8 @@ export default function GroupClient({ username, groupId }: { username: string; g
           <h1 className="text-4xl font-black text-white uppercase tracking-tighter">Koleksi Tidak Ditemukan</h1>
           <p className="text-sm font-medium text-white/40 max-w-xs mx-auto uppercase tracking-widest">Maaf, koleksi yang Anda cari tidak tersedia atau telah dihapus.</p>
         </div>
-        <Button asChild className="h-14 px-10 neon-gradient text-background font-black rounded-2xl uppercase text-[10px] tracking-[0.2em] shadow-2xl">
-          <Link href={`/${username}`}><ChevronLeft size={16} className="mr-2" /> Kembali ke Profil</Link>
+        <Button onClick={() => window.history.back()} className="h-14 px-10 neon-gradient text-background font-black rounded-2xl uppercase text-[10px] tracking-[0.2em] shadow-2xl">
+          <ChevronLeft size={16} className="mr-2" /> Kembali
         </Button>
       </div>
     );
@@ -83,7 +92,6 @@ export default function GroupClient({ username, groupId }: { username: string; g
   const primaryColor = profile.themeColor || '#ff0000';
   const secondaryColor = profile.themeColorSecondary || '#ffea00';
   const dynamicGradient = `linear-gradient(-45deg, ${primaryColor} 0%, ${secondaryColor} 50%, ${primaryColor} 100%)`;
-  
   const isUserPremium = profile.isPremium || profile.role === 'Admin';
 
   return (
@@ -96,8 +104,8 @@ export default function GroupClient({ username, groupId }: { username: string; g
     >
       <div className="max-w-md mx-auto space-y-8 animate-in relative z-10 p-6 pb-24">
         <div className="flex items-center justify-between">
-          <Button variant="ghost" asChild className="w-12 h-12 rounded-2xl glass-card text-white p-0">
-            <Link href={`/${username}`}><ChevronLeft size={24} /></Link>
+          <Button variant="ghost" onClick={() => window.history.back()} className="w-12 h-12 rounded-2xl glass-card text-white p-0 flex items-center justify-center">
+            <ChevronLeft size={24} />
           </Button>
           <div className="text-right">
              <p className="text-[8px] font-black text-primary uppercase tracking-[0.3em]">Melihat Koleksi</p>
@@ -147,7 +155,7 @@ export default function GroupClient({ username, groupId }: { username: string; g
                   {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <Link2 size={24} style={{ color: primaryColor }} />}
                 </div>
                 <div className="flex-1 text-left min-w-0">
-                  <span className="text-base font-black text-white tracking-tight truncate block">{link.title}</span>
+                  <span className="text-base font-black text-white tracking-tight truncate block uppercase">{link.title}</span>
                 </div>
                 <MousePointer2 size={20} style={{ color: primaryColor }} />
               </div>

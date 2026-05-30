@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 /**
- * @fileOverview Linku Engine v41.0 - PURE SUBDOMAIN ARCHITECTURE
- * Mematikan total rute path-based. Tidak ada redirect. Hanya internal rewrite.
+ * @fileOverview Linku Engine v42.0 - UNIFIED INTERNAL VIEW ARCHITECTURE
+ * Menghapus rute lama dan menyatukan resolusi subdomain & custom domain.
  */
 
 export function middleware(req: NextRequest) {
@@ -26,17 +26,17 @@ export function middleware(req: NextRequest) {
   
   const reservedPaths = [
     'dashboard', 'login', 'register', 'admin', 'u',
-    'verify-email', 'forgot-password', 'auth', 'reviews', '_domain', '_subdomain'
+    'verify-email', 'forgot-password', 'auth', 'reviews', '_view'
   ];
   const firstSegment = pathname.split('/')[1];
 
   const isLocal = hostOnly.includes('localhost') || hostOnly.includes('127.0.0.1');
   const isMainDomain = hostOnly === mainDomain || hostOnly.endsWith('.web.app') || hostOnly.endsWith('.firebaseapp.com');
 
-  // A. LOGIKA CUSTOM DOMAIN (Milik user, misal: budi.com)
+  // A. LOGIKA CUSTOM DOMAIN (Misal: budi.com)
   if (!isMainDomain && !isLocal && !hostOnly.endsWith(mainDomain)) {
-    if (pathname.startsWith('/_domain')) return NextResponse.next();
-    url.pathname = `/_domain/${hostOnly}${pathname}`;
+    // Rewrite internal ke folder _view dengan prefix d:
+    url.pathname = `/_view/d:${hostOnly}${pathname}`;
     return NextResponse.rewrite(url);
   }
 
@@ -44,19 +44,18 @@ export function middleware(req: NextRequest) {
   if (hostOnly.endsWith(mainDomain) && hostOnly !== mainDomain) {
     const subdomain = hostOnly.replace(`.${mainDomain}`, '');
     
-    // Jangan ganggu rute sistem (dashboard/admin) meskipun diakses via subdomain
+    // Abaikan rute sistem
     if (reservedPaths.includes(firstSegment)) {
       return NextResponse.next();
     }
 
-    // INTERNAL REWRITE ke folder _subdomain
-    url.pathname = `/_subdomain/${subdomain}${pathname}`;
+    // Rewrite internal ke folder _view dengan prefix u:
+    url.pathname = `/_view/u:${subdomain}${pathname}`;
     return NextResponse.rewrite(url);
   }
 
-  // C. DOMAIN UTAMA: Proteksi Folder Legacy
-  // Jika user mencoba linku.biz.id/username, biarkan Next.js memproses normal 
-  // (karena folder [username] sudah dimatikan di page.tsx-nya)
+  // C. PROTEKSI JALUR LEGACY (Path-based /username)
+  // Folder [username] sudah dihapus, jadi Next.js otomatis akan lempar 404
   
   return NextResponse.next();
 }

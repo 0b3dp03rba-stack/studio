@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc, collection, updateDoc, increment, getDoc, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { doc, collection, updateDoc, increment, getDoc, query, orderBy, onSnapshot, where, limit, getDocs } from 'firebase/firestore';
 import { User, Share2, MousePointer2, Link2, LayoutGrid, ChevronRight, Search, X, Instagram, Youtube, Facebook, MessageCircle, Globe, Mail, Sparkles, ExternalLink, Ghost, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,15 +38,23 @@ export default function ProfileClient({ username }: { username: string }) {
 
   useEffect(() => {
     setMounted(true);
-    const resolveUserAndTrackView = async () => {
+    const resolveUser = async () => {
       try {
-        const userRef = doc(db, 'usernames', username.toLowerCase());
-        const userSnap = await getDoc(userRef);
-        let uid = userSnap.exists() ? userSnap.data().userId : null;
-        if (!uid) {
-          const profileRef = doc(db, 'userProfiles', username);
-          const profileSnap = await getDoc(profileRef);
-          if (profileSnap.exists()) uid = username;
+        let uid = null;
+
+        // JALUR 1: Domain Kustom (d:domain.com)
+        if (username.startsWith('d:')) {
+          const domain = username.replace('d:', '');
+          const q = query(collection(db, 'userProfiles'), where('customDomain', '==', domain), limit(1));
+          const snap = await getDocs(q);
+          if (!snap.empty) uid = snap.docs[0].id;
+        } 
+        // JALUR 2: Subdomain / Username (u:username)
+        else {
+          const cleanUsername = username.replace('u:', '').toLowerCase();
+          const userRef = doc(db, 'usernames', cleanUsername);
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) uid = userSnap.data().userId;
         }
 
         if (uid) {
@@ -54,12 +62,12 @@ export default function ProfileClient({ username }: { username: string }) {
           updateDoc(doc(db, 'userProfiles', uid), { views: increment(1) }).catch(() => {});
         }
       } catch (e) {
-        console.error(e);
+        console.error("Resolution Error:", e);
       } finally {
         setIsResolving(false);
       }
     };
-    resolveUserAndTrackView();
+    resolveUser();
   }, [db, username]);
 
   const profileRef = useMemoFirebase(() => resolvedUserId ? doc(db, 'userProfiles', resolvedUserId) : null, [db, resolvedUserId]);
@@ -128,7 +136,7 @@ export default function ProfileClient({ username }: { username: string }) {
     return (
       <div className="min-h-screen bg-black flex flex-col items-center justify-center gap-4">
         <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-[10px] font-black uppercase tracking-widest text-primary/50">Membangun Linku...</p>
+        <p className="text-[10px] font-black uppercase tracking-widest text-primary/50">Sinkronisasi Hub...</p>
       </div>
     );
   }
@@ -140,11 +148,11 @@ export default function ProfileClient({ username }: { username: string }) {
           <Ghost size={48} />
         </div>
         <div className="space-y-4">
-          <h1 className="text-4xl font-black text-white uppercase tracking-tighter">Identitas Tidak Ditemukan</h1>
-          <p className="text-sm font-medium text-white/40 max-w-xs mx-auto uppercase tracking-widest">Maaf, profil @{username} belum terdaftar di Linku.</p>
+          <h1 className="text-4xl font-black text-white uppercase tracking-tighter">Identitas Gaib</h1>
+          <p className="text-sm font-medium text-white/40 max-w-xs mx-auto uppercase tracking-widest">Alamat yang Anda tuju tidak terdaftar di Linku Engine.</p>
         </div>
         <Button asChild className="h-14 px-10 neon-gradient text-background font-black rounded-2xl uppercase text-[10px] tracking-[0.2em] shadow-2xl">
-          <Link href="https://linku.biz.id"><Home size={16} className="mr-2" /> Kembali ke Beranda</Link>
+          <Link href="https://linku.biz.id"><Home size={16} className="mr-2" /> Kembali ke Markas</Link>
         </Button>
       </div>
     );
@@ -153,8 +161,6 @@ export default function ProfileClient({ username }: { username: string }) {
   const primaryColor = profile.themeColor || '#ff0000';
   const secondaryColor = profile.themeColorSecondary || '#ffea00';
   const dynamicGradient = `linear-gradient(-45deg, ${primaryColor} 0%, ${secondaryColor} 50%, ${primaryColor} 100%)`;
-  
-  // LOGIKA PREMIUM OTOMATIS: Admin selalu premium
   const isUserPremium = profile.isPremium || profile.role === 'Admin';
 
   return (
@@ -167,7 +173,7 @@ export default function ProfileClient({ username }: { username: string }) {
     >
       <div className="max-w-md mx-auto space-y-8 animate-in relative z-10 p-6 pb-24">
         <div className="flex justify-end">
-          <Button variant="ghost" size="icon" onClick={() => { navigator.clipboard.writeText(window.location.href); toast({title: "Tersalin"}); }} className="w-12 h-12 rounded-2xl glass-card text-white">
+          <Button variant="ghost" size="icon" onClick={() => { navigator.clipboard.writeText(window.location.href); toast({title: "Link Tersalin"}); }} className="w-12 h-12 rounded-2xl glass-card text-white">
             <Share2 size={20} />
           </Button>
         </div>
@@ -182,7 +188,7 @@ export default function ProfileClient({ username }: { username: string }) {
             </div>
           </div>
           <div className="space-y-4">
-            <h1 className="text-4xl font-black text-white tracking-tighter leading-none">{profile.displayName || 'User'}</h1>
+            <h1 className="text-4xl font-black text-white tracking-tighter leading-none uppercase">{profile.displayName || 'User'}</h1>
             {profile.bio && <p className="text-sm font-medium text-white/70 max-w-xs mx-auto leading-relaxed">{profile.bio}</p>}
           </div>
 
@@ -241,7 +247,7 @@ export default function ProfileClient({ username }: { username: string }) {
                     {newestLink.imageUrl ? <img src={newestLink.imageUrl} className="w-full h-full object-cover" alt="Link" /> : <Link2 size={32} style={{ color: primaryColor }} />}
                   </div>
                   <div className="flex-1 text-left min-w-0">
-                    <span className="text-lg font-black text-white tracking-tight truncate block">{newestLink.title}</span>
+                    <span className="text-lg font-black text-white tracking-tight truncate block uppercase">{newestLink.title}</span>
                     <p className="text-[8px] font-black text-primary uppercase tracking-widest mt-1">
                       {newestLink.groupId ? 'Ditemukan di Koleksi' : 'Tautan Hub Utama'}
                     </p>
@@ -255,7 +261,7 @@ export default function ProfileClient({ username }: { username: string }) {
           <div className="space-y-4 pt-4 border-t border-white/5">
              <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em] ml-1">Koleksi Konten</p>
             {filteredGroups.map(group => (
-              <Link key={group.id} href={`/${username}/g/${group.id}`} className="block">
+              <Link key={group.id} href={`${window.location.pathname}/g/${group.id}`} className="block">
                 <div 
                   className="p-0.5 rounded-[2rem] animate-flowing-gradient transition-transform active:scale-95 shadow-xl"
                   style={{ backgroundImage: dynamicGradient, backgroundSize: '200% 200%' }}
@@ -265,7 +271,7 @@ export default function ProfileClient({ username }: { username: string }) {
                       {group.imageUrl ? <img src={group.imageUrl} className="w-full h-full object-cover" alt="Group" /> : <LayoutGrid size={32} style={{ color: primaryColor }} />}
                     </div>
                     <div className="flex-1 text-left min-w-0">
-                      <span className="text-lg font-black text-white tracking-tight block truncate">{group.title}</span>
+                      <span className="text-lg font-black text-white tracking-tight block truncate uppercase">{group.title}</span>
                       <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] mt-1">Koleksi</p>
                     </div>
                     <ChevronRight size={24} className="text-white/50" />
@@ -291,7 +297,7 @@ export default function ProfileClient({ username }: { username: string }) {
                     {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" alt="Link" /> : <Link2 size={24} style={{ color: primaryColor }} />}
                   </div>
                   <div className="flex-1 text-left min-w-0">
-                    <span className="text-base font-black text-white tracking-tight truncate block">{link.title}</span>
+                    <span className="text-base font-black text-white tracking-tight truncate block uppercase">{link.title}</span>
                   </div>
                   <MousePointer2 size={20} style={{ color: primaryColor }} />
                 </div>
