@@ -12,5 +12,7 @@ export default function UnifiedProfilePage({ params }: { params: Promise<{ usern
   const { username } = use(params);
   // Decode param jika mengandung karakter khusus domain (misal: titik atau titik dua)
   const decodedUsername = decodeURIComponent(username);
+  
+  // ProfileClient sudah memiliki logika deteksi u: dan d:
   return <ProfileClient username={decodedUsername} />;
 }

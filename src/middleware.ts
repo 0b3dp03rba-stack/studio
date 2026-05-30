@@ -1,26 +1,19 @@
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import type { NextRequest } from 'next/request';
 
 /**
- * @fileOverview Linku Engine v50.0 - FINAL UNIFIED ARCHITECTURE
- * 1. linku.biz.id -> Dashboard & Main Site
- * 2. www.any.com -> Cleaned to any.com
- * 3. linku.biz.id/user -> 301 Redirect ke user.linku.biz.id
- * 4. user.linku.biz.id -> Internal Rewrite ke /_view/u:user
- * 5. customdomain.com -> Internal Rewrite ke /_view/d:customdomain.com
+ * @fileOverview Linku Engine v51.0 - FINAL STABLE ARCHITECTURE
+ * Mengatasi ERR_TOO_MANY_REDIRECTS dengan isolasi rute yang sangat ketat.
  */
 
 export function middleware(req: NextRequest) {
   const url = req.nextUrl.clone();
+  
+  // 1. Ambil Hostname asli dan bersihkan dari port atau spasi
   const rawHost = req.headers.get('host') || '';
-  
-  // 1. STANDARISASI HOSTNAME: Bersihkan 'www.' dan Port (untuk dev)
-  const host = rawHost.replace(/^www\./, '').split(':')[0].toLowerCase();
-  
-  const mainDomain = 'linku.biz.id';
-  const isMainDomain = host === mainDomain;
+  const hostname = rawHost.toLowerCase().trim().split(':')[0];
 
-  // 2. TAMENG UTAMA: Loloskan file statis, API, dan Next.js internal
+  // 2. TAMENG UTAMA: Loloskan langsung semua file aset statis, internal Next.js, dan API
   if (
     url.pathname.startsWith('/_next') || 
     url.pathname.startsWith('/api') ||
@@ -30,66 +23,66 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // 3. TAMENG LOOP: Jika request sudah di dalam dapur internal _view, loloskan
+  // 3. TAMENG REWRITE: Jika rute internal sudah mengarah ke /_view, segera HENTIKAN proses agar tidak loop
   if (url.pathname.startsWith('/_view')) {
     return NextResponse.next();
   }
 
-  // 4. DAFTAR HOST SISTEM (Abaikan rewrite untuk domain preview/internal dev)
-  const systemHosts = [
-    'localhost', '127.0.0.1', 'web.app', 'firebaseapp.com', 
-    'firebase.google.com', 'cloudworkstations.dev'
-  ];
-  const isSystemHost = systemHosts.some(sh => host === sh || host.endsWith('.' + sh));
+  const mainDomain = 'linku.biz.id';
+  
+  // 4. LOGIKA DETEKSI DOMAIN UTAMA (Dashboard & Landing Page)
+  const isMainDomain = hostname === mainDomain || hostname === `www.${mainDomain}`;
 
-  // 5. LOGIKA DOMAIN UTAMA (Dashboard & Redirect)
-  if (isMainDomain || isSystemHost) {
-    const reservedPaths = [
-      'dashboard', 'login', 'register', 'admin', 'u',
-      'verify-email', 'forgot-password', 'auth', 'reviews'
-    ];
-
+  if (isMainDomain) {
     const pathSegments = url.pathname.split('/').filter(Boolean);
     const firstSegment = pathSegments[0];
 
-    // Jika mengakses root atau rute sistem, biarkan lewat
+    // Daftar rute internal dashboard/sistem yang tidak boleh di-redirect
+    const reservedPaths = [
+      'dashboard', 'login', 'register', 'auth', 'premium', 
+      'admin', 'reviews', 'verify-email', 'forgot-password'
+    ];
+    
     if (!firstSegment || reservedPaths.includes(firstSegment)) {
       return NextResponse.next();
     }
 
-    // Jika mengakses link profil LAMA (linku.biz.id/username), Redirect ke Subdomain
-    if (isMainDomain) {
-      const remainingPath = url.pathname.replace(`/${firstSegment}`, '');
-      const protocol = rawHost.includes('localhost') ? 'http' : 'https';
-      
-      const redirectUrl = `${protocol}://${firstSegment}.${mainDomain}${remainingPath}${url.search}`;
-      return NextResponse.redirect(new URL(redirectUrl), 301);
-    }
+    // Redirect link lama linku.biz.id/username ke username.linku.biz.id (301 Permanent)
+    const remainingPath = url.pathname.replace(`/${firstSegment}`, '');
+    const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
     
-    return NextResponse.next();
+    return NextResponse.redirect(
+      new URL(`${protocol}://${firstSegment}.${mainDomain}${remainingPath}${url.search}`, req.url),
+      301
+    );
   }
 
-  // 6. LOGIKA SUBDOMAIN BAWAAN (username.linku.biz.id)
-  const isSubdomain = host.endsWith('.' + mainDomain);
+  // 5. LOGIKA DETEKSI SUBDOMAIN (username.linku.biz.id)
+  const isSubdomain = !isMainDomain && hostname.endsWith(mainDomain);
+  
   if (isSubdomain) {
-    const subdomain = host.replace(`.${mainDomain}`, '');
-    
-    // Abaikan jika subdomain sistem
+    // Ambil teks subdomain murni (hapus linku.biz.id dan www.)
+    const subdomain = hostname.replace(`.${mainDomain}`, '').replace('www.', '');
+
+    // Lewati jika ini subdomain sistem (admin, sys, dll)
     const systemSubdomains = ['admin', 'sys', 'apps', 'www'];
-    if (systemSubdomains.includes(subdomain)) {
+    if (systemSubdomains.includes(subdomain) || subdomain === '') {
       return NextResponse.next();
     }
 
-    // Rewrite ke Unified Viewer dengan label User (u:)
+    // Rewrite internal ke folder /_view/u:[username]
+    // Kita tambahkan prefix 'u:' agar ProfileClient tahu ini pencarian berdasarkan username
     url.pathname = `/_view/u:${subdomain}${url.pathname}`;
     return NextResponse.rewrite(url);
   }
 
-  // 7. LOGIKA CUSTOM DOMAIN PREMIUM (domainuser.com)
-  // Jika host bukan sistem, bukan domain utama, dan bukan subdomain bawaan
-  if (!isMainDomain && !isSystemHost && !isSubdomain) {
-    // Rewrite ke Unified Viewer dengan label Domain (d:)
-    url.pathname = `/_view/d:${host}${url.pathname}`;
+  // 6. LOGIKA CUSTOM DOMAIN PREMIUM (domainuser.com)
+  if (!isMainDomain && !isSubdomain) {
+    const cleanCustomDomain = hostname.replace('www.', '');
+    
+    // Rewrite internal ke folder /_view/d:[custom_domain]
+    // Kita tambahkan prefix 'd:' agar ProfileClient tahu ini pencarian berdasarkan customDomain
+    url.pathname = `/_view/d:${cleanCustomDomain}${url.pathname}`;
     return NextResponse.rewrite(url);
   }
 
@@ -101,6 +94,6 @@ export const config = {
     /*
      * Matcher ketat: Kecualikan file statis, aset, dan favicon demi performa.
      */
-    '/((?!api|_next/static|_next/image|images|favicon.ico|sitemap.xml|robots.txt).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)',
   ],
 };

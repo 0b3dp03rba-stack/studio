@@ -10,5 +10,7 @@ import GroupClient from '@/app/[username]/g/[groupId]/GroupClient';
 export default function UnifiedGroupPage({ params }: { params: Promise<{ username: string; groupId: string }> }) {
   const { username, groupId } = use(params);
   const decodedUsername = decodeURIComponent(username);
+  
+  // GroupClient sudah memiliki logika deteksi u: dan d:
   return <GroupClient username={decodedUsername} groupId={groupId} />;
 }
