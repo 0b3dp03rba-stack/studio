@@ -3,7 +3,7 @@
 
 import { useMemo } from 'react';
 import { Card } from '@/components/ui/card';
-import { Link as LinkIcon, Clock, AlertTriangle, ExternalLink, RefreshCw } from 'lucide-react';
+import { Link as LinkIcon, Clock, AlertTriangle, ExternalLink, RefreshCw, Zap } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { query, limit, collectionGroup, orderBy } from 'firebase/firestore';
 import { Badge } from '@/components/ui/badge';
@@ -13,7 +13,6 @@ export default function AdminActivityPage() {
   const db = useFirestore();
 
   // Activity Feed Query (Collection Group)
-  // Query ini membutuhkan Index pada koleksi 'links' dengan field 'createdAt' DESC
   const linksQuery = useMemoFirebase(() => query(
     collectionGroup(db, 'links'), 
     orderBy('createdAt', 'desc'),
@@ -21,6 +20,14 @@ export default function AdminActivityPage() {
   ), [db]);
   
   const { data: rawLinks, isLoading, error } = useCollection(linksQuery);
+
+  // Deteksi URL Konfigurasi Otomatis dari Pesan Error Firebase
+  const autoConfigUrl = useMemo(() => {
+    if (!error) return null;
+    const msg = (error as any).message || "";
+    const urlMatch = msg.match(/https:\/\/console\.firebase\.google\.com[^\s]*/);
+    return urlMatch ? urlMatch[0] : null;
+  }, [error]);
 
   if (isLoading) {
     return (
@@ -31,32 +38,35 @@ export default function AdminActivityPage() {
     );
   }
 
-  // Jika index belum dibuat atau ada masalah kueri
   if (error) {
-    const errorMsg = error.message || "";
-    const isIndexError = errorMsg.toLowerCase().includes('index');
-    const isPermissionError = errorMsg.toLowerCase().includes('permission');
-    
     return (
-      <div className="py-20 px-6 text-center space-y-6">
-        <div className="w-20 h-20 bg-primary/10 rounded-[2rem] flex items-center justify-center text-primary mx-auto shadow-2xl">
-          {isPermissionError ? <AlertTriangle size={40} /> : <RefreshCw size={40} className="animate-pulse" />}
+      <div className="py-20 px-6 text-center space-y-8">
+        <div className="w-24 h-24 bg-primary/10 rounded-[2.5rem] flex items-center justify-center text-primary mx-auto shadow-2xl animate-pulse">
+          <AlertTriangle size={48} />
         </div>
-        <div className="space-y-2">
-          <h2 className="text-xl font-black text-white uppercase tracking-tight">
-            {isPermissionError ? 'Izin Ditolak' : 'Index Diperlukan'}
-          </h2>
-          <p className="text-xs font-medium text-white/40 leading-relaxed uppercase tracking-widest max-w-xs mx-auto">
-            {isIndexError 
-              ? 'Firestore butuh jalur khusus untuk memantau seluruh tautan secara global. Klik tombol di bawah untuk membuatnya secara otomatis.' 
-              : errorMsg || 'Kesalahan kueri database.'}
+        <div className="space-y-3">
+          <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Index Diperlukan</h2>
+          <p className="text-[10px] font-bold text-white/40 leading-relaxed uppercase tracking-[0.2em] max-w-xs mx-auto">
+            Firestore butuh jalur khusus untuk memantau seluruh tautan. Klik tombol di bawah untuk konfigurasi instan.
           </p>
         </div>
-        <Button asChild className="neon-gradient text-background font-black rounded-2xl h-14 px-8 uppercase text-[10px] tracking-widest shadow-xl">
-           <a href="https://console.firebase.google.com" target="_blank" rel="noreferrer">
-             Buka Firebase Console <ExternalLink size={14} className="ml-2" />
-           </a>
-        </Button>
+
+        {autoConfigUrl ? (
+          <Button asChild className="neon-gradient text-background font-black rounded-2xl h-20 px-10 shadow-[0_0_50px_-10px_rgba(255,0,0,0.5)] active:scale-95 transition-all">
+             <a href={autoConfigUrl} target="_blank" rel="noreferrer" className="flex flex-col items-center justify-center gap-1">
+               <span className="text-xs tracking-widest">KONFIGURASI INDEX OTOMATIS</span>
+               <span className="text-[8px] opacity-70">KLIK UNTUK SETUP INSTAN DI FIREBASE</span>
+             </a>
+          </Button>
+        ) : (
+          <Button asChild variant="outline" className="border-white/10 text-white font-black rounded-2xl h-14 px-8 uppercase text-[10px] tracking-widest">
+             <a href="https://console.firebase.google.com" target="_blank" rel="noreferrer">
+               Buka Firebase Console <ExternalLink size={14} className="ml-2" />
+             </a>
+          </Button>
+        )}
+        
+        <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.4em]">Setelah klik, tunggu 2-3 menit hingga status 'Enabled'</p>
       </div>
     );
   }
