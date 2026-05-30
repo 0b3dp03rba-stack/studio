@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc, collection, updateDoc, increment, getDoc, query, orderBy, onSnapshot, where, limit, getDocs, collectionGroup } from 'firebase/firestore';
-import { User, Share2, MousePointer2, Link2, LayoutGrid, ChevronRight, Search, Instagram, Youtube, Facebook, MessageCircle, Globe, Mail, Sparkles, ExternalLink, Ghost, Home } from 'lucide-react';
+import { User, Share2, MousePointer2, Link2, LayoutGrid, ChevronRight, Search, Instagram, Youtube, Facebook, MessageCircle, Globe, Mail, Sparkles, ExternalLink, Ghost, Home, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -56,13 +56,12 @@ export default function ProfileClient({ username }: { username: string }) {
   const profileRef = useMemoFirebase(() => resolvedUserId ? doc(db, 'userProfiles', resolvedUserId) : null, [db, resolvedUserId]);
   const { data: profile } = useDoc(profileRef);
 
-  // SPOTLIGHT (TAUTAN TERBARU LINTAS FOLDER)
-  // Catatan: Jika muncul "Query requires an index", klik link di error browser untuk buat index di Firestore Console.
+  // SPOTLIGHT (TAUTAN TERBARU)
   const spotlightQuery = useMemoFirebase(() => {
     if (!resolvedUserId) return null;
     return query(collectionGroup(db, 'links'), where('userId', '==', resolvedUserId), orderBy('createdAt', 'desc'), limit(1));
   }, [db, resolvedUserId]);
-  const { data: spotlightLinks } = useCollection(spotlightQuery);
+  const { data: spotlightLinks, error: spotlightError } = useCollection(spotlightQuery);
   const latestLink = spotlightLinks?.[0];
 
   const groupsQuery = useMemoFirebase(() => {
@@ -95,17 +94,27 @@ export default function ProfileClient({ username }: { username: string }) {
 
   const primaryColor = profile.themeColor || '#ff0000';
   const secondaryColor = profile.themeColorSecondary || '#ffea00';
-  const isMinimal = profile.layout_type === 'minimal';
-  const isSplit = profile.layout_type === 'split';
+  
+  // DYNAMIC SHAPE LOGIC
+  const shape = profile.profile_shape || 'rounded';
+  const getShapeClass = (type: 'card' | 'search' | 'button') => {
+    if (shape === 'square') return "rounded-none";
+    if (shape === 'hexagon') return type === 'card' ? "rounded-[3rem]" : "rounded-full"; // Map Hexagon to Pill for long items
+    if (shape === 'circle') return "rounded-[3rem]";
+    if (shape === 'rounded') {
+       if (type === 'card') return "rounded-[3rem]";
+       if (type === 'search') return "rounded-2xl";
+       return "rounded-2xl";
+    }
+    return "rounded-2xl";
+  };
 
-  const avatarShapeClass = profile.profile_shape === 'circle' ? "rounded-full" : 
-                           profile.profile_shape === 'hexagon' ? "[clip-path:polygon(25%_0%,75%_0%,100%_50%,75%_100%,25%_100%,0%_50%)]" :
-                           profile.profile_shape === 'rounded' ? "rounded-[2.5rem]" : "rounded-none";
+  const avatarClass = "rounded-[2rem]"; // FIXED AVATAR SHAPE AS REQUESTED
 
-  // Helper untuk membangun jalur link grup yang aman (Subdomain & Preview Friendly)
   const getGroupHref = (groupId: string) => {
-    const base = window.location.pathname.endsWith('/') ? window.location.pathname : `${window.location.pathname}/`;
-    return `${base}g/${groupId}`;
+    const currentPath = window.location.pathname;
+    const base = currentPath.endsWith('/') ? currentPath.slice(0, -1) : currentPath;
+    return `${base}/g/${groupId}`;
   };
 
   return (
@@ -119,45 +128,33 @@ export default function ProfileClient({ username }: { username: string }) {
 
       <div className="max-w-md mx-auto relative z-10 p-4 pb-24 pt-6 space-y-8">
         
-        {/* IDENTITY CARD - THE MASTER PIECE */}
+        {/* IDENTITY CARD */}
         <div className={cn(
-          "relative glass-card border-none rounded-[3rem] overflow-hidden shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] transition-all duration-500",
-          "before:absolute before:inset-0 before:p-[1px] before:rounded-[3rem] before:bg-gradient-to-br before:from-white/10 before:to-transparent before:-z-10"
+          "relative glass-card border-none overflow-hidden shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] transition-all duration-500",
+          getShapeClass('card'),
+          "before:absolute before:inset-0 before:p-[1px] before:bg-gradient-to-br before:from-white/10 before:to-transparent before:-z-10"
         )}>
-           {/* Background Banner Inside Card */}
            {profile.bannerUrl ? (
              <div className="absolute inset-0 z-0">
-                <img src={profile.bannerUrl} className="w-full h-full object-cover opacity-30" alt="Card Cover" />
-                <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/40 to-black/95" />
+                <img src={profile.bannerUrl} className="w-full h-full object-cover opacity-40" alt="Card Cover" />
+                <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/50 to-black/95" />
              </div>
            ) : (
              <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-secondary/10 z-0" />
            )}
 
            <div className="relative z-10 p-8">
-              {/* Share Action */}
               <div className="absolute top-6 right-6 z-20">
-                 <Button 
-                   variant="ghost" 
-                   size="icon" 
-                   onClick={() => { navigator.clipboard.writeText(window.location.href); toast({title: "Link Tersalin"}); }} 
-                   className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/20 transition-all active:scale-90"
-                 >
+                 <Button variant="ghost" size="icon" onClick={() => { navigator.clipboard.writeText(window.location.href); toast({title: "Link Tersalin"}); }} className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/20 transition-all">
                    <Share2 size={18} />
                  </Button>
               </div>
 
-              {/* RENDER TEMPLATE CONTENT BERDASARKAN layout_type */}
-              {isSplit ? (
-                /* TEMPLATE: MODERN SPLIT (Avatar Left, Info Right) */
+              {profile.layout_type === 'split' ? (
                 <div className="flex flex-col gap-6">
                    <div className="flex items-center gap-6 text-left">
-                      <div className={cn(
-                        "p-1 shadow-2xl animate-flowing-gradient relative shrink-0",
-                        avatarShapeClass,
-                        "w-24 h-24"
-                      )} style={{ backgroundImage: `linear-gradient(45deg, ${primaryColor}, ${secondaryColor})` }}>
-                         <div className={cn("w-full h-full bg-background flex items-center justify-center overflow-hidden border-4 border-background", avatarShapeClass)}>
+                      <div className={cn("p-1 shadow-2xl animate-flowing-gradient shrink-0 w-24 h-24", avatarClass)} style={{ backgroundImage: `linear-gradient(45deg, ${primaryColor}, ${secondaryColor})` }}>
+                         <div className={cn("w-full h-full bg-background flex items-center justify-center overflow-hidden border-4 border-background", avatarClass)}>
                             {profile.avatarUrl ? <img src={profile.avatarUrl} className="w-full h-full object-cover" alt="Avatar" /> : <User size={40} className="text-white/20" />}
                          </div>
                       </div>
@@ -166,8 +163,7 @@ export default function ProfileClient({ username }: { username: string }) {
                          {profile.bio && <p className="text-[9px] font-bold text-white/50 leading-relaxed uppercase tracking-widest line-clamp-3">{profile.bio}</p>}
                       </div>
                    </div>
-                   {/* Social Bar for Split */}
-                   {profile.socialLinks && profile.socialLinks.length > 0 && (
+                   {profile.socialLinks?.length > 0 && (
                      <div className="flex flex-wrap gap-2 pt-4 border-t border-white/5">
                         {profile.socialLinks.map((social: any, i: number) => {
                           const Icon = platformIcons[social.platform] || Globe;
@@ -180,15 +176,10 @@ export default function ProfileClient({ username }: { username: string }) {
                      </div>
                    )}
                 </div>
-              ) : isMinimal ? (
-                /* TEMPLATE: MINIMAL (Essential Top-Down) */
+              ) : profile.layout_type === 'minimal' ? (
                 <div className="flex flex-col items-center text-center space-y-4">
-                   <div className={cn(
-                        "p-0.5 shadow-xl relative",
-                        avatarShapeClass,
-                        "w-20 h-20"
-                      )} style={{ backgroundColor: primaryColor }}>
-                         <div className={cn("w-full h-full bg-background flex items-center justify-center overflow-hidden border-2 border-background", avatarShapeClass)}>
+                   <div className={cn("p-0.5 shadow-xl w-20 h-20", avatarClass)} style={{ backgroundColor: primaryColor }}>
+                         <div className={cn("w-full h-full bg-background flex items-center justify-center overflow-hidden border-2 border-background", avatarClass)}>
                             {profile.avatarUrl ? <img src={profile.avatarUrl} className="w-full h-full object-cover" alt="Avatar" /> : <User size={32} className="text-white/20" />}
                          </div>
                    </div>
@@ -196,7 +187,6 @@ export default function ProfileClient({ username }: { username: string }) {
                       <h1 className="text-xl font-black text-white tracking-widest uppercase">{profile.displayName}</h1>
                       {profile.bio && <p className="text-[8px] font-bold text-white/40 uppercase tracking-[0.3em]">{profile.bio}</p>}
                    </div>
-                   {/* Compact Social Bar */}
                    <div className="flex gap-4 pt-2">
                       {profile.socialLinks?.slice(0, 5).map((social: any, i: number) => {
                         const Icon = platformIcons[social.platform] || Globe;
@@ -209,29 +199,22 @@ export default function ProfileClient({ username }: { username: string }) {
                    </div>
                 </div>
               ) : (
-                /* TEMPLATE: CLASSIC (Centered Hero) */
                 <div className="flex flex-col items-center text-center">
-                   <div className={cn(
-                    "p-1 shadow-2xl animate-flowing-gradient relative mb-6",
-                    avatarShapeClass,
-                    "w-28 h-28"
-                  )} style={{ backgroundImage: `linear-gradient(45deg, ${primaryColor}, ${secondaryColor})` }}>
-                     <div className={cn("w-full h-full bg-background flex items-center justify-center overflow-hidden border-4 border-background", avatarShapeClass)}>
+                   <div className={cn("p-1 shadow-2xl animate-flowing-gradient mb-6 w-28 h-28", avatarClass)} style={{ backgroundImage: `linear-gradient(45deg, ${primaryColor}, ${secondaryColor})` }}>
+                     <div className={cn("w-full h-full bg-background flex items-center justify-center overflow-hidden border-4 border-background", avatarClass)}>
                         {profile.avatarUrl ? <img src={profile.avatarUrl} className="w-full h-full object-cover" alt="Avatar" /> : <User size={48} className="text-white/20" />}
                      </div>
                   </div>
-
                   <div className="space-y-2">
                      <h1 className="text-3xl font-black text-white tracking-tighter uppercase leading-none">{profile.displayName}</h1>
                      {profile.bio && <p className="text-[10px] font-bold text-white/60 leading-relaxed max-w-[240px] mx-auto uppercase tracking-widest">{profile.bio}</p>}
                   </div>
-
-                  {profile.socialLinks && profile.socialLinks.length > 0 && (
+                  {profile.socialLinks?.length > 0 && (
                     <div className="flex flex-wrap justify-center gap-3 mt-8 pt-6 border-t border-white/5 w-full">
                       {profile.socialLinks.map((social: any, i: number) => {
                         const Icon = platformIcons[social.platform] || Globe;
                         return (
-                          <a key={i} href={getSmartSocialUrl(social.platform, social.label)} target="_blank" rel="noreferrer" className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:text-primary hover:border-primary/50 hover:bg-primary/10 transition-all active:scale-90">
+                          <a key={i} href={getSmartSocialUrl(social.platform, social.label)} target="_blank" rel="noreferrer" className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:text-primary hover:border-primary/50 hover:bg-primary/10 transition-all">
                             <Icon size={18} />
                           </a>
                         );
@@ -243,7 +226,7 @@ export default function ProfileClient({ username }: { username: string }) {
            </div>
         </div>
 
-        {/* SPOTLIGHT SECTION (TAUTAN TERBARU) */}
+        {/* SPOTLIGHT SECTION */}
         {latestLink && (
           <div className="space-y-3 animate-in fade-in slide-in-from-top-4 duration-1000">
              <div className="flex items-center gap-2 px-4">
@@ -253,10 +236,10 @@ export default function ProfileClient({ username }: { username: string }) {
              </div>
              <button 
                onClick={() => { updateDoc(doc(db, 'userProfiles', resolvedUserId!, 'links', latestLink.id), { clicks: increment(1) }).catch(()=>{}); window.open(latestLink.url, '_blank'); }}
-               className="w-full p-1 rounded-[2.5rem] animate-flowing-gradient shadow-2xl transition-transform active:scale-95"
+               className={cn("w-full p-1 animate-flowing-gradient shadow-2xl transition-transform active:scale-95", getShapeClass('card'))}
                style={{ backgroundImage: `linear-gradient(45deg, ${primaryColor}, ${secondaryColor})` }}
              >
-                <div className="w-full h-24 bg-black/80 backdrop-blur-3xl rounded-[2.2rem] flex items-center px-6 gap-4 border border-white/10">
+                <div className={cn("w-full h-24 bg-black/80 backdrop-blur-3xl flex items-center px-6 gap-4 border border-white/10", getShapeClass('card'))}>
                    <div className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center overflow-hidden border border-white/10 shadow-xl shrink-0">
                       {latestLink.imageUrl ? <img src={latestLink.imageUrl} className="w-full h-full object-cover" alt={latestLink.title} /> : <Link2 size={24} style={{ color: primaryColor }} />}
                    </div>
@@ -271,7 +254,7 @@ export default function ProfileClient({ username }: { username: string }) {
         )}
 
         <div className="space-y-6">
-           <div className="relative glass-card rounded-[2rem] flex items-center px-6 gap-3 border border-white/10 h-14 mx-1">
+           <div className={cn("relative glass-card flex items-center px-6 gap-3 border border-white/10 h-14 mx-1", getShapeClass('search'))}>
               <Search size={18} className="text-white/40" />
               <Input placeholder="Cari koleksi..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="bg-transparent border-none focus-visible:ring-0 text-sm font-bold text-white placeholder:text-white/20 h-full" />
            </div>
@@ -279,8 +262,8 @@ export default function ProfileClient({ username }: { username: string }) {
            <div className="space-y-4">
               {groups?.filter(g => g.title.toLowerCase().includes(searchQuery.toLowerCase())).map(group => (
                 <Link key={group.id} href={getGroupHref(group.id)} className="block group px-1">
-                  <div className="p-0.5 rounded-[2.5rem] glass-card border-white/5 hover:border-white/20 transition-all hover:scale-[1.02] shadow-xl">
-                    <div className="w-full h-24 bg-black/40 backdrop-blur-2xl rounded-[2.4rem] flex items-center px-6 gap-4 border border-white/10">
+                  <div className={cn("p-0.5 glass-card border-white/5 hover:border-white/20 transition-all hover:scale-[1.02] shadow-xl", getShapeClass('card'))}>
+                    <div className={cn("w-full h-24 bg-black/40 backdrop-blur-2xl flex items-center px-6 gap-4 border border-white/10", getShapeClass('card'))}>
                       <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10 shrink-0">
                         {group.imageUrl ? <img src={group.imageUrl} className="w-full h-full object-cover" alt={group.title} /> : <LayoutGrid size={32} style={{ color: primaryColor }} />}
                       </div>
@@ -300,10 +283,10 @@ export default function ProfileClient({ username }: { username: string }) {
                   onClick={() => { updateDoc(doc(db, 'userProfiles', resolvedUserId!, 'links', link.id), { clicks: increment(1) }).catch(()=>{}); window.open(link.url, '_blank'); }}
                   className={cn(
                     "w-full p-5 flex items-center gap-4 transition-all active:scale-95 group shadow-lg mx-1",
+                    getShapeClass('button'),
                     link.button_style === 'glassmorphism' ? "glass-card border-white/10" : 
                     link.button_style === 'outline' ? "bg-transparent border-2 border-white/20" :
-                    "bg-white/5 border border-white/5",
-                    link.button_radius === 'pill' ? "rounded-full" : (link.button_radius === 'square' ? "rounded-none" : "rounded-[2rem]")
+                    "bg-white/5 border border-white/5"
                   )}
                 >
                   <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10">
@@ -317,6 +300,13 @@ export default function ProfileClient({ username }: { username: string }) {
               ))}
            </div>
         </div>
+
+        {spotlightError && (
+          <div className="p-4 bg-primary/10 border border-primary/20 rounded-2xl flex items-center gap-3 text-primary">
+            <AlertTriangle size={20} />
+            <p className="text-[9px] font-black uppercase">Index Firestore Diperlukan untuk Fitur Spotlight. Klik tautan di console untuk buat.</p>
+          </div>
+        )}
 
         {!(profile.isPremium || profile.role === 'Admin') && (
           <div className="pt-24 text-center">

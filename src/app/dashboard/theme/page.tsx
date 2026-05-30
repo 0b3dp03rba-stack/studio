@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Palette, Sparkles, Loader2, Save, Upload, LayoutGrid, Circle, Square, Hexagon, Maximize, Image as ImageIcon, Trash2, Smartphone, Layout, Columns, Layers } from 'lucide-react';
+import { Palette, Sparkles, Loader2, Save, Upload, LayoutGrid, Circle, Square, Hexagon, Maximize, Image as ImageIcon, Trash2, Smartphone, Layout, Columns, Layers, MousePointer2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
@@ -25,7 +25,7 @@ export default function ThemePage() {
   const [cropTarget, setActiveCropTarget] = useState<'avatar' | 'banner' | 'wallpaper'>('avatar');
 
   const [localProfile, setLocalProfile] = useState<any>({
-    profile_shape: 'circle',
+    profile_shape: 'rounded',
     layout_type: 'classic',
     themeColor: '#ff0000',
     themeColorSecondary: '#ffea00',
@@ -62,7 +62,7 @@ export default function ThemePage() {
     setIsSaving(true);
     try {
       await updateDoc(profileRef, { 
-        profile_shape: localProfile.profile_shape || 'circle',
+        profile_shape: localProfile.profile_shape || 'rounded',
         layout_type: localProfile.layout_type || 'classic',
         avatarUrl: localProfile.avatarUrl || '',
         bannerUrl: localProfile.bannerUrl || '',
@@ -121,7 +121,6 @@ export default function ThemePage() {
                   <layout.icon size={24} className={cn(localProfile.layout_type === layout.id ? "animate-pulse" : "")} />
                   <div className="text-center">
                     <p className="text-[9px] font-black uppercase tracking-tighter">{layout.label}</p>
-                    <p className="text-[7px] font-bold opacity-40 uppercase tracking-widest mt-0.5 hidden sm:block">{layout.desc}</p>
                   </div>
                 </button>
               ))}
@@ -150,6 +149,43 @@ export default function ThemePage() {
            </div>
         </Card>
 
+        {/* SHAPE & UI STYLE */}
+        <Card className="glass-card border-none rounded-[3rem] p-8 shadow-2xl space-y-8">
+           <div className="space-y-4">
+              <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase tracking-widest">
+                 <MousePointer2 size={16} /> <span>Global UI Shape</span>
+              </div>
+              <div className="grid grid-cols-4 gap-4">
+                {[
+                  { id: 'square', icon: Square, label: 'Square' },
+                  { id: 'rounded', icon: Maximize, label: 'Soft' },
+                  { id: 'circle', icon: Circle, label: 'Circle' },
+                  { id: 'hexagon', icon: Smartphone, label: 'Pill' }
+                ].map((s) => (
+                  <button 
+                    key={s.id} 
+                    onClick={() => setLocalProfile({...localProfile, profile_shape: s.id})}
+                    className={cn(
+                      "aspect-square rounded-2xl flex flex-col items-center justify-center gap-2 transition-all border-2", 
+                      localProfile.profile_shape === s.id 
+                      ? "neon-gradient text-background border-primary shadow-xl scale-105" 
+                      : "bg-white/5 text-white/20 border-white/5 hover:border-white/20"
+                    )}
+                  >
+                    <s.icon size={20} />
+                    <span className="text-[7px] font-black uppercase tracking-widest">{s.label}</span>
+                  </button>
+                ))}
+              </div>
+           </div>
+           
+           <div className="pt-4">
+              <Button onClick={handleSave} disabled={isSaving} className="w-full h-20 neon-gradient text-background font-black rounded-[2rem] shadow-2xl uppercase tracking-[0.3em] text-xs glow-primary active:scale-95 transition-all">
+                {isSaving ? <Loader2 className="animate-spin" /> : "PUBLISH DESIGN"}
+              </Button>
+           </div>
+        </Card>
+
         {/* WALLPAPER EDITOR */}
         <Card className="glass-card border-none rounded-[3rem] overflow-hidden p-8 shadow-2xl space-y-6">
            <div className="flex items-center justify-between">
@@ -170,37 +206,8 @@ export default function ThemePage() {
               </div>
               <div className="space-y-2">
                  <p className="text-xs font-black text-white uppercase tracking-tight">Atmosfer Profil</p>
-                 <p className="text-[9px] text-white/40 leading-relaxed uppercase font-medium">Unggah latar belakang penuh untuk memberikan kesan eksklusif pada seluruh halaman Master.</p>
+                 <p className="text-[9px] text-white/40 leading-relaxed uppercase font-medium">Unggah latar belakang penuh untuk kesan eksklusif.</p>
               </div>
-           </div>
-        </Card>
-
-        {/* SHAPE & PUBLISH */}
-        <Card className="glass-card border-none rounded-[3rem] p-8 shadow-2xl space-y-8">
-           <div className="space-y-4">
-              <label className="text-[10px] font-black uppercase text-white/30 tracking-[0.3em] ml-1">Avatar Frame Shape</label>
-              <div className="grid grid-cols-4 gap-4">
-                {[
-                  { id: 'circle', icon: Circle },
-                  { id: 'square', icon: Square },
-                  { id: 'rounded', icon: Maximize },
-                  { id: 'hexagon', icon: Hexagon }
-                ].map((s) => (
-                  <button 
-                    key={s.id} 
-                    onClick={() => setLocalProfile({...localProfile, profile_shape: s.id})}
-                    className={cn("aspect-square rounded-2xl flex items-center justify-center transition-all", localProfile.profile_shape === s.id ? "neon-gradient text-background shadow-xl scale-110" : "bg-white/5 text-white/20 hover:bg-white/10")}
-                  >
-                    <s.icon size={24} />
-                  </button>
-                ))}
-              </div>
-           </div>
-           
-           <div className="pt-4">
-              <Button onClick={handleSave} disabled={isSaving} className="w-full h-20 neon-gradient text-background font-black rounded-[2rem] shadow-2xl uppercase tracking-[0.3em] text-xs glow-primary active:scale-95 transition-all">
-                {isSaving ? <Loader2 className="animate-spin" /> : "PUBLISH DESIGN"}
-              </Button>
            </div>
         </Card>
       </div>

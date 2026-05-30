@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, useMemo } from 'react';
@@ -8,6 +7,7 @@ import { MousePointer2, Link2, ChevronLeft, Search, X, Ghost, Home } from 'lucid
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
 export default function GroupClient({ username, groupId }: { username: string; groupId: string }) {
   const db = useFirestore();
@@ -81,7 +81,6 @@ export default function GroupClient({ username, groupId }: { username: string; g
         </div>
         <div className="space-y-4">
           <h1 className="text-4xl font-black text-white uppercase tracking-tighter">Koleksi Tidak Ditemukan</h1>
-          <p className="text-sm font-medium text-white/40 max-w-xs mx-auto uppercase tracking-widest">Maaf, koleksi yang Anda cari tidak tersedia atau telah dihapus.</p>
         </div>
         <Button onClick={() => window.history.back()} className="h-14 px-10 neon-gradient text-background font-black rounded-2xl uppercase text-[10px] tracking-[0.2em] shadow-2xl">
           <ChevronLeft size={16} className="mr-2" /> Kembali
@@ -93,7 +92,16 @@ export default function GroupClient({ username, groupId }: { username: string; g
   const primaryColor = profile.themeColor || '#ff0000';
   const secondaryColor = profile.themeColorSecondary || '#ffea00';
   const dynamicGradient = `linear-gradient(-45deg, ${primaryColor} 0%, ${secondaryColor} 50%, ${primaryColor} 100%)`;
-  const isUserPremium = profile.isPremium || profile.role === 'Admin';
+  
+  // DYNAMIC SHAPE LOGIC
+  const shape = profile.profile_shape || 'rounded';
+  const getShapeClass = (type: 'card' | 'search' | 'button') => {
+    if (shape === 'square') return "rounded-none";
+    if (shape === 'hexagon') return "rounded-full"; 
+    if (shape === 'circle') return "rounded-[3rem]";
+    if (shape === 'rounded') return "rounded-2xl";
+    return "rounded-2xl";
+  };
 
   return (
     <div 
@@ -115,30 +123,20 @@ export default function GroupClient({ username, groupId }: { username: string; g
         </div>
 
         <div className="text-center space-y-6 pt-4">
-          <div 
-            className="mx-auto w-24 h-24 rounded-[2rem] p-1 shadow-2xl animate-flowing-gradient"
-            style={{ backgroundImage: dynamicGradient, backgroundSize: '200% 200%' }}
-          >
-            <div className="w-full h-full rounded-[1.85rem] bg-background flex items-center justify-center overflow-hidden border-4 border-background">
+          <div className={cn("mx-auto w-24 h-24 p-1 shadow-2xl animate-flowing-gradient", getShapeClass('card'))} style={{ backgroundImage: dynamicGradient, backgroundSize: '200% 200%' }}>
+            <div className={cn("w-full h-full bg-background flex items-center justify-center overflow-hidden border-4 border-background", getShapeClass('card'))}>
               {group.imageUrl ? <img src={group.imageUrl} className="w-full h-full object-cover" /> : <Link2 size={40} style={{ color: primaryColor }} />}
             </div>
           </div>
         </div>
 
         <div className="relative group">
-          <div className="absolute inset-0 bg-primary/10 blur-lg opacity-0 group-focus-within:opacity-100 transition-opacity rounded-2xl" />
-          <div className="relative glass-card rounded-2xl flex items-center px-4 gap-3 border border-white/5 h-12">
+          <div className={cn("absolute inset-0 bg-primary/10 blur-lg opacity-0 group-focus-within:opacity-100 transition-opacity", getShapeClass('search'))} />
+          <div className={cn("relative glass-card flex items-center px-4 gap-3 border border-white/5 h-12", getShapeClass('search'))}>
             <Search size={16} className="text-white/20" />
-            <Input 
-              placeholder={`Cari di ${group.title}...`} 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-transparent border-none focus-visible:ring-0 text-sm font-bold text-white placeholder:text-white/10 h-full"
-            />
+            <Input placeholder={`Cari di ${group.title}...`} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="bg-transparent border-none focus-visible:ring-0 text-sm font-bold text-white placeholder:text-white/20 h-full" />
             {searchQuery && (
-              <button onClick={() => setSearchQuery('')} className="text-white/20 hover:text-white transition-colors">
-                <X size={16} />
-              </button>
+              <button onClick={() => setSearchQuery('')} className="text-white/20 hover:text-white transition-colors"><X size={16} /></button>
             )}
           </div>
         </div>
@@ -148,10 +146,10 @@ export default function GroupClient({ username, groupId }: { username: string; g
             <button
               key={link.id}
               onClick={() => handleLinkClick(link.id, link.url)}
-              className="w-full p-0.5 rounded-2xl hover:scale-[1.02] transition-transform shadow-lg animate-flowing-gradient"
+              className={cn("w-full p-0.5 hover:scale-[1.02] transition-transform shadow-lg animate-flowing-gradient", getShapeClass('button'))}
               style={{ backgroundImage: dynamicGradient, backgroundSize: '200% 200%' }}
             >
-              <div className="w-full h-20 bg-black/80 backdrop-blur-xl rounded-[0.95rem] flex items-center px-6 gap-4 border border-white/10">
+              <div className={cn("w-full h-20 bg-black/80 backdrop-blur-xl flex items-center px-6 gap-4 border border-white/10", getShapeClass('button'))}>
                 <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/5">
                   {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <Link2 size={24} style={{ color: primaryColor }} />}
                 </div>
@@ -170,7 +168,7 @@ export default function GroupClient({ username, groupId }: { username: string; g
           )}
         </div>
 
-        {!isUserPremium && (
+        {!(profile.isPremium || profile.role === 'Admin') && (
           <div className="pt-12 text-center opacity-30">
             <p className="text-[9px] font-black uppercase tracking-[0.4em] text-white">Powering with Linku Engine</p>
           </div>
