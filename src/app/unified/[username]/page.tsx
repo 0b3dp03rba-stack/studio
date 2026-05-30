@@ -7,7 +7,6 @@ import ProfileClient from '@/app/[username]/ProfileClient';
 /**
  * @fileOverview Unified Public Profile Resolver
  * Menjadi gerbang tunggal untuk melihat profil (Subdomain & Custom Domain).
- * Folder /unified/ dipilih karena tanpa underscore agar tidak dianggap private folder.
  */
 export default function UnifiedProfilePage({ params }: { params: Promise<{ username: string }> }) {
   const { username } = use(params);

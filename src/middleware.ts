@@ -3,8 +3,8 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 /**
- * @fileOverview Linku Engine v60.0 - PRODUCTION STABLE ROUTING
- * Menangani Subdomain, Custom Domain, dan Redirect Jalur Lama.
+ * @fileOverview Linku Engine v61.0 - PRODUCTION STABLE ROUTING
+ * Menangani Subdomain, Custom Domain, dan Pencegahan Loop Jalur Internal.
  */
 
 export function middleware(req: NextRequest) {
@@ -50,7 +50,7 @@ export function middleware(req: NextRequest) {
     }
 
     /**
-     * MODE PREVIEW/LOCAL: Izinkan path-based access /username
+     * MODE PREVIEW/LOCAL: Izinkan path-based access /username untuk debugging
      */
     if (hostname !== mainDomain && hostname !== `www.${mainDomain}`) {
        url.pathname = `/unified/u:${firstSegment}${url.pathname.replace(`/${firstSegment}`, '') || '/'}`;
@@ -58,7 +58,7 @@ export function middleware(req: NextRequest) {
     }
 
     /**
-     * MODE PRODUKSI: Redirect linku.biz.id/username ke username.linku.biz.id
+     * MODE PRODUKSI: Redirect linku.biz.id/username ke username.linku.biz.id (SEO Friendly)
      */
     const remainingPath = url.pathname.replace(`/${firstSegment}`, '') || '/';
     return NextResponse.redirect(

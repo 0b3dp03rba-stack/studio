@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Sparkles, ShieldCheck, Zap, Globe, Loader2, Save, ReceiptText, ArrowRight, Info, Network, CheckCircle2, Trash2, AlertCircle } from 'lucide-react';
+import { Sparkles, ShieldCheck, Zap, Globe, Loader2, Save, ReceiptText, ArrowRight, Info, Network, CheckCircle2, Trash2 } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, updateDoc, serverTimestamp, collection, setDoc, query, where, limit } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
@@ -141,11 +141,11 @@ export default function PremiumPage() {
                 <div className="p-6 bg-primary/5 rounded-[2rem] border border-primary/20 space-y-6 animate-in slide-in-from-bottom-4 duration-500">
                   <div className="flex items-center gap-3 text-primary">
                     <Network size={20} />
-                    <p className="text-xs font-black uppercase tracking-widest">Panduan DNS (Sangat Penting):</p>
+                    <p className="text-xs font-black uppercase tracking-widest">Panduan DNS (White-Label):</p>
                   </div>
                   
                   <p className="text-[10px] font-bold text-white/60 leading-relaxed uppercase">
-                    Hubungkan domain pribadi Anda ke infrastruktur Linku dengan mengatur DNS di panel domain Anda (seperti Cloudflare/GoDaddy):
+                    Arahkan domain pribadi Anda ke infrastruktur Linku melalui panel penyedia domain Anda:
                   </p>
 
                   <div className="bg-black/40 rounded-2xl overflow-hidden border border-white/10 shadow-inner">
@@ -153,14 +153,14 @@ export default function PremiumPage() {
                       <thead className="bg-white/5 text-white/40 uppercase font-black">
                         <tr>
                           <th className="p-4 border-r border-white/5">Tipe</th>
-                          <th className="p-4 border-r border-white/5">Nama / Host</th>
-                          <th className="p-4">Nilai / Target</th>
+                          <th className="p-4 border-r border-white/5">Nama</th>
+                          <th className="p-4">Target / Value</th>
                         </tr>
                       </thead>
                       <tbody className="font-bold text-white uppercase">
                         <tr className="border-t border-white/5">
                           <td className="p-4 border-r border-white/5 text-primary">CNAME</td>
-                          <td className="p-4 border-r border-white/5">@ <span className="text-[8px] opacity-40">(atau www)</span></td>
+                          <td className="p-4 border-r border-white/5">@ / www</td>
                           <td className="p-4 text-primary">linku.biz.id</td>
                         </tr>
                       </tbody>
@@ -170,7 +170,7 @@ export default function PremiumPage() {
                   <div className="flex gap-4 p-4 bg-white/5 rounded-2xl">
                     <CheckCircle2 size={20} className="text-primary shrink-0" />
                     <p className="text-[9px] font-bold text-white/40 uppercase leading-relaxed">
-                      Catatan: Linku bukan penyedia domain. Anda harus memiliki domain sendiri untuk menggunakan fitur ini. Linku hanya menangani pemetaan traffic dari domain tersebut ke profil Anda.
+                      Catatan: Pengaturan ini akan memetakan domain Anda ke gateway Linku. Pastikan Anda sudah menambahkan domain ini ke project Vercel/Firebase Master jika diperlukan SSL khusus.
                     </p>
                   </div>
                 </div>
