@@ -2,76 +2,94 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 /**
- * @fileOverview Linku Engine v49.0 - FINAL UNIFIED ARCHITECTURE
+ * @fileOverview Linku Engine v50.0 - FINAL UNIFIED ARCHITECTURE
  * 1. linku.biz.id -> Dashboard & Main Site
- * 2. linku.biz.id/user -> 301 Redirect ke user.linku.biz.id
- * 3. user.linku.biz.id -> Rewrite ke /_view/u:user
- * 4. customdomain.com -> Rewrite ke /_view/d:customdomain.com
+ * 2. www.any.com -> Cleaned to any.com
+ * 3. linku.biz.id/user -> 301 Redirect ke user.linku.biz.id
+ * 4. user.linku.biz.id -> Internal Rewrite ke /_view/u:user
+ * 5. customdomain.com -> Internal Rewrite ke /_view/d:customdomain.com
  */
 
 export function middleware(req: NextRequest) {
   const url = req.nextUrl.clone();
-  const host = req.headers.get('host') || '';
-  const pathname = url.pathname;
+  const rawHost = req.headers.get('host') || '';
+  
+  // 1. STANDARISASI HOSTNAME: Bersihkan 'www.' dan Port (untuk dev)
+  const host = rawHost.replace(/^www\./, '').split(':')[0].toLowerCase();
+  
+  const mainDomain = 'linku.biz.id';
+  const isMainDomain = host === mainDomain;
 
-  // --- 1. THE ULTIMATE SHIELD (ANTI-LOOP) ---
-  // Jika rute sudah masuk dapur internal, api, atau aset sistem, biarkan lewat.
+  // 2. TAMENG UTAMA: Loloskan file statis, API, dan Next.js internal
   if (
-    pathname.startsWith('/_view') || 
-    pathname.startsWith('/api') ||
-    pathname.startsWith('/_next') ||
+    url.pathname.startsWith('/_next') || 
+    url.pathname.startsWith('/api') ||
+    url.pathname.includes('.') ||
     req.headers.has('x-nextjs-rewrite')
   ) {
     return NextResponse.next();
   }
 
-  const mainDomain = 'linku.biz.id';
-  const hostOnly = host.split(':')[0].toLowerCase();
+  // 3. TAMENG LOOP: Jika request sudah di dalam dapur internal _view, loloskan
+  if (url.pathname.startsWith('/_view')) {
+    return NextResponse.next();
+  }
 
-  // Daftar host sistem yang kebal terhadap rewrite profil publik
+  // 4. DAFTAR HOST SISTEM (Abaikan rewrite untuk domain preview/internal dev)
   const systemHosts = [
     'localhost', '127.0.0.1', 'web.app', 'firebaseapp.com', 
     'firebase.google.com', 'cloudworkstations.dev'
   ];
-  
-  const isSystemHost = systemHosts.some(sh => hostOnly === sh || hostOnly.endsWith('.' + sh));
-  const isExactMainHost = hostOnly === mainDomain || hostOnly === `www.${mainDomain}`;
+  const isSystemHost = systemHosts.some(sh => host === sh || host.endsWith('.' + sh));
 
-  // --- 2. JALUR DOMAIN UTAMA (Dashboard & Redirect) ---
-  if (isExactMainHost) {
+  // 5. LOGIKA DOMAIN UTAMA (Dashboard & Redirect)
+  if (isMainDomain || isSystemHost) {
     const reservedPaths = [
-      '/dashboard', '/login', '/register', '/admin', '/u',
-      '/verify-email', '/forgot-password', '/auth', '/reviews'
+      'dashboard', 'login', 'register', 'admin', 'u',
+      'verify-email', 'forgot-password', 'auth', 'reviews'
     ];
 
-    const pathSegments = pathname.split('/').filter(Boolean);
-    
-    // Jika user mengakses path-based lama (linku.biz.id/budi), paksa redirect ke subdomain
-    if (pathSegments.length > 0 && !reservedPaths.some(p => pathname.startsWith(p))) {
-      const username = pathSegments[0];
-      const remainingPath = pathname.replace(`/${username}`, '') || '';
-      const protocol = host.includes('localhost') ? 'http' : 'https';
+    const pathSegments = url.pathname.split('/').filter(Boolean);
+    const firstSegment = pathSegments[0];
+
+    // Jika mengakses root atau rute sistem, biarkan lewat
+    if (!firstSegment || reservedPaths.includes(firstSegment)) {
+      return NextResponse.next();
+    }
+
+    // Jika mengakses link profil LAMA (linku.biz.id/username), Redirect ke Subdomain
+    if (isMainDomain) {
+      const remainingPath = url.pathname.replace(`/${firstSegment}`, '');
+      const protocol = rawHost.includes('localhost') ? 'http' : 'https';
       
-      const redirectUrl = `${protocol}://${username}.${mainDomain}${remainingPath}`;
+      const redirectUrl = `${protocol}://${firstSegment}.${mainDomain}${remainingPath}${url.search}`;
       return NextResponse.redirect(new URL(redirectUrl), 301);
     }
     
     return NextResponse.next();
   }
 
-  // --- 3. JALUR SUBDOMAIN (user.linku.biz.id) ---
-  if (hostOnly.endsWith('.' + mainDomain)) {
-    const subdomain = hostOnly.replace('.' + mainDomain, '').replace('www.', '');
-    if (subdomain && subdomain !== 'www') {
-      url.pathname = `/_view/u:${subdomain}${pathname}`;
-      return NextResponse.rewrite(url);
+  // 6. LOGIKA SUBDOMAIN BAWAAN (username.linku.biz.id)
+  const isSubdomain = host.endsWith('.' + mainDomain);
+  if (isSubdomain) {
+    const subdomain = host.replace(`.${mainDomain}`, '');
+    
+    // Abaikan jika subdomain sistem
+    const systemSubdomains = ['admin', 'sys', 'apps', 'www'];
+    if (systemSubdomains.includes(subdomain)) {
+      return NextResponse.next();
     }
+
+    // Rewrite ke Unified Viewer dengan label User (u:)
+    url.pathname = `/_view/u:${subdomain}${url.pathname}`;
+    return NextResponse.rewrite(url);
   }
 
-  // --- 4. JALUR CUSTOM DOMAIN (PREMIUM) ---
-  // Jika host bukan sistem dan bukan domain utama, otomatis dianggap sebagai domain kustom
-  if (!isExactMainHost && !isSystemHost) {
-    url.pathname = `/_view/d:${hostOnly}${pathname}`;
+  // 7. LOGIKA CUSTOM DOMAIN PREMIUM (domainuser.com)
+  // Jika host bukan sistem, bukan domain utama, dan bukan subdomain bawaan
+  if (!isMainDomain && !isSystemHost && !isSubdomain) {
+    // Rewrite ke Unified Viewer dengan label Domain (d:)
+    url.pathname = `/_view/d:${host}${url.pathname}`;
     return NextResponse.rewrite(url);
   }
 
@@ -83,6 +101,6 @@ export const config = {
     /*
      * Matcher ketat: Kecualikan file statis, aset, dan favicon demi performa.
      */
-    '/((?!api|_next/static|_next/image|images|favicon.ico|.*\\.).*)',
+    '/((?!api|_next/static|_next/image|images|favicon.ico|sitemap.xml|robots.txt).*)',
   ],
 };
