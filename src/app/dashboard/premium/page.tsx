@@ -71,13 +71,16 @@ export default function PremiumPage() {
   };
 
   const handleSaveDomain = async () => {
-    if (!profileRef || !customDomain.includes('.')) return;
+    if (!profileRef || !customDomain.includes('.')) {
+      toast({ variant: "destructive", title: "DOMAIN TIDAK VALID", description: "Masukkan domain yang benar (contoh: budi.com)" });
+      return;
+    }
     setIsSavingDomain(true);
     try {
       await updateDoc(profileRef, { customDomain: customDomain.trim().toLowerCase(), updatedAt: serverTimestamp() });
-      toast({ title: "DOMAIN DISIMPAN" });
+      toast({ title: "DOMAIN DISIMPAN", description: "Sekarang lakukan konfigurasi DNS di panel domain Anda." });
     } catch (e) {
-      toast({ variant: "destructive", title: "GAGAL" });
+      toast({ variant: "destructive", title: "GAGAL MENYIMPAN" });
     } finally { setIsSavingDomain(false); }
   };
 
@@ -102,24 +105,51 @@ export default function PremiumPage() {
            
            <div className="space-y-6">
               <div className="space-y-3">
-                 <label className="text-[10px] font-black uppercase text-muted-foreground">Domain / Subdomain:</label>
+                 <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Domain / Subdomain Anda:</label>
                  <div className="flex gap-2">
-                    <Input placeholder="budi.com" value={customDomain} onChange={(e) => setCustomDomain(e.target.value)} className="bg-white/5 border-none h-16 rounded-2xl font-bold text-base px-6" />
-                    <Button onClick={handleSaveDomain} disabled={isSavingDomain} className="h-16 w-16 rounded-2xl neon-gradient text-background shrink-0 active:scale-95">{isSavingDomain ? <Loader2 className="animate-spin" /> : <Save size={28} />}</Button>
+                    <Input placeholder="contoh: budi.com" value={customDomain} onChange={(e) => setCustomDomain(e.target.value)} className="bg-white/5 border-none h-16 rounded-2xl font-bold text-base px-6 focus-visible:ring-primary/20" />
+                    <Button onClick={handleSaveDomain} disabled={isSavingDomain} className="h-16 w-16 rounded-2xl neon-gradient text-background shrink-0 active:scale-95 transition-transform shadow-xl">
+                      {isSavingDomain ? <Loader2 className="animate-spin" /> : <Save size={28} />}
+                    </Button>
                  </div>
               </div>
 
               {customDomain && (
-                <div className="p-6 bg-primary/5 rounded-[2rem] border border-primary/20 space-y-6 animate-in">
-                  <div className="flex items-center gap-3 text-primary"><Network size={20} /><p className="text-xs font-black uppercase">Panduan DNS (Sangat Penting):</p></div>
-                  <p className="text-[10px] font-bold text-white/60 leading-relaxed uppercase">Atur DNS domain Anda di panel domain (Niagahoster/Cloudflare/dll):</p>
-                  <div className="bg-black/40 rounded-2xl overflow-hidden border border-white/10">
+                <div className="p-6 bg-primary/5 rounded-[2rem] border border-primary/20 space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+                  <div className="flex items-center gap-3 text-primary">
+                    <Network size={20} />
+                    <p className="text-xs font-black uppercase tracking-widest">Panduan DNS (Sangat Penting):</p>
+                  </div>
+                  
+                  <p className="text-[10px] font-bold text-white/60 leading-relaxed uppercase">
+                    Silakan buka panel kontrol domain Anda (Niagahoster, Cloudflare, dll) dan tambahkan record berikut:
+                  </p>
+
+                  <div className="bg-black/40 rounded-2xl overflow-hidden border border-white/10 shadow-inner">
                     <table className="w-full text-[10px] text-left">
-                      <thead className="bg-white/5 text-white/40 uppercase font-black"><tr><th className="p-3">Tipe</th><th className="p-3">Nama / Host</th><th className="p-3">Nilai / Target</th></tr></thead>
-                      <tbody className="font-bold text-white uppercase"><tr className="border-t border-white/5"><td className="p-3">CNAME</td><td className="p-3 text-primary">@ (atau nama subdomain)</td><td className="p-3 text-primary">linku.biz.id</td></tr></tbody>
+                      <thead className="bg-white/5 text-white/40 uppercase font-black">
+                        <tr>
+                          <th className="p-4 border-r border-white/5">Tipe</th>
+                          <th className="p-4 border-r border-white/5">Nama / Host</th>
+                          <th className="p-4">Nilai / Target</th>
+                        </tr>
+                      </thead>
+                      <tbody className="font-bold text-white uppercase">
+                        <tr className="border-t border-white/5">
+                          <td className="p-4 border-r border-white/5 text-primary">CNAME</td>
+                          <td className="p-4 border-r border-white/5">@ <span className="text-[8px] opacity-40">(atau subdomain)</span></td>
+                          <td className="p-4 text-primary">linku.biz.id</td>
+                        </tr>
+                      </tbody>
                     </table>
                   </div>
-                  <div className="flex gap-3 pt-2"><CheckCircle2 size={16} className="text-primary shrink-0" /><p className="text-[9px] font-bold text-white/40 uppercase leading-relaxed">Gunakan CNAME ke <span className="text-white underline">linku.biz.id</span>. Ini metode paling stabil dan aman.</p></div>
+
+                  <div className="flex gap-4 p-4 bg-white/5 rounded-2xl">
+                    <CheckCircle2 size={20} className="text-primary shrink-0" />
+                    <p className="text-[9px] font-bold text-white/40 uppercase leading-relaxed">
+                      Metode <span className="text-white underline decoration-primary decoration-2 underline-offset-4">CNAME</span> adalah metode paling stabil. Sistem kami akan otomatis mengenali domain Anda setelah DNS menyebar (propagation).
+                    </p>
+                  </div>
                 </div>
               )}
            </div>

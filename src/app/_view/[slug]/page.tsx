@@ -10,5 +10,7 @@ import ProfileClient from '@/app/[username]/ProfileClient';
  */
 export default function UnifiedProfilePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
-  return <ProfileClient username={slug} />;
+  // Decode slug jika mengandung karakter khusus domain
+  const decodedSlug = decodeURIComponent(slug);
+  return <ProfileClient username={decodedSlug} />;
 }
