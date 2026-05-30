@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Sparkles, ShieldCheck, Zap, Globe, Loader2, Save, ReceiptText, ArrowRight, Info, Network, CheckCircle2, Trash2, SearchCheck, AlertTriangle } from 'lucide-react';
+import { Sparkles, ShieldCheck, Zap, Globe, Loader2, Save, ReceiptText, ArrowRight, Info, Network, CheckCircle2, Trash2, SearchCheck, AlertTriangle, ExternalLink } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, updateDoc, serverTimestamp, collection, setDoc, query, where, limit } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
@@ -169,11 +169,22 @@ export default function PremiumPage() {
 
               {profile?.customDomain && (
                 <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+                  <div className="p-6 bg-red-500/10 rounded-[2rem] border border-red-500/30 space-y-4">
+                    <div className="flex items-center gap-3 text-red-500">
+                      <AlertTriangle size={20} />
+                      <p className="text-xs font-black uppercase tracking-widest leading-none">Langkah Terakhir (Penting!)</p>
+                    </div>
+                    <p className="text-[10px] font-bold text-white/80 leading-relaxed uppercase">
+                      DNS Master sudah terverifikasi, tapi server butuh izin SSL. Kirim pesan ke Admin via <Link href="/dashboard/chat" className="text-primary underline">Live Chat</Link> agar domain <span className="text-primary">{profile.customDomain}</span> segera didaftarkan ke server utama kami.
+                    </p>
+                    <p className="text-[9px] font-medium text-white/40 uppercase italic">Tanpa langkah ini, web akan muncul error "Connection Closed".</p>
+                  </div>
+
                   <div className="p-6 bg-primary/5 rounded-[2rem] border border-primary/20 space-y-6">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3 text-primary">
                         <Network size={20} />
-                        <p className="text-xs font-black uppercase tracking-widest">Panduan DNS:</p>
+                        <p className="text-xs font-black uppercase tracking-widest">Status Koneksi:</p>
                       </div>
                       <Button 
                         size="sm" 
@@ -185,10 +196,6 @@ export default function PremiumPage() {
                         {isCheckingDNS ? <Loader2 className="animate-spin mr-2" size={12} /> : <SearchCheck size={12} className="mr-2" />} Cek Koneksi DNS
                       </Button>
                     </div>
-                    
-                    <p className="text-[10px] font-bold text-white/60 leading-relaxed uppercase">
-                      Atur domain di panel penyedia domain (Cloudflare/Rumahweb/dll):
-                    </p>
 
                     <div className="bg-black/40 rounded-2xl overflow-hidden border border-white/10 shadow-inner">
                       <table className="w-full text-[10px] text-left">
@@ -208,13 +215,6 @@ export default function PremiumPage() {
                         </tbody>
                       </table>
                     </div>
-
-                    <div className="flex gap-4 p-4 bg-white/5 rounded-2xl">
-                      <CheckCircle2 size={20} className="text-primary shrink-0" />
-                      <p className="text-[9px] font-bold text-white/40 uppercase leading-relaxed">
-                        Sistem akan menangkap domain Anda secara otomatis begitu DNS terdeteksi secara publik.
-                      </p>
-                    </div>
                   </div>
 
                   {/* Cloudflare/SSL Warning */}
@@ -226,9 +226,6 @@ export default function PremiumPage() {
                     <div className="space-y-3">
                       <p className="text-[9px] font-bold text-white/60 uppercase leading-relaxed">
                         Jika menggunakan Cloudflare Proxy (Orange Cloud), Anda <span className="text-orange-500">WAJIB</span> mengatur mode SSL/TLS ke <span className="text-white">"Full (Strict)"</span>.
-                      </p>
-                      <p className="text-[9px] font-medium text-white/40 uppercase leading-relaxed">
-                        Jika tidak, aplikasi akan mengalami error "Too many redirects". Sangat disarankan menggunakan mode "DNS Only" (Grey Cloud) saat proses verifikasi awal.
                       </p>
                     </div>
                   </div>
