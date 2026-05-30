@@ -1,7 +1,6 @@
-
 "use client";
 
-import { LayoutDashboard, User, Palette, FolderKanban, Zap, BarChart3, Clock, Users, LogOut } from 'lucide-react';
+import { LayoutDashboard, User, Palette, FolderKanban, Zap, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -9,8 +8,8 @@ import { useUser, useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
 
 /**
- * @fileOverview Bottom Navigation Linku Engine v87.0
- * Menyederhanakan navigasi menjadi 5 menu utama sesuai alur kerja Master.
+ * @fileOverview Bottom Navigation Linku Engine v88.0
+ * 5 Menu Utama: Dash, Manage, Premium, Visual Lab, User Set.
  */
 
 export default function BottomNav() {
@@ -23,16 +22,16 @@ export default function BottomNav() {
   
   const isAdminPath = pathname.startsWith('/admin');
   
-  // Sembunyikan di profil publik /u/ atau /unified/
+  // Sembunyikan di profil publik
   const isPublicProfile = pathname.startsWith('/u/') || pathname.startsWith('/unified/') || (pathname.length > 1 && !pathname.startsWith('/dashboard') && !isAdminPath && !pathname.startsWith('/editor'));
   if (isPublicProfile) return null;
 
   const handleLogout = async () => {
     await signOut(auth);
-    router.push('/'); // Redirect ke home
+    router.push('/');
   };
 
-  const userItems = [
+  const navItems = [
     { label: 'Dash', icon: LayoutDashboard, href: '/dashboard' },
     { label: 'Manage', icon: FolderKanban, href: '/dashboard/manage' },
     { label: 'Premium', icon: Zap, href: '/dashboard/premium' },
@@ -40,30 +39,12 @@ export default function BottomNav() {
     { label: 'User Set', icon: User, href: '/dashboard/profil' },
   ];
 
-  const adminItems = [
-    { label: 'Analisis', icon: BarChart3, href: '/admin' },
-    { label: 'Database', icon: Users, href: '/admin/users' },
-    { label: 'Activity', icon: Clock, href: '/admin/activity' },
-    { label: 'Exit', icon: LogOut, href: '#', onClick: handleLogout },
-  ];
-
-  const navItems = isAdminPath ? adminItems : userItems;
-
   return (
     <nav className="fixed bottom-0 left-0 right-0 h-24 bg-black/95 backdrop-blur-3xl border-t border-white/5 flex items-center justify-around px-4 z-50 rounded-t-[2.5rem]">
       {navItems.map((item) => {
         const isActive = pathname === item.href;
         const Icon = item.icon;
         
-        if (item.onClick) {
-          return (
-            <button key={item.label} onClick={item.onClick} className="flex flex-col items-center justify-center gap-1 flex-1 text-white/20">
-               <div className="p-3 rounded-2xl"><Icon size={20} /></div>
-               <span className="text-[7px] font-black uppercase tracking-widest">LOGOUT</span>
-            </button>
-          );
-        }
-
         return (
           <Link
             key={item.href}

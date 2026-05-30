@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -9,7 +8,6 @@ import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import ImageCropperModal from '@/components/ImageCropperModal';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 
 export default function ThemePage() {
@@ -70,7 +68,7 @@ export default function ThemePage() {
         wallpaperUrl: localProfile.wallpaperUrl || '',
         updatedAt: serverTimestamp() 
       });
-      toast({ title: "Visual Diperbarui", description: "Tampilan profil Anda telah diperbarui." });
+      toast({ title: "Visual Diperbarui" });
     } catch (e) { 
       toast({ variant: "destructive", title: "Gagal Simpan" }); 
     } finally { 
@@ -90,128 +88,100 @@ export default function ThemePage() {
   };
 
   return (
-    <div className="space-y-8 animate-in pb-32 pt-24 px-4">
+    <div className="space-y-8 animate-in pb-32 pt-24">
       <div className="space-y-1">
         <h1 className="text-4xl font-black tracking-tighter text-white uppercase leading-none">Visual Lab</h1>
-        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/70">Customize Identity Hub</p>
+        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/70">Customize Identity Architecture</p>
       </div>
 
       <div className="grid gap-6">
         
-        {/* CARD LAYOUT TEMPLATE SELECTOR */}
+        {/* TEMPLATE CARD LAYOUT */}
         <Card className="glass-card border-none rounded-[3rem] p-8 shadow-2xl space-y-6">
            <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase tracking-widest">
-              <Layout size={16} /> <span>Card Content Template</span>
+              <Layout size={16} /> <span>Card Layout Template</span>
            </div>
            <div className="grid grid-cols-3 gap-3">
               {[
-                { id: 'classic', label: 'Classic', icon: Layers, desc: 'Centered Hero' },
-                { id: 'split', label: 'Modern', icon: Columns, desc: 'Side-by-Side' },
-                { id: 'minimal', label: 'Elite', icon: LayoutGrid, desc: 'Compact Hub' }
+                { id: 'classic', label: 'Classic', icon: Layers },
+                { id: 'split', label: 'Modern', icon: Columns },
+                { id: 'minimal', label: 'Elite', icon: LayoutGrid }
               ].map((layout) => (
                 <button 
                   key={layout.id}
                   onClick={() => setLocalProfile({...localProfile, layout_type: layout.id})}
                   className={cn(
-                    "flex flex-col items-center gap-3 p-4 rounded-2xl border-2 transition-all group",
+                    "flex flex-col items-center gap-3 p-4 rounded-2xl border-2 transition-all",
                     localProfile.layout_type === layout.id 
                     ? "bg-primary/10 border-primary text-primary shadow-[0_0_20px_rgba(255,0,0,0.2)]" 
-                    : "bg-white/5 border-white/5 text-white/40 hover:border-white/20 hover:text-white"
+                    : "bg-white/5 border-white/5 text-white/40 hover:border-white/20"
                   )}
                 >
-                  <layout.icon size={24} className={cn(localProfile.layout_type === layout.id ? "animate-pulse" : "")} />
-                  <div className="text-center">
-                    <p className="text-[9px] font-black uppercase tracking-tighter">{layout.label}</p>
-                  </div>
+                  <layout.icon size={24} />
+                  <p className="text-[9px] font-black uppercase tracking-tighter">{layout.label}</p>
                 </button>
               ))}
            </div>
         </Card>
 
-        {/* IDENTITY CARD EDITOR (SAMPUL) */}
-        <Card className="glass-card border-none rounded-[3rem] overflow-hidden p-8 shadow-2xl space-y-6">
-           <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase tracking-widest"><Maximize size={16} /><span>Identity Cover (3:1)</span></div>
-              {localProfile.bannerUrl && (
-                <button onClick={() => handleRemoveImage('banner')} className="text-[9px] font-black text-destructive uppercase flex items-center gap-1 hover:underline">
-                  <Trash2 size={10} /> Delete Cover
-                </button>
-              )}
+        {/* GLOBAL UI SHAPE */}
+        <Card className="glass-card border-none rounded-[3rem] p-8 shadow-2xl space-y-6">
+           <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase tracking-widest">
+              <MousePointer2 size={16} /> <span>Global Theme Shape</span>
            </div>
-           <div className="w-full aspect-[3/1] bg-white/5 rounded-[2rem] overflow-hidden border border-white/10 relative group shadow-inner">
-              {localProfile.bannerUrl ? <img src={localProfile.bannerUrl} className="w-full h-full object-cover" alt="Banner Preview" /> : <div className="w-full h-full flex items-center justify-center text-white/5"><ImageIcon size={32} /></div>}
-              <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity backdrop-blur-sm">
-                 <div className="flex flex-col items-center gap-2">
-                    <Upload className="text-white" size={24} />
-                    <span className="text-[10px] font-black text-white uppercase">Upload Cover Photo</span>
-                 </div>
-                 <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageSelect(e, 'banner')} />
-              </label>
+           <div className="grid grid-cols-4 gap-4">
+              {[
+                { id: 'square', icon: Square, label: 'Square' },
+                { id: 'rounded', icon: Maximize, label: 'Soft' },
+                { id: 'circle', icon: Circle, label: 'Pill' },
+                { id: 'hexagon', icon: Hexagon, label: 'Hex' }
+              ].map((s) => (
+                <button 
+                  key={s.id} 
+                  onClick={() => setLocalProfile({...localProfile, profile_shape: s.id})}
+                  className={cn(
+                    "aspect-square rounded-2xl flex flex-col items-center justify-center gap-2 transition-all border-2", 
+                    localProfile.profile_shape === s.id 
+                    ? "neon-gradient text-background border-primary" 
+                    : "bg-white/5 text-white/20 border-white/5"
+                  )}
+                >
+                  <s.icon size={20} />
+                  <span className="text-[7px] font-black uppercase tracking-widest">{s.label}</span>
+                </button>
+              ))}
            </div>
         </Card>
 
-        {/* SHAPE & UI STYLE */}
-        <Card className="glass-card border-none rounded-[3rem] p-8 shadow-2xl space-y-8">
-           <div className="space-y-4">
-              <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase tracking-widest">
-                 <MousePointer2 size={16} /> <span>Global UI Shape</span>
+        {/* UPLOAD SECTIONS */}
+        <div className="grid grid-cols-2 gap-4">
+           <Card className="glass-card border-none rounded-[2rem] p-6 space-y-4">
+              <p className="text-[9px] font-black uppercase text-white/40 text-center tracking-widest">Identity Cover</p>
+              <div className="aspect-[3/1] bg-white/5 rounded-xl overflow-hidden border border-white/10 relative group">
+                 {localProfile.bannerUrl ? <img src={localProfile.bannerUrl} className="w-full h-full object-cover" /> : <ImageIcon className="m-auto text-white/5" />}
+                 <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity">
+                    <Upload size={16} />
+                    <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageSelect(e, 'banner')} />
+                 </label>
               </div>
-              <div className="grid grid-cols-4 gap-4">
-                {[
-                  { id: 'square', icon: Square, label: 'Square' },
-                  { id: 'rounded', icon: Maximize, label: 'Soft' },
-                  { id: 'circle', icon: Circle, label: 'Circle' },
-                  { id: 'hexagon', icon: Smartphone, label: 'Pill' }
-                ].map((s) => (
-                  <button 
-                    key={s.id} 
-                    onClick={() => setLocalProfile({...localProfile, profile_shape: s.id})}
-                    className={cn(
-                      "aspect-square rounded-2xl flex flex-col items-center justify-center gap-2 transition-all border-2", 
-                      localProfile.profile_shape === s.id 
-                      ? "neon-gradient text-background border-primary shadow-xl scale-105" 
-                      : "bg-white/5 text-white/20 border-white/5 hover:border-white/20"
-                    )}
-                  >
-                    <s.icon size={20} />
-                    <span className="text-[7px] font-black uppercase tracking-widest">{s.label}</span>
-                  </button>
-                ))}
+           </Card>
+           <Card className="glass-card border-none rounded-[2rem] p-6 space-y-4">
+              <p className="text-[9px] font-black uppercase text-white/40 text-center tracking-widest">Full Wallpaper</p>
+              <div className="aspect-[9/16] h-12 mx-auto bg-white/5 rounded-lg overflow-hidden border border-white/10 relative group">
+                 {localProfile.wallpaperUrl ? <img src={localProfile.wallpaperUrl} className="w-full h-full object-cover" /> : <Smartphone className="m-auto text-white/5" />}
+                 <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity">
+                    <Upload size={16} />
+                    <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageSelect(e, 'wallpaper')} />
+                 </label>
               </div>
-           </div>
-           
-           <div className="pt-4">
-              <Button onClick={handleSave} disabled={isSaving} className="w-full h-20 neon-gradient text-background font-black rounded-[2rem] shadow-2xl uppercase tracking-[0.3em] text-xs glow-primary active:scale-95 transition-all">
-                {isSaving ? <Loader2 className="animate-spin" /> : "PUBLISH DESIGN"}
-              </Button>
-           </div>
-        </Card>
+           </Card>
+        </div>
 
-        {/* WALLPAPER EDITOR */}
-        <Card className="glass-card border-none rounded-[3rem] overflow-hidden p-8 shadow-2xl space-y-6">
-           <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-secondary font-black text-[10px] uppercase tracking-widest"><ImageIcon size={16} /><span>Full Wallpaper (9:16)</span></div>
-              {localProfile.wallpaperUrl && (
-                <button onClick={() => handleRemoveImage('wallpaper')} className="text-[9px] font-black text-destructive uppercase flex items-center gap-1 hover:underline">
-                  <Trash2 size={10} /> Delete Wallpaper
-                </button>
-              )}
-           </div>
-           <div className="flex gap-6 items-center">
-              <div className="w-24 aspect-[9/16] bg-white/5 rounded-[1.5rem] overflow-hidden border border-white/10 relative group shrink-0 shadow-2xl">
-                {localProfile.wallpaperUrl ? <img src={localProfile.wallpaperUrl} className="w-full h-full object-cover" alt="Wallpaper Preview" /> : <div className="w-full h-full flex items-center justify-center text-white/5"><Smartphone size={24} /></div>}
-                <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity backdrop-blur-sm">
-                   <Upload className="text-white" size={20} />
-                   <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageSelect(e, 'wallpaper')} />
-                </label>
-              </div>
-              <div className="space-y-2">
-                 <p className="text-xs font-black text-white uppercase tracking-tight">Atmosfer Profil</p>
-                 <p className="text-[9px] text-white/40 leading-relaxed uppercase font-medium">Upload a full background for an exclusive look.</p>
-              </div>
-           </div>
-        </Card>
+        <Button onClick={handleSave} disabled={isSaving} className="w-full h-16 neon-gradient text-background font-black rounded-3xl shadow-xl uppercase tracking-widest">
+           {isSaving ? <Loader2 className="animate-spin" /> : "PUBLISH DESIGN"}
+        </Button>
       </div>
+
       <ImageCropperModal imageSrc={tempImage} isOpen={cropperOpen} onClose={() => setCropperOpen(false)} onCropComplete={onCropComplete} aspect={getAspect()} />
     </div>
   );

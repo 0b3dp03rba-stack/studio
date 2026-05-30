@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, useMemo } from 'react';
@@ -14,7 +13,7 @@ import { getSmartSocialUrl } from '@/lib/utils-app';
 
 const platformIcons: Record<string, any> = {
   Instagram, YouTube: Youtube, Facebook, WhatsApp: MessageCircle, Email: Mail, Website: Globe,
-  TikTok: ({ className, size = 20 }: any) => (
+  TikTok: ({ className, size = 22 }: any) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" /></svg>
   )
 };
@@ -27,7 +26,7 @@ export default function ProfileClient({ username }: { username: string }) {
   const [resolvedUserId, setResolvedUserId] = useState<string | null>(null);
   const [isResolving, setIsResolving] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [allLinks, setAllLinks] = useState<any[]>([]);
+  const [standaloneLinks, setStandaloneLinks] = useState<any[]>([]);
 
   useEffect(() => {
     setMounted(true);
@@ -57,7 +56,7 @@ export default function ProfileClient({ username }: { username: string }) {
   const profileRef = useMemoFirebase(() => resolvedUserId ? doc(db, 'userProfiles', resolvedUserId) : null, [db, resolvedUserId]);
   const { data: profile } = useDoc(profileRef);
 
-  // SPOTLIGHT (TAUTAN TERBARU)
+  // SPOTLIGHT (TAUTAN TERBARU DARI MANAPUN)
   const spotlightQuery = useMemoFirebase(() => {
     if (!resolvedUserId) return null;
     return query(collectionGroup(db, 'links'), where('userId', '==', resolvedUserId), orderBy('createdAt', 'desc'), limit(1));
@@ -74,11 +73,7 @@ export default function ProfileClient({ username }: { username: string }) {
   useEffect(() => {
     if (!resolvedUserId) return;
     const unsubStandalone = onSnapshot(collection(db, 'userProfiles', resolvedUserId, 'links'), (snap) => {
-      const links = snap.docs.map(d => ({ ...d.data(), id: d.id, isStandalone: true }));
-      setAllLinks(prev => {
-        const others = prev.filter(l => !l.isStandalone);
-        return [...others, ...links];
-      });
+      setStandaloneLinks(snap.docs.map(d => ({ ...d.data(), id: d.id, isStandalone: true })));
     });
     return () => unsubStandalone();
   }, [resolvedUserId, db]);
@@ -106,7 +101,7 @@ export default function ProfileClient({ username }: { username: string }) {
     return "rounded-2xl";
   };
 
-  const avatarClass = "rounded-[2rem]"; // FIXED AVATAR SHAPE AS REQUESTED
+  const avatarClass = "rounded-[2rem]"; // KOTAK SUDUT LENGKUNG TETAP
 
   const getGroupHref = (groupId: string) => {
     const currentPath = window.location.pathname;
@@ -125,7 +120,7 @@ export default function ProfileClient({ username }: { username: string }) {
 
       <div className="max-w-md mx-auto relative z-10 p-4 pb-24 pt-6 space-y-8">
         
-        {/* IDENTITY CARD - THE MASTER HUB */}
+        {/* IDENTITY CARD - TATA LETAK CUSTOM */}
         <div className={cn(
           "relative glass-card border-none overflow-hidden shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] transition-all duration-500",
           getShapeClass('card'),
@@ -144,6 +139,7 @@ export default function ProfileClient({ username }: { username: string }) {
               
               {profile.layout_type === 'split' ? (
                 <div className="flex justify-between items-start gap-4">
+                   {/* KIRI: PROFIL & NAMA */}
                    <div className="flex flex-col gap-6 flex-1 min-w-0">
                       <div className={cn("p-1 shadow-2xl animate-flowing-gradient shrink-0 w-24 h-24", avatarClass)} style={{ backgroundImage: `linear-gradient(45deg, ${primaryColor}, ${secondaryColor})` }}>
                          <div className={cn("w-full h-full bg-background flex items-center justify-center overflow-hidden border-4 border-background", avatarClass)}>
@@ -156,18 +152,19 @@ export default function ProfileClient({ username }: { username: string }) {
                       </div>
                    </div>
                    
+                   {/* KANAN: SOSMED & SHARE */}
                    <div className="flex flex-col items-end gap-6 shrink-0">
                       <Button variant="ghost" size="icon" onClick={() => { navigator.clipboard.writeText(window.location.href); toast({title: "Link Tersalin"}); }} className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/20 transition-all">
-                        <Share2 size={20} />
+                        <Share2 size={22} />
                       </Button>
                       
                       {profile.socialLinks?.length > 0 && (
-                        <div className="flex flex-col gap-3">
+                        <div className="flex flex-col gap-4">
                            {profile.socialLinks.map((social: any, i: number) => {
                              const Icon = platformIcons[social.platform] || Globe;
                              return (
-                               <a key={i} href={getSmartSocialUrl(social.platform, social.label)} target="_blank" rel="noreferrer" className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:text-primary transition-all">
-                                 <Icon size={20} />
+                               <a key={i} href={getSmartSocialUrl(social.platform, social.label)} target="_blank" rel="noreferrer" className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:text-primary transition-all">
+                                 <Icon size={22} />
                                </a>
                              );
                            })}
@@ -187,19 +184,19 @@ export default function ProfileClient({ username }: { username: string }) {
                          <h1 className="text-xl font-black text-white tracking-widest uppercase truncate">{profile.displayName}</h1>
                          {profile.bio && <p className="text-[8px] font-bold text-white/40 uppercase tracking-[0.2em] truncate">{profile.bio}</p>}
                       </div>
-                      <div className="flex gap-3">
+                      <div className="flex gap-4">
                          {profile.socialLinks?.slice(0, 5).map((social: any, i: number) => {
                            const Icon = platformIcons[social.platform] || Globe;
                            return (
                              <a key={i} href={getSmartSocialUrl(social.platform, social.label)} target="_blank" rel="noreferrer" className="text-white/20 hover:text-primary transition-colors">
-                               <Icon size={20} />
+                               <Icon size={22} />
                              </a>
                            );
                          })}
                       </div>
                    </div>
                    <Button variant="ghost" size="icon" onClick={() => { navigator.clipboard.writeText(window.location.href); toast({title: "Link Tersalin"}); }} className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 text-white/40 shrink-0">
-                      <Share2 size={18} />
+                      <Share2 size={20} />
                    </Button>
                 </div>
               ) : (
@@ -220,11 +217,11 @@ export default function ProfileClient({ username }: { username: string }) {
                      {profile.bio && <p className="text-[10px] font-bold text-white/60 leading-relaxed max-w-[240px] mx-auto uppercase tracking-widest">{profile.bio}</p>}
                   </div>
                   {profile.socialLinks?.length > 0 && (
-                    <div className="flex flex-wrap justify-center gap-4 mt-8 pt-6 border-t border-white/5 w-full">
+                    <div className="flex flex-wrap justify-center gap-5 mt-8 pt-6 border-t border-white/5 w-full">
                       {profile.socialLinks.map((social: any, i: number) => {
                         const Icon = platformIcons[social.platform] || Globe;
                         return (
-                          <a key={i} href={getSmartSocialUrl(social.platform, social.label)} target="_blank" rel="noreferrer" className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:text-primary hover:border-primary/50 hover:bg-primary/10 transition-all shadow-lg">
+                          <a key={i} href={getSmartSocialUrl(social.platform, social.label)} target="_blank" rel="noreferrer" className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:text-primary transition-all">
                             <Icon size={22} />
                           </a>
                         );
@@ -288,7 +285,7 @@ export default function ProfileClient({ username }: { username: string }) {
                 </Link>
               ))}
 
-              {allLinks.filter(l => l.isStandalone && l.title.toLowerCase().includes(searchQuery.toLowerCase())).map(link => (
+              {standaloneLinks.filter(l => l.title.toLowerCase().includes(searchQuery.toLowerCase())).map(link => (
                 <button
                   key={link.id}
                   onClick={() => { updateDoc(doc(db, 'userProfiles', resolvedUserId!, 'links', link.id), { clicks: increment(1) }).catch(()=>{}); window.open(link.url, '_blank'); }}
@@ -313,9 +310,9 @@ export default function ProfileClient({ username }: { username: string }) {
         </div>
 
         {spotlightError && (
-          <div className="p-4 bg-primary/10 border border-primary/20 rounded-2xl flex items-center gap-3 text-primary">
+          <div className="p-4 bg-primary/10 border border-primary/20 rounded-2xl flex items-center gap-3 text-primary mx-1">
             <AlertTriangle size={20} />
-            <p className="text-[9px] font-black uppercase">Firestore Index Required for Spotlight. Click alert in Admin Panel to fix.</p>
+            <p className="text-[9px] font-black uppercase">Firestore Index Required. Go to Admin Activity to see the setup link.</p>
           </div>
         )}
 
