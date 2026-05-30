@@ -3,7 +3,7 @@
 
 import { useState, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { User, Mail, Trash2, ArrowLeft, Loader2, Edit3, Search, X, ShieldCheck, Key, AtSign, Info, Lock } from 'lucide-react';
+import { User, Mail, Trash2, ArrowLeft, Loader2, Edit3, Search, X, ShieldCheck, Key, AtSign, Info, Lock, Crown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,7 @@ import Link from 'next/link';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 
 export default function AdminUsersPage() {
   const { user: adminUser } = useUser();
@@ -28,13 +29,13 @@ export default function AdminUsersPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Validasi Status Admin: Memastikan hanya admin yang bisa mengakses data user
+  // Validasi Status Admin
   const profileRef = useMemoFirebase(() => adminUser ? doc(db, 'userProfiles', adminUser.uid) : null, [db, adminUser]);
   const { data: profile } = useDoc(profileRef);
   const isAdmin = profile?.role === 'Admin' || adminUser?.email === 'creeppermoment@gmail.com';
 
   const { data: rawUsers, isLoading } = useCollection(useMemoFirebase(() => 
-    isAdmin ? query(collection(db, 'userProfiles'), limit(500)) : null, 
+    isAdmin ? query(collection(db, 'userProfiles'), limit(1000)) : null, 
     [db, isAdmin]
   ));
 
@@ -73,10 +74,11 @@ export default function AdminUsersPage() {
         displayName: editingUser.displayName,
         username: editingUser.username.toLowerCase().trim(),
         role: editingUser.role,
+        isPremium: !!editingUser.isPremium,
         bio: editingUser.bio || '',
         updatedAt: serverTimestamp()
       });
-      toast({ title: "PROFIL DIPERBARUI", description: "Data pengguna telah berhasil disimpan." });
+      toast({ title: "PROFIL DIPERBARUI", description: `Data @${editingUser.username} telah disimpan.` });
       setEditingUser(null);
     } catch (e) {
       toast({ variant: "destructive", title: "GAGAL", description: "Gagal memperbarui data." });
@@ -132,12 +134,18 @@ export default function AdminUsersPage() {
         {filteredUsers.map((u) => (
           <Card key={u.id} className="glass-card border-none rounded-[2rem] overflow-hidden group shadow-xl hover:bg-white/[0.05] transition-all">
             <CardContent className="p-5 flex items-center gap-4">
-              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all shrink-0 ${u.role === 'Admin' ? 'neon-gradient text-background glow-primary shadow-xl' : 'bg-white/5 text-muted-foreground border border-white/5'}`}>
+              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all shrink-0 ${u.role === 'Admin' ? 'neon-gradient text-background shadow-xl' : 'bg-white/5 text-muted-foreground border border-white/5'}`}>
                 {u.role === 'Admin' ? <ShieldCheck size={28} /> : <User size={28} />}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <p className="text-sm font-black truncate text-white uppercase tracking-tight">@{u.username || 'unknown'}</p>
+                  {u.isPremium && (
+                    <div className="flex items-center gap-1 bg-yellow-500/20 text-yellow-500 border border-yellow-500/30 px-1.5 py-0.5 rounded-md">
+                      <Crown size={8} className="fill-yellow-500" />
+                      <span className="text-[7px] font-black uppercase tracking-widest">GOLD</span>
+                    </div>
+                  )}
                   <Badge variant={u.role === 'Admin' ? 'default' : 'outline'} className="text-[8px] h-4 px-1.5 font-black uppercase border-white/10">
                     {u.role}
                   </Badge>
@@ -185,51 +193,58 @@ export default function AdminUsersPage() {
                 <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Nama Tampilan</label>
                 <Input value={editingUser?.displayName || ''} onChange={(e) => setEditingUser({...editingUser, displayName: e.target.value})} className="bg-white/5 border-none h-12 rounded-xl font-bold" />
               </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Username Unik</label>
-                <div className="relative">
-                  <AtSign className="absolute left-4 top-1/2 -translate-y-1/2 text-primary" size={14} />
-                  <Input value={editingUser?.username || ''} onChange={(e) => setEditingUser({...editingUser, username: e.target.value})} className="bg-white/5 border-none h-12 rounded-xl pl-10 font-bold" />
-                </div>
+              
+              <div className="flex items-center justify-between p-4 bg-yellow-500/5 rounded-2xl border border-yellow-500/10">
+                 <div className="flex items-center gap-3 text-yellow-500">
+                    <Crown size={20} />
+                    <div>
+                       <p className="text-[10px] font-black uppercase tracking-widest leading-none">Akses Premium</p>
+                       <p className="text-[8px] font-bold opacity-60 uppercase mt-1">Berikan fitur emas secara manual</p>
+                    </div>
+                 </div>
+                 <Switch 
+                   checked={editingUser?.isPremium || false} 
+                   onCheckedChange={(checked) => setEditingUser({...editingUser, isPremium: checked})} 
+                 />
               </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Role Platform</label>
-                <Select value={editingUser?.role} onValueChange={(v) => setEditingUser({...editingUser, role: v})}>
-                  <SelectTrigger className="bg-white/5 border-none h-12 rounded-xl font-black uppercase text-[10px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="glass-card border-none rounded-xl">
-                    <SelectItem value="User" className="text-xs font-bold uppercase">User Biasa</SelectItem>
-                    <SelectItem value="Admin" className="text-xs font-bold uppercase">Administrator</SelectItem>
-                  </SelectContent>
-                </Select>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Username</label>
+                  <div className="relative">
+                    <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 text-primary" size={12} />
+                    <Input value={editingUser?.username || ''} onChange={(e) => setEditingUser({...editingUser, username: e.target.value})} className="bg-white/5 border-none h-12 rounded-xl pl-8 font-bold text-xs" />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Role</label>
+                  <Select value={editingUser?.role} onValueChange={(v) => setEditingUser({...editingUser, role: v})}>
+                    <SelectTrigger className="bg-white/5 border-none h-12 rounded-xl font-black uppercase text-[10px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="glass-card border-none rounded-xl">
+                      <SelectItem value="User" className="text-xs font-bold uppercase">User</SelectItem>
+                      <SelectItem value="Admin" className="text-xs font-bold uppercase">Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <div className="pt-4 border-t border-white/10 space-y-4">
-                <div className="flex items-center gap-2 text-primary">
-                  <Key size={16} />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Keamanan & Sandi</span>
-                </div>
-                <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10 flex gap-3 items-start">
-                  <Info size={16} className="text-primary shrink-0 mt-0.5" />
-                  <p className="text-[9px] font-bold text-primary/70 leading-relaxed uppercase">
-                    Admin tidak bisa melihat sandi user demi privasi. Gunakan tombol di bawah untuk memicu email reset sandi resmi.
-                  </p>
-                </div>
                 <Button 
                   onClick={() => handleSendResetEmail(editingUser.email)}
-                  className="w-full h-14 bg-primary/10 hover:bg-primary/20 text-primary font-black rounded-xl text-[10px] uppercase tracking-[0.2em] border border-primary/20 shadow-xl"
+                  className="w-full h-12 bg-primary/10 hover:bg-primary/20 text-primary font-black rounded-xl text-[10px] uppercase tracking-[0.2em] border border-primary/20"
                 >
-                  <Lock size={14} className="mr-2" /> KIRIM EMAIL RESET PASSWORD
+                  <Lock size={14} className="mr-2" /> RESET PASSWORD EMAIL
                 </Button>
               </div>
             </div>
           </div>
 
-          <DialogFooter className="mt-6 gap-3">
+          <DialogFooter className="mt-4 gap-3">
             <Button variant="ghost" onClick={() => setEditingUser(null)} className="rounded-xl font-black uppercase text-[10px] flex-1">Batal</Button>
             <Button onClick={handleSaveEdit} disabled={isSaving} className="neon-gradient text-background font-black rounded-xl glow-primary px-8 uppercase text-[10px] flex-1">
-              {isSaving ? <Loader2 className="animate-spin" size={16} /> : "Simpan Perubahan"}
+              {isSaving ? <Loader2 className="animate-spin" size={16} /> : "Simpan"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -249,9 +264,9 @@ export default function AdminUsersPage() {
             <AlertDialogAction 
               onClick={(e) => { e.preventDefault(); handleDeleteUser(); }}
               disabled={isDeleting}
-              className="bg-destructive hover:bg-destructive/80 text-white rounded-xl text-[10px] font-black uppercase h-12 flex-1 shadow-lg shadow-destructive/20"
+              className="bg-destructive hover:bg-destructive/80 text-white rounded-xl text-[10px] font-black uppercase h-12 flex-1"
             >
-              {isDeleting ? <Loader2 className="animate-spin" size={16} /> : "HAPUS SEKARANG"}
+              {isDeleting ? <Loader2 className="animate-spin" size={16} /> : "HAPUS"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
