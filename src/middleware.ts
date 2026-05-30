@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 /**
- * @fileOverview Linku Engine v54.0 - UNIFIED ROUTING SYSTEM
- * Mengarahkan Subdomain dan Custom Domain ke satu "Dapur" (_view) dengan label instruksi.
+ * @fileOverview Linku Engine v56.0 - UNIFIED ROUTING SYSTEM
+ * Mengarahkan Subdomain dan Custom Domain ke satu "Dapur" (_view) dengan label u: atau d:.
  */
 
 export function middleware(req: NextRequest) {
@@ -28,7 +28,7 @@ export function middleware(req: NextRequest) {
 
   const mainDomain = 'linku.biz.id';
   
-  // 3. DAFTAR DOMAIN SISTEM (Dashboard & Google Preview)
+  // 3. DAFTAR DOMAIN SISTEM (Dashboard & Firebase Studio Preview)
   const isSystemHost = 
     hostname === mainDomain || 
     hostname === `www.${mainDomain}` ||
@@ -81,7 +81,7 @@ export function middleware(req: NextRequest) {
   }
 
   // 5. LOGIKA CUSTOM DOMAIN (d:domain.com)
-  // Semua yang bukan domain sistem dan bukan subdomain linku
+  // Semua yang bukan domain sistem dan bukan subdomain linku dianggap domain premium
   const cleanCustomDomain = hostname.replace('www.', '');
   url.pathname = `/_view/d:${cleanCustomDomain}${url.pathname}`;
   return NextResponse.rewrite(url);

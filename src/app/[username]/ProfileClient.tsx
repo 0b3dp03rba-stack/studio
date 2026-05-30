@@ -59,6 +59,7 @@ export default function ProfileClient({ username }: { username: string }) {
 
         if (uid) {
           setResolvedUserId(uid);
+          // Increment views secara silent
           updateDoc(doc(db, 'userProfiles', uid), { views: increment(1) }).catch(() => {});
         }
       } catch (e) {
@@ -73,12 +74,13 @@ export default function ProfileClient({ username }: { username: string }) {
   const profileRef = useMemoFirebase(() => resolvedUserId ? doc(db, 'userProfiles', resolvedUserId) : null, [db, resolvedUserId]);
   const { data: profile, isLoading: isProfileLoading } = useDoc(profileRef);
 
-  // LOGIKA AUTO-REDIRECT: Jika diakses via subdomain tapi punya domain kustom
+  // LOGIKA AUTO-REDIRECT: Jika diakses via subdomain tapi punya domain kustom aktif
   useEffect(() => {
-    if (profile?.customDomain && profile.isPremium && typeof window !== 'undefined') {
+    if (profile?.customDomain && (profile.isPremium || profile.role === 'Admin') && typeof window !== 'undefined') {
       const hostname = window.location.hostname;
-      // Cek apakah host saat ini adalah subdomain linku
-      if (hostname.endsWith('linku.biz.id') && hostname !== 'linku.biz.id') {
+      const mainDomain = 'linku.biz.id';
+      // Jika pengunjung menggunakan subdomain linku, lempar ke domain pribadinya
+      if (hostname.endsWith(mainDomain) && hostname !== mainDomain) {
         const targetUrl = `https://${profile.customDomain}${window.location.pathname}${window.location.search}`;
         window.location.replace(targetUrl);
       }
@@ -148,7 +150,7 @@ export default function ProfileClient({ username }: { username: string }) {
     return (
       <div className="min-h-screen bg-black flex flex-col items-center justify-center gap-4">
         <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-[10px] font-black uppercase tracking-widest text-primary/50">Sinkronisasi Hub...</p>
+        <p className="text-[10px] font-black uppercase tracking-widest text-primary/50">Membangun Identitas...</p>
       </div>
     );
   }
@@ -164,7 +166,7 @@ export default function ProfileClient({ username }: { username: string }) {
           <p className="text-sm font-medium text-white/40 max-w-xs mx-auto uppercase tracking-widest">Alamat yang Anda tuju tidak terdaftar di Linku Engine.</p>
         </div>
         <Button asChild className="h-14 px-10 neon-gradient text-background font-black rounded-2xl uppercase text-[10px] tracking-[0.2em] shadow-2xl">
-          <Link href="https://linku.biz.id"><Home size={16} className="mr-2" /> Kembali ke Markas</Link>
+          <Link href="/"><Home size={16} className="mr-2" /> Kembali ke Markas</Link>
         </Button>
       </div>
     );

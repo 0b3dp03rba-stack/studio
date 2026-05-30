@@ -5,7 +5,7 @@ import GroupClient from '@/app/[username]/g/[groupId]/GroupClient';
 
 /**
  * @fileOverview Unified Public Group Viewer
- * Melayani rute internal hasil rewrite dari Middleware untuk koleksi link.
+ * Melayani rute internal hasil rewrite dari Middleware.
  */
 export default function UnifiedGroupPage({ params }: { params: Promise<{ username: string; groupId: string }> }) {
   const { username, groupId } = use(params);

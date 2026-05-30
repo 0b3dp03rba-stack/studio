@@ -69,7 +69,7 @@ export default function PremiumPage() {
         router.push(`/dashboard/premium/pay/${data.depositId}`);
       }
     } catch (e) {
-      toast({ variant: "destructive", title: "Error" });
+      toast({ variant: "destructive", title: "Gagal membuat tagihan" });
     } finally { setIsProcessing(false); }
   };
 
@@ -103,8 +103,8 @@ export default function PremiumPage() {
 
   if (isActuallyPremium) {
     return (
-      <div className="space-y-8 animate-in pb-24">
-        <div className="text-center space-y-4 pt-6">
+      <div className="space-y-8 animate-in pb-24 pt-24">
+        <div className="text-center space-y-4">
           <div className="mx-auto w-24 h-24 rounded-[2.5rem] neon-gradient flex items-center justify-center text-background glow-primary shadow-2xl relative">
             <ShieldCheck size={56} />
             <div className="absolute -bottom-2 bg-black border border-white/10 px-3 py-1 rounded-full text-[8px] font-black text-primary uppercase">Premium Active</div>
@@ -115,11 +115,11 @@ export default function PremiumPage() {
         <Card className="glass-card border-none rounded-[2.5rem] p-8 space-y-8">
            <div className="flex items-center justify-between border-b border-white/5 pb-6">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary"><Globe size={24} /></div>
+                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-xl"><Globe size={24} /></div>
                 <h3 className="font-black text-base uppercase text-white">Custom Domain</h3>
               </div>
               {profile?.customDomain && (
-                <Button variant="ghost" size="icon" onClick={handleDeleteDomain} disabled={isSavingDomain} className="h-12 w-12 rounded-2xl text-destructive/40 hover:text-destructive hover:bg-destructive/10 transition-all">
+                <Button variant="ghost" size="icon" onClick={handleDeleteDomain} disabled={isSavingDomain} className="h-12 w-12 rounded-2xl text-destructive/40 hover:text-destructive hover:bg-destructive/10 transition-all border border-white/5">
                    {isSavingDomain ? <Loader2 className="animate-spin" size={20} /> : <Trash2 size={20} />}
                 </Button>
               )}
@@ -169,7 +169,7 @@ export default function PremiumPage() {
                   <div className="flex gap-4 p-4 bg-white/5 rounded-2xl">
                     <CheckCircle2 size={20} className="text-primary shrink-0" />
                     <p className="text-[9px] font-bold text-white/40 uppercase leading-relaxed">
-                      Sistem akan otomatis mendeteksi konfigurasi Anda. Subdomain standar Anda kini akan otomatis mengalihkan traffic ke domain kustom ini.
+                      Sistem akan otomatis mendeteksi konfigurasi Anda. Subdomain standar Anda kini akan otomatis mengalihkan traffic ke domain kustom ini demi SEO yang lebih baik.
                     </p>
                   </div>
                 </div>
@@ -181,7 +181,7 @@ export default function PremiumPage() {
   }
 
   return (
-    <div className="space-y-8 animate-in pb-24">
+    <div className="space-y-8 animate-in pb-24 pt-24">
       <div className="text-center space-y-1"><h1 className="text-4xl font-black text-white uppercase tracking-tighter">Go Premium</h1><p className="text-[10px] font-black text-primary/70 uppercase tracking-[0.4em]">Satu Kali Bayar. Selamanya.</p></div>
       <Card className="glass-card border-none rounded-[2.5rem] overflow-hidden relative shadow-2xl">
         <div className="absolute top-0 left-0 w-full h-1.5 neon-gradient" />
