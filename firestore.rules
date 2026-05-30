@@ -14,6 +14,7 @@ service cloud.firestore {
 
     // CRITICAL: Collection Group Rule for Spotlight & Admin Activity Feed
     // This allows public read access to all 'links' collections across the database.
+    // MUST BE AT THE TOP to override more specific rules.
     match /{path=**}/links/{linkId} {
       allow read: if true;
     }

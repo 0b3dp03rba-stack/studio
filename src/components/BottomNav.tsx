@@ -1,30 +1,49 @@
 
 "use client";
 
-import { LayoutDashboard, User, Palette, FolderKanban, Zap } from 'lucide-react';
+import { LayoutDashboard, User, Palette, FolderKanban, Zap, Users, Activity, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { useUser } from '@/firebase';
+import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
 
 /**
- * @fileOverview Bottom Navigation Linku Engine v89.0
- * 5 Menu Utama: Dash, Manage, Premium, Visual Lab, User Set.
+ * @fileOverview Bottom Navigation Linku Engine v90.0
+ * Dual Mode: 
+ * - Admin Mode (3 Menu): Dashboard, Database, Activity.
+ * - User Mode (5 Menu): Dash, Manage, Premium, Visual Lab, User Set.
  */
 
 export default function BottomNav() {
   const { user } = useUser();
+  const db = useFirestore();
   const pathname = usePathname();
+
+  const profileRef = useMemoFirebase(() => 
+    user ? doc(db, 'userProfiles', user.uid) : null, 
+    [db, user?.uid]
+  );
+  const { data: profile } = useDoc(profileRef);
 
   if (!user) return null;
   
   const isAdminPath = pathname.startsWith('/admin');
+  const isAdmin = profile?.role === 'Admin' || user?.email === 'creeppermoment@gmail.com';
   
   // Sembunyikan di profil publik
-  const isPublicProfile = pathname.startsWith('/u/') || pathname.startsWith('/unified/') || (pathname.length > 1 && !pathname.startsWith('/dashboard') && !isAdminPath && !pathname.startsWith('/editor'));
+  const isPublicProfile = pathname.startsWith('/u/') || pathname.startsWith('/unified/') || (pathname.length > 1 && !pathname.startsWith('/dashboard') && !isAdminPath && !pathname.startsWith('/verify-email') && !pathname.startsWith('/auth'));
   if (isPublicProfile) return null;
 
-  const navItems = [
+  // MENU ADMIN (3 ITEM)
+  const adminNavItems = [
+    { label: 'Dashboard', icon: LayoutDashboard, href: '/admin' },
+    { label: 'Database', icon: Users, href: '/admin/users' },
+    { label: 'Activity', icon: Activity, href: '/admin/activity' },
+  ];
+
+  // MENU USER (5 ITEM)
+  const userNavItems = [
     { label: 'Dash', icon: LayoutDashboard, href: '/dashboard' },
     { label: 'Manage', icon: FolderKanban, href: '/dashboard/manage' },
     { label: 'Premium', icon: Zap, href: '/dashboard/premium' },
@@ -32,9 +51,12 @@ export default function BottomNav() {
     { label: 'User Set', icon: User, href: '/dashboard/profil' },
   ];
 
+  // Gunakan menu admin hanya jika di path admin DAN user adalah admin
+  const activeItems = (isAdminPath && isAdmin) ? adminNavItems : userNavItems;
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 h-24 bg-black/95 backdrop-blur-3xl border-t border-white/5 flex items-center justify-around px-4 z-50 rounded-t-[2.5rem]">
-      {navItems.map((item) => {
+      {activeItems.map((item) => {
         const isActive = pathname === item.href;
         const Icon = item.icon;
         

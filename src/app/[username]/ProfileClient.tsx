@@ -60,7 +60,6 @@ export default function ProfileClient({ username }: { username: string }) {
   // SPOTLIGHT (GLOBAL LATEST LINK ACROSS ALL FOLDERS)
   const spotlightQuery = useMemoFirebase(() => {
     if (!resolvedUserId) return null;
-    // We use collectionGroup('links') to find the latest link even if nested inside linkGroups
     return query(collectionGroup(db, 'links'), where('userId', '==', resolvedUserId), orderBy('createdAt', 'desc'), limit(1));
   }, [db, resolvedUserId]);
   const { data: spotlightLinks, error: spotlightError } = useCollection(spotlightQuery);
@@ -93,7 +92,6 @@ export default function ProfileClient({ username }: { username: string }) {
   const primaryColor = profile.themeColor || '#ff0000';
   const secondaryColor = profile.themeColorSecondary || '#ffea00';
   
-  // DYNAMIC SHAPE LOGIC
   const shape = profile.profile_shape || 'rounded';
   const getShapeClass = (type: 'card' | 'search' | 'button') => {
     if (shape === 'square') return "rounded-none";
@@ -103,7 +101,7 @@ export default function ProfileClient({ username }: { username: string }) {
     return "rounded-2xl";
   };
 
-  const avatarClass = "rounded-[2rem]"; // KOTAK SUDUT LENGKUNG TETAP
+  const avatarClass = "rounded-[2rem]";
 
   const getGroupHref = (groupId: string) => {
     const currentPath = window.location.pathname;
@@ -122,7 +120,6 @@ export default function ProfileClient({ username }: { username: string }) {
 
       <div className="max-w-md mx-auto relative z-10 p-4 pb-24 pt-6 space-y-8">
         
-        {/* IDENTITY CARD - DYNAMIC LAYOUTS */}
         <div className={cn(
           "relative glass-card border-none overflow-hidden shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] transition-all duration-500",
           getShapeClass('card'),
@@ -141,7 +138,6 @@ export default function ProfileClient({ username }: { username: string }) {
               
               {profile.layout_type === 'split' ? (
                 <div className="flex justify-between items-start gap-4">
-                   {/* KIRI: PROFIL & NAMA */}
                    <div className="flex flex-col gap-6 flex-1 min-w-0">
                       <div className={cn("p-1 shadow-2xl animate-flowing-gradient shrink-0 w-24 h-24", avatarClass)} style={{ backgroundImage: `linear-gradient(45deg, ${primaryColor}, ${secondaryColor})` }}>
                          <div className={cn("w-full h-full bg-background flex items-center justify-center overflow-hidden border-4 border-background", avatarClass)}>
@@ -154,7 +150,6 @@ export default function ProfileClient({ username }: { username: string }) {
                       </div>
                    </div>
                    
-                   {/* KANAN: SOSMED & SHARE */}
                    <div className="flex flex-col items-end gap-6 shrink-0">
                       <Button variant="ghost" size="icon" onClick={() => { navigator.clipboard.writeText(window.location.href); toast({title: "Link Tersalin"}); }} className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/20 transition-all">
                         <Share2 size={22} />
@@ -235,7 +230,6 @@ export default function ProfileClient({ username }: { username: string }) {
            </div>
         </div>
 
-        {/* SPOTLIGHT SECTION (LATEST LINK) */}
         {latestLink && (
           <div className="space-y-3 animate-in fade-in slide-in-from-top-4 duration-1000">
              <div className="flex items-center gap-2 px-4">
@@ -262,7 +256,6 @@ export default function ProfileClient({ username }: { username: string }) {
           </div>
         )}
 
-        {/* CONTENT HUB */}
         <div className="space-y-6">
            <div className={cn("relative glass-card flex items-center px-6 gap-3 border border-white/10 h-14 mx-1", getShapeClass('search'))}>
               <Search size={18} className="text-white/40" />
