@@ -1,8 +1,8 @@
-import { NextResponse } from 'next/request';
+import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 /**
- * @fileOverview Linku Engine v39.0 - SUBDOMAIN ARCHITECTURE
+ * @fileOverview Linku Engine v39.1 - FIX IMPORT & SUBDOMAIN ARCHITECTURE
  * Memisahkan rute publik (redirect) dan rute subdomain (render).
  */
 
