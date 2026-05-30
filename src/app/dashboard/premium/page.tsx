@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Sparkles, ShieldCheck, Zap, Globe, Loader2, Save, ReceiptText, ArrowRight, Info, Network, CheckCircle2, Trash2, SearchCheck, ExternalLink } from 'lucide-react';
+import { Sparkles, ShieldCheck, Zap, Globe, Loader2, Save, ReceiptText, ArrowRight, Info, Network, CheckCircle2, Trash2, SearchCheck, AlertTriangle } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, updateDoc, serverTimestamp, collection, setDoc, query, where, limit } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
@@ -105,7 +105,6 @@ export default function PremiumPage() {
     if (!profile?.customDomain) return;
     setIsCheckingDNS(true);
     try {
-      // Menggunakan Google DNS API untuk memeriksa CNAME secara publik
       const res = await fetch(`https://dns.google/resolve?name=${profile.customDomain}&type=CNAME`);
       const data = await res.json();
       
@@ -169,51 +168,69 @@ export default function PremiumPage() {
               </div>
 
               {profile?.customDomain && (
-                <div className="p-6 bg-primary/5 rounded-[2rem] border border-primary/20 space-y-6 animate-in slide-in-from-bottom-4 duration-500">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 text-primary">
-                      <Network size={20} />
-                      <p className="text-xs font-black uppercase tracking-widest">Panduan DNS:</p>
+                <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+                  <div className="p-6 bg-primary/5 rounded-[2rem] border border-primary/20 space-y-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3 text-primary">
+                        <Network size={20} />
+                        <p className="text-xs font-black uppercase tracking-widest">Panduan DNS:</p>
+                      </div>
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        onClick={handleCheckDNS} 
+                        disabled={isCheckingDNS}
+                        className="h-8 bg-primary/10 text-primary font-black uppercase text-[8px] tracking-widest rounded-lg hover:bg-primary/20"
+                      >
+                        {isCheckingDNS ? <Loader2 className="animate-spin mr-2" size={12} /> : <SearchCheck size={12} className="mr-2" />} Cek Koneksi DNS
+                      </Button>
                     </div>
-                    <Button 
-                      size="sm" 
-                      variant="ghost" 
-                      onClick={handleCheckDNS} 
-                      disabled={isCheckingDNS}
-                      className="h-8 bg-primary/10 text-primary font-black uppercase text-[8px] tracking-widest rounded-lg hover:bg-primary/20"
-                    >
-                      {isCheckingDNS ? <Loader2 className="animate-spin mr-2" size={12} /> : <SearchCheck size={12} className="mr-2" />} Cek Koneksi DNS
-                    </Button>
-                  </div>
-                  
-                  <p className="text-[10px] font-bold text-white/60 leading-relaxed uppercase">
-                    Arahkan domain pribadi Anda melalui panel penyedia domain (Rumahweb/Niagahoster/dll):
-                  </p>
-
-                  <div className="bg-black/40 rounded-2xl overflow-hidden border border-white/10 shadow-inner">
-                    <table className="w-full text-[10px] text-left">
-                      <thead className="bg-white/5 text-white/40 uppercase font-black">
-                        <tr>
-                          <th className="p-4 border-r border-white/5">Tipe</th>
-                          <th className="p-4 border-r border-white/5">Nama</th>
-                          <th className="p-4">Target / Value</th>
-                        </tr>
-                      </thead>
-                      <tbody className="font-bold text-white uppercase">
-                        <tr className="border-t border-white/5">
-                          <td className="p-4 border-r border-white/5 text-primary">CNAME</td>
-                          <td className="p-4 border-r border-white/5">@ / www</td>
-                          <td className="p-4 text-primary">linku.biz.id</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <div className="flex gap-4 p-4 bg-white/5 rounded-2xl">
-                    <CheckCircle2 size={20} className="text-primary shrink-0" />
-                    <p className="text-[9px] font-bold text-white/40 uppercase leading-relaxed">
-                      Sistem akan menangkap domain Anda secara otomatis begitu DNS terdeteksi. Gunakan tombol "Cek Koneksi" di atas untuk memantau status.
+                    
+                    <p className="text-[10px] font-bold text-white/60 leading-relaxed uppercase">
+                      Atur domain di panel penyedia domain (Cloudflare/Rumahweb/dll):
                     </p>
+
+                    <div className="bg-black/40 rounded-2xl overflow-hidden border border-white/10 shadow-inner">
+                      <table className="w-full text-[10px] text-left">
+                        <thead className="bg-white/5 text-white/40 uppercase font-black">
+                          <tr>
+                            <th className="p-4 border-r border-white/5">Tipe</th>
+                            <th className="p-4 border-r border-white/5">Nama</th>
+                            <th className="p-4">Target / Value</th>
+                          </tr>
+                        </thead>
+                        <tbody className="font-bold text-white uppercase">
+                          <tr className="border-t border-white/5">
+                            <td className="p-4 border-r border-white/5 text-primary">CNAME</td>
+                            <td className="p-4 border-r border-white/5">@ / www</td>
+                            <td className="p-4 text-primary">linku.biz.id</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div className="flex gap-4 p-4 bg-white/5 rounded-2xl">
+                      <CheckCircle2 size={20} className="text-primary shrink-0" />
+                      <p className="text-[9px] font-bold text-white/40 uppercase leading-relaxed">
+                        Sistem akan menangkap domain Anda secara otomatis begitu DNS terdeteksi secara publik.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Cloudflare/SSL Warning */}
+                  <div className="p-6 bg-orange-500/10 rounded-[2rem] border border-orange-500/20 space-y-4">
+                    <div className="flex items-center gap-3 text-orange-500">
+                      <AlertTriangle size={20} />
+                      <p className="text-xs font-black uppercase tracking-widest">Pengguna Cloudflare?</p>
+                    </div>
+                    <div className="space-y-3">
+                      <p className="text-[9px] font-bold text-white/60 uppercase leading-relaxed">
+                        Jika menggunakan Cloudflare Proxy (Orange Cloud), Anda <span className="text-orange-500">WAJIB</span> mengatur mode SSL/TLS ke <span className="text-white">"Full (Strict)"</span>.
+                      </p>
+                      <p className="text-[9px] font-medium text-white/40 uppercase leading-relaxed">
+                        Jika tidak, aplikasi akan mengalami error "Too many redirects". Sangat disarankan menggunakan mode "DNS Only" (Grey Cloud) saat proses verifikasi awal.
+                      </p>
+                    </div>
                   </div>
                 </div>
               )}
