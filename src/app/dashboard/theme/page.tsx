@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -92,7 +93,7 @@ export default function ThemePage() {
     <div className="space-y-8 animate-in pb-32 pt-24 px-4">
       <div className="space-y-1">
         <h1 className="text-4xl font-black tracking-tighter text-white uppercase leading-none">Visual Lab</h1>
-        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/70">Kustomisasi Identity Hub</p>
+        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/70">Customize Identity Hub</p>
       </div>
 
       <div className="grid gap-6">
@@ -133,7 +134,7 @@ export default function ThemePage() {
               <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase tracking-widest"><Maximize size={16} /><span>Identity Cover (3:1)</span></div>
               {localProfile.bannerUrl && (
                 <button onClick={() => handleRemoveImage('banner')} className="text-[9px] font-black text-destructive uppercase flex items-center gap-1 hover:underline">
-                  <Trash2 size={10} /> Hapus Sampul
+                  <Trash2 size={10} /> Delete Cover
                 </button>
               )}
            </div>
@@ -142,7 +143,7 @@ export default function ThemePage() {
               <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity backdrop-blur-sm">
                  <div className="flex flex-col items-center gap-2">
                     <Upload className="text-white" size={24} />
-                    <span className="text-[10px] font-black text-white uppercase">Ganti Foto Sampul</span>
+                    <span className="text-[10px] font-black text-white uppercase">Upload Cover Photo</span>
                  </div>
                  <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageSelect(e, 'banner')} />
               </label>
@@ -192,7 +193,7 @@ export default function ThemePage() {
               <div className="flex items-center gap-2 text-secondary font-black text-[10px] uppercase tracking-widest"><ImageIcon size={16} /><span>Full Wallpaper (9:16)</span></div>
               {localProfile.wallpaperUrl && (
                 <button onClick={() => handleRemoveImage('wallpaper')} className="text-[9px] font-black text-destructive uppercase flex items-center gap-1 hover:underline">
-                  <Trash2 size={10} /> Hapus Wallpaper
+                  <Trash2 size={10} /> Delete Wallpaper
                 </button>
               )}
            </div>
@@ -206,7 +207,7 @@ export default function ThemePage() {
               </div>
               <div className="space-y-2">
                  <p className="text-xs font-black text-white uppercase tracking-tight">Atmosfer Profil</p>
-                 <p className="text-[9px] text-white/40 leading-relaxed uppercase font-medium">Unggah latar belakang penuh untuk kesan eksklusif.</p>
+                 <p className="text-[9px] text-white/40 leading-relaxed uppercase font-medium">Upload a full background for an exclusive look.</p>
               </div>
            </div>
         </Card>

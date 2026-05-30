@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, useMemo } from 'react';
@@ -13,7 +14,7 @@ import { getSmartSocialUrl } from '@/lib/utils-app';
 
 const platformIcons: Record<string, any> = {
   Instagram, YouTube: Youtube, Facebook, WhatsApp: MessageCircle, Email: Mail, Website: Globe,
-  TikTok: ({ className, size = 16 }: any) => (
+  TikTok: ({ className, size = 20 }: any) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" /></svg>
   )
 };
@@ -99,13 +100,9 @@ export default function ProfileClient({ username }: { username: string }) {
   const shape = profile.profile_shape || 'rounded';
   const getShapeClass = (type: 'card' | 'search' | 'button') => {
     if (shape === 'square') return "rounded-none";
-    if (shape === 'hexagon') return type === 'card' ? "rounded-[3rem]" : "rounded-full"; // Map Hexagon to Pill for long items
+    if (shape === 'hexagon') return type === 'card' ? "rounded-[3rem]" : "rounded-full"; 
     if (shape === 'circle') return "rounded-[3rem]";
-    if (shape === 'rounded') {
-       if (type === 'card') return "rounded-[3rem]";
-       if (type === 'search') return "rounded-2xl";
-       return "rounded-2xl";
-    }
+    if (shape === 'rounded') return "rounded-[2.5rem]";
     return "rounded-2xl";
   };
 
@@ -128,7 +125,7 @@ export default function ProfileClient({ username }: { username: string }) {
 
       <div className="max-w-md mx-auto relative z-10 p-4 pb-24 pt-6 space-y-8">
         
-        {/* IDENTITY CARD */}
+        {/* IDENTITY CARD - THE MASTER HUB */}
         <div className={cn(
           "relative glass-card border-none overflow-hidden shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] transition-all duration-500",
           getShapeClass('card'),
@@ -144,62 +141,75 @@ export default function ProfileClient({ username }: { username: string }) {
            )}
 
            <div className="relative z-10 p-8">
-              <div className="absolute top-6 right-6 z-20">
-                 <Button variant="ghost" size="icon" onClick={() => { navigator.clipboard.writeText(window.location.href); toast({title: "Link Tersalin"}); }} className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/20 transition-all">
-                   <Share2 size={18} />
-                 </Button>
-              </div>
-
+              
               {profile.layout_type === 'split' ? (
-                <div className="flex flex-col gap-6">
-                   <div className="flex items-center gap-6 text-left">
+                <div className="flex justify-between items-start gap-4">
+                   <div className="flex flex-col gap-6 flex-1 min-w-0">
                       <div className={cn("p-1 shadow-2xl animate-flowing-gradient shrink-0 w-24 h-24", avatarClass)} style={{ backgroundImage: `linear-gradient(45deg, ${primaryColor}, ${secondaryColor})` }}>
                          <div className={cn("w-full h-full bg-background flex items-center justify-center overflow-hidden border-4 border-background", avatarClass)}>
                             {profile.avatarUrl ? <img src={profile.avatarUrl} className="w-full h-full object-cover" alt="Avatar" /> : <User size={40} className="text-white/20" />}
                          </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                         <h1 className="text-2xl font-black text-white tracking-tighter uppercase leading-tight mb-1">{profile.displayName}</h1>
-                         {profile.bio && <p className="text-[9px] font-bold text-white/50 leading-relaxed uppercase tracking-widest line-clamp-3">{profile.bio}</p>}
+                      <div className="space-y-1">
+                         <h1 className="text-2xl font-black text-white tracking-tighter uppercase leading-tight">{profile.displayName}</h1>
+                         {profile.bio && <p className="text-[10px] font-bold text-white/50 leading-relaxed uppercase tracking-widest line-clamp-3">{profile.bio}</p>}
                       </div>
                    </div>
-                   {profile.socialLinks?.length > 0 && (
-                     <div className="flex flex-wrap gap-2 pt-4 border-t border-white/5">
-                        {profile.socialLinks.map((social: any, i: number) => {
-                          const Icon = platformIcons[social.platform] || Globe;
-                          return (
-                            <a key={i} href={getSmartSocialUrl(social.platform, social.label)} target="_blank" rel="noreferrer" className="w-9 h-9 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:text-primary transition-all">
-                              <Icon size={16} />
-                            </a>
-                          );
-                        })}
-                     </div>
-                   )}
+                   
+                   <div className="flex flex-col items-end gap-6 shrink-0">
+                      <Button variant="ghost" size="icon" onClick={() => { navigator.clipboard.writeText(window.location.href); toast({title: "Link Tersalin"}); }} className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/20 transition-all">
+                        <Share2 size={20} />
+                      </Button>
+                      
+                      {profile.socialLinks?.length > 0 && (
+                        <div className="flex flex-col gap-3">
+                           {profile.socialLinks.map((social: any, i: number) => {
+                             const Icon = platformIcons[social.platform] || Globe;
+                             return (
+                               <a key={i} href={getSmartSocialUrl(social.platform, social.label)} target="_blank" rel="noreferrer" className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:text-primary transition-all">
+                                 <Icon size={20} />
+                               </a>
+                             );
+                           })}
+                        </div>
+                      )}
+                   </div>
                 </div>
               ) : profile.layout_type === 'minimal' ? (
-                <div className="flex flex-col items-center text-center space-y-4">
-                   <div className={cn("p-0.5 shadow-xl w-20 h-20", avatarClass)} style={{ backgroundColor: primaryColor }}>
+                <div className="flex items-center gap-6">
+                   <div className={cn("p-0.5 shadow-xl w-20 h-20 shrink-0", avatarClass)} style={{ backgroundColor: primaryColor }}>
                          <div className={cn("w-full h-full bg-background flex items-center justify-center overflow-hidden border-2 border-background", avatarClass)}>
                             {profile.avatarUrl ? <img src={profile.avatarUrl} className="w-full h-full object-cover" alt="Avatar" /> : <User size={32} className="text-white/20" />}
                          </div>
                    </div>
-                   <div className="space-y-1">
-                      <h1 className="text-xl font-black text-white tracking-widest uppercase">{profile.displayName}</h1>
-                      {profile.bio && <p className="text-[8px] font-bold text-white/40 uppercase tracking-[0.3em]">{profile.bio}</p>}
+                   <div className="flex-1 min-w-0 text-left space-y-3">
+                      <div>
+                         <h1 className="text-xl font-black text-white tracking-widest uppercase truncate">{profile.displayName}</h1>
+                         {profile.bio && <p className="text-[8px] font-bold text-white/40 uppercase tracking-[0.2em] truncate">{profile.bio}</p>}
+                      </div>
+                      <div className="flex gap-3">
+                         {profile.socialLinks?.slice(0, 5).map((social: any, i: number) => {
+                           const Icon = platformIcons[social.platform] || Globe;
+                           return (
+                             <a key={i} href={getSmartSocialUrl(social.platform, social.label)} target="_blank" rel="noreferrer" className="text-white/20 hover:text-primary transition-colors">
+                               <Icon size={20} />
+                             </a>
+                           );
+                         })}
+                      </div>
                    </div>
-                   <div className="flex gap-4 pt-2">
-                      {profile.socialLinks?.slice(0, 5).map((social: any, i: number) => {
-                        const Icon = platformIcons[social.platform] || Globe;
-                        return (
-                          <a key={i} href={getSmartSocialUrl(social.platform, social.label)} target="_blank" rel="noreferrer" className="text-white/20 hover:text-primary transition-colors">
-                            <Icon size={14} />
-                          </a>
-                        );
-                      })}
-                   </div>
+                   <Button variant="ghost" size="icon" onClick={() => { navigator.clipboard.writeText(window.location.href); toast({title: "Link Tersalin"}); }} className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 text-white/40 shrink-0">
+                      <Share2 size={18} />
+                   </Button>
                 </div>
               ) : (
                 <div className="flex flex-col items-center text-center">
+                   <div className="absolute top-6 right-6">
+                      <Button variant="ghost" size="icon" onClick={() => { navigator.clipboard.writeText(window.location.href); toast({title: "Link Tersalin"}); }} className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 text-white/60 hover:text-white transition-all shadow-xl">
+                        <Share2 size={22} />
+                      </Button>
+                   </div>
+
                    <div className={cn("p-1 shadow-2xl animate-flowing-gradient mb-6 w-28 h-28", avatarClass)} style={{ backgroundImage: `linear-gradient(45deg, ${primaryColor}, ${secondaryColor})` }}>
                      <div className={cn("w-full h-full bg-background flex items-center justify-center overflow-hidden border-4 border-background", avatarClass)}>
                         {profile.avatarUrl ? <img src={profile.avatarUrl} className="w-full h-full object-cover" alt="Avatar" /> : <User size={48} className="text-white/20" />}
@@ -210,12 +220,12 @@ export default function ProfileClient({ username }: { username: string }) {
                      {profile.bio && <p className="text-[10px] font-bold text-white/60 leading-relaxed max-w-[240px] mx-auto uppercase tracking-widest">{profile.bio}</p>}
                   </div>
                   {profile.socialLinks?.length > 0 && (
-                    <div className="flex flex-wrap justify-center gap-3 mt-8 pt-6 border-t border-white/5 w-full">
+                    <div className="flex flex-wrap justify-center gap-4 mt-8 pt-6 border-t border-white/5 w-full">
                       {profile.socialLinks.map((social: any, i: number) => {
                         const Icon = platformIcons[social.platform] || Globe;
                         return (
-                          <a key={i} href={getSmartSocialUrl(social.platform, social.label)} target="_blank" rel="noreferrer" className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:text-primary hover:border-primary/50 hover:bg-primary/10 transition-all">
-                            <Icon size={18} />
+                          <a key={i} href={getSmartSocialUrl(social.platform, social.label)} target="_blank" rel="noreferrer" className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:text-primary hover:border-primary/50 hover:bg-primary/10 transition-all shadow-lg">
+                            <Icon size={22} />
                           </a>
                         );
                       })}
@@ -226,11 +236,11 @@ export default function ProfileClient({ username }: { username: string }) {
            </div>
         </div>
 
-        {/* SPOTLIGHT SECTION */}
+        {/* SPOTLIGHT SECTION (LATEST LINK) */}
         {latestLink && (
           <div className="space-y-3 animate-in fade-in slide-in-from-top-4 duration-1000">
              <div className="flex items-center gap-2 px-4">
-                <Sparkles size={12} className="text-primary animate-pulse" />
+                <Sparkles size={14} className="text-primary animate-pulse" />
                 <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40">Latest Update</p>
                 <div className="bg-primary px-2 py-0.5 rounded-full text-[8px] font-black text-background animate-pulse">NEW</div>
              </div>
@@ -245,7 +255,7 @@ export default function ProfileClient({ username }: { username: string }) {
                    </div>
                    <div className="flex-1 text-left min-w-0">
                       <span className="text-lg font-black text-white tracking-tight block truncate uppercase">{latestLink.title}</span>
-                      <p className="text-[9px] font-black text-primary uppercase tracking-[0.2em]">Kunjungi Sekarang</p>
+                      <p className="text-[9px] font-black text-primary uppercase tracking-[0.2em]">Visit Now</p>
                    </div>
                    <ExternalLink size={20} style={{ color: primaryColor }} />
                 </div>
@@ -253,10 +263,11 @@ export default function ProfileClient({ username }: { username: string }) {
           </div>
         )}
 
+        {/* CONTENT HUB */}
         <div className="space-y-6">
            <div className={cn("relative glass-card flex items-center px-6 gap-3 border border-white/10 h-14 mx-1", getShapeClass('search'))}>
               <Search size={18} className="text-white/40" />
-              <Input placeholder="Cari koleksi..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="bg-transparent border-none focus-visible:ring-0 text-sm font-bold text-white placeholder:text-white/20 h-full" />
+              <Input placeholder="Search collections..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="bg-transparent border-none focus-visible:ring-0 text-sm font-bold text-white placeholder:text-white/20 h-full" />
            </div>
 
            <div className="space-y-4">
@@ -269,7 +280,7 @@ export default function ProfileClient({ username }: { username: string }) {
                       </div>
                       <div className="flex-1 text-left min-w-0">
                         <span className="text-lg font-black text-white tracking-tight block truncate uppercase">{group.title}</span>
-                        <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] mt-1">Koleksi</p>
+                        <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] mt-1">Collection</p>
                       </div>
                       <ChevronRight size={24} className="text-white/20 group-hover:text-primary transition-colors" />
                     </div>
@@ -304,7 +315,7 @@ export default function ProfileClient({ username }: { username: string }) {
         {spotlightError && (
           <div className="p-4 bg-primary/10 border border-primary/20 rounded-2xl flex items-center gap-3 text-primary">
             <AlertTriangle size={20} />
-            <p className="text-[9px] font-black uppercase">Index Firestore Diperlukan untuk Fitur Spotlight. Klik tautan di console untuk buat.</p>
+            <p className="text-[9px] font-black uppercase">Firestore Index Required for Spotlight. Click alert in Admin Panel to fix.</p>
           </div>
         )}
 
