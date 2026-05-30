@@ -1,43 +1,42 @@
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/request';
+import type { NextRequest } from 'next/server';
 
 /**
- * @fileOverview Linku Engine v51.0 - FINAL STABLE ARCHITECTURE
- * Mengatasi ERR_TOO_MANY_REDIRECTS dengan isolasi rute yang sangat ketat.
+ * @fileOverview Linku Engine v52.0 - UNIFIED ROUTE RESOLUTION
+ * Mengatasi 404 dengan isolasi rute internal yang bersih.
  */
 
 export function middleware(req: NextRequest) {
   const url = req.nextUrl.clone();
   
-  // 1. Ambil Hostname asli dan bersihkan dari port atau spasi
+  // 1. Ambil Hostname asli dan bersihkan
   const rawHost = req.headers.get('host') || '';
   const hostname = rawHost.toLowerCase().trim().split(':')[0];
 
-  // 2. TAMENG UTAMA: Loloskan langsung semua file aset statis, internal Next.js, dan API
+  // 2. TAMENG UTAMA: Loloskan aset statis, API, dan rute internal Next.js
   if (
     url.pathname.startsWith('/_next') || 
     url.pathname.startsWith('/api') ||
-    url.pathname.includes('.') ||
-    req.headers.has('x-nextjs-rewrite')
+    url.pathname.includes('.')
   ) {
     return NextResponse.next();
   }
 
-  // 3. TAMENG REWRITE: Jika rute internal sudah mengarah ke /_view, segera HENTIKAN proses agar tidak loop
+  // 3. TAMENG LOOP: Jika sudah di rute internal _view, jangan diproses lagi
   if (url.pathname.startsWith('/_view')) {
     return NextResponse.next();
   }
 
   const mainDomain = 'linku.biz.id';
   
-  // 4. LOGIKA DETEKSI DOMAIN UTAMA (Dashboard & Landing Page)
+  // 4. LOGIKA DOMAIN UTAMA (Dashboard & Landing Page)
   const isMainDomain = hostname === mainDomain || hostname === `www.${mainDomain}`;
 
   if (isMainDomain) {
     const pathSegments = url.pathname.split('/').filter(Boolean);
     const firstSegment = pathSegments[0];
 
-    // Daftar rute internal dashboard/sistem yang tidak boleh di-redirect
+    // Daftar rute sistem yang dilindungi
     const reservedPaths = [
       'dashboard', 'login', 'register', 'auth', 'premium', 
       'admin', 'reviews', 'verify-email', 'forgot-password'
@@ -47,7 +46,7 @@ export function middleware(req: NextRequest) {
       return NextResponse.next();
     }
 
-    // Redirect link lama linku.biz.id/username ke username.linku.biz.id (301 Permanent)
+    // Redirect link lama linku.biz.id/username ke username.linku.biz.id
     const remainingPath = url.pathname.replace(`/${firstSegment}`, '');
     const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
     
@@ -57,31 +56,27 @@ export function middleware(req: NextRequest) {
     );
   }
 
-  // 5. LOGIKA DETEKSI SUBDOMAIN (username.linku.biz.id)
+  // 5. LOGIKA SUBDOMAIN & CUSTOM DOMAIN (Melayani Halaman Publik)
   const isSubdomain = !isMainDomain && hostname.endsWith(mainDomain);
   
   if (isSubdomain) {
-    // Ambil teks subdomain murni (hapus linku.biz.id dan www.)
     const subdomain = hostname.replace(`.${mainDomain}`, '').replace('www.', '');
-
-    // Lewati jika ini subdomain sistem (admin, sys, dll)
     const systemSubdomains = ['admin', 'sys', 'apps', 'www'];
+    
     if (systemSubdomains.includes(subdomain) || subdomain === '') {
       return NextResponse.next();
     }
 
-    // Rewrite internal ke folder /_view/u:[username]
-    // Kita tambahkan prefix 'u:' agar ProfileClient tahu ini pencarian berdasarkan username
+    // Rewrite ke dapur internal dengan label u:
     url.pathname = `/_view/u:${subdomain}${url.pathname}`;
     return NextResponse.rewrite(url);
   }
 
-  // 6. LOGIKA CUSTOM DOMAIN PREMIUM (domainuser.com)
+  // 6. LOGIKA CUSTOM DOMAIN PREMIUM
   if (!isMainDomain && !isSubdomain) {
     const cleanCustomDomain = hostname.replace('www.', '');
     
-    // Rewrite internal ke folder /_view/d:[custom_domain]
-    // Kita tambahkan prefix 'd:' agar ProfileClient tahu ini pencarian berdasarkan customDomain
+    // Rewrite ke dapur internal dengan label d:
     url.pathname = `/_view/d:${cleanCustomDomain}${url.pathname}`;
     return NextResponse.rewrite(url);
   }
@@ -91,9 +86,6 @@ export function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Matcher ketat: Kecualikan file statis, aset, dan favicon demi performa.
-     */
     '/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)',
   ],
 };

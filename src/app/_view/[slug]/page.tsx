@@ -1,16 +1,9 @@
-"use client";
-
-import { use } from 'react';
-import ProfileClient from '@/app/[username]/ProfileClient';
+import { notFound } from 'next/navigation';
 
 /**
- * @fileOverview Unified Public Profile Viewer
- * Melayani rute internal hasil rewrite dari Middleware.
- * slug format: "u:username" atau "d:domain.com"
+ * @fileOverview File ini dihapus karena konflik dengan folder [username].
+ * Menghindari 404 akibat tabrakan rute dinamis.
  */
-export default function UnifiedProfilePage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = use(params);
-  // Decode slug jika mengandung karakter khusus domain
-  const decodedSlug = decodeURIComponent(slug);
-  return <ProfileClient username={decodedSlug} />;
+export default function DeletedSlugPage() {
+  return notFound();
 }

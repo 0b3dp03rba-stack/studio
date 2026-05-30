@@ -5,12 +5,11 @@ import GroupClient from '@/app/[username]/g/[groupId]/GroupClient';
 
 /**
  * @fileOverview Unified Public Group Viewer
- * Melayani rute internal hasil rewrite dari Middleware.
+ * Melayani rute internal hasil rewrite dari Middleware untuk koleksi link.
  */
 export default function UnifiedGroupPage({ params }: { params: Promise<{ username: string; groupId: string }> }) {
   const { username, groupId } = use(params);
   const decodedUsername = decodeURIComponent(username);
   
-  // GroupClient sudah memiliki logika deteksi u: dan d:
   return <GroupClient username={decodedUsername} groupId={groupId} />;
 }

@@ -1,14 +1,8 @@
-"use client";
-
-import { use } from 'react';
-import GroupClient from '@/app/[username]/g/[groupId]/GroupClient';
+import { notFound } from 'next/navigation';
 
 /**
- * @fileOverview Unified Public Group Viewer
- * Melayani rute internal hasil rewrite dari Middleware.
+ * @fileOverview File ini dihapus karena konflik dengan folder [username].
  */
-export default function UnifiedGroupPage({ params }: { params: Promise<{ slug: string; groupId: string }> }) {
-  const { slug, groupId } = use(params);
-  const decodedSlug = decodeURIComponent(slug);
-  return <GroupClient username={decodedSlug} groupId={groupId} />;
+export default function DeletedSlugGroupPage() {
+  return notFound();
 }
