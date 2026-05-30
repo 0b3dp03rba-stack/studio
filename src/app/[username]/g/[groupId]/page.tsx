@@ -2,7 +2,7 @@
 import { notFound } from 'next/navigation';
 
 /**
- * @fileOverview Rute Path-Based MATI TOTAL.
+ * @fileOverview Jalur root sengaja dimatikan untuk menghindari konflik routing.
  */
 export default function LegacyGroupPage() {
   return notFound();

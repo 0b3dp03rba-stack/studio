@@ -1,10 +1,10 @@
 
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/request';
+import type { NextRequest } from 'next/server';
 
 /**
- * @fileOverview Linku Engine v58.0 - PRO ROUTING SYSTEM
- * Menangani Subdomain, Custom Domain, dan Preview Mode (Firebase Studio).
+ * @fileOverview Linku Engine v59.0 - PRODUCTION STABLE ROUTING
+ * Menangani Subdomain, Custom Domain, dan Redirect Jalur Lama.
  */
 
 export function middleware(req: NextRequest) {
@@ -16,7 +16,7 @@ export function middleware(req: NextRequest) {
   if (
     url.pathname.startsWith('/_next') || 
     url.pathname.startsWith('/api') ||
-    url.pathname.startsWith('/_view') || // Penting: Jangan olah rute yang sudah di-rewrite
+    url.pathname.startsWith('/unified') || // Tameng Anti-Loop internal
     url.pathname.includes('.')
   ) {
     return NextResponse.next();
@@ -50,16 +50,16 @@ export function middleware(req: NextRequest) {
     }
 
     /**
-     * LOGIKA PREVIEW CERDAS:
-     * Jika di Localhost/Studio (System Host) dan user ketik /username, 
-     * jangan REDIRECT (karena subdomain lokal sering mati), tapi REWRITE internal.
+     * MODE PREVIEW/LOCAL: Izinkan path-based access /username
      */
     if (hostname !== mainDomain && hostname !== `www.${mainDomain}`) {
-       url.pathname = `/_view/u:${firstSegment}${url.pathname.replace(`/${firstSegment}`, '') || '/'}`;
+       url.pathname = `/unified/u:${firstSegment}${url.pathname.replace(`/${firstSegment}`, '') || '/'}`;
        return NextResponse.rewrite(url);
     }
 
-    // Jika di PRODUKSI (linku.biz.id) dan ketik /username, lempar ke subdomain resmi (301)
+    /**
+     * MODE PRODUKSI: Redirect linku.biz.id/username ke username.linku.biz.id
+     */
     const remainingPath = url.pathname.replace(`/${firstSegment}`, '') || '/';
     return NextResponse.redirect(
       new URL(`https://${firstSegment}.${mainDomain}${remainingPath}${url.search}`, req.url),
@@ -77,13 +77,14 @@ export function middleware(req: NextRequest) {
       return NextResponse.next();
     }
 
-    url.pathname = `/_view/u:${subdomain}${url.pathname}`;
+    // Rewrite internal ke dapur unified dengan label u:
+    url.pathname = `/unified/u:${subdomain}${url.pathname}`;
     return NextResponse.rewrite(url);
   }
 
   // 4. LOGIKA CUSTOM DOMAIN (d:domain.com)
   const cleanCustomDomain = hostname.replace('www.', '');
-  url.pathname = `/_view/d:${cleanCustomDomain}${url.pathname}`;
+  url.pathname = `/unified/d:${cleanCustomDomain}${url.pathname}`;
   return NextResponse.rewrite(url);
 }
 
