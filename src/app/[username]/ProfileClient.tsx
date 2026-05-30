@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc, collection, updateDoc, increment, getDoc, query, orderBy, onSnapshot, where, limit, getDocs, collectionGroup } from 'firebase/firestore';
-import { User, Share2, MousePointer2, Link2, LayoutGrid, ChevronRight, Search, Instagram, Youtube, Facebook, MessageCircle, Globe, Mail, Sparkles, ExternalLink, Ghost, Home, Layers, Columns, Layout } from 'lucide-react';
+import { User, Share2, MousePointer2, Link2, LayoutGrid, ChevronRight, Search, Instagram, Youtube, Facebook, MessageCircle, Globe, Mail, Sparkles, ExternalLink, Ghost, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -57,6 +57,7 @@ export default function ProfileClient({ username }: { username: string }) {
   const { data: profile } = useDoc(profileRef);
 
   // SPOTLIGHT (TAUTAN TERBARU LINTAS FOLDER)
+  // Catatan: Jika muncul "Query requires an index", klik link di error browser untuk buat index di Firestore Console.
   const spotlightQuery = useMemoFirebase(() => {
     if (!resolvedUserId) return null;
     return query(collectionGroup(db, 'links'), where('userId', '==', resolvedUserId), orderBy('createdAt', 'desc'), limit(1));
@@ -100,6 +101,12 @@ export default function ProfileClient({ username }: { username: string }) {
   const avatarShapeClass = profile.profile_shape === 'circle' ? "rounded-full" : 
                            profile.profile_shape === 'hexagon' ? "[clip-path:polygon(25%_0%,75%_0%,100%_50%,75%_100%,25%_100%,0%_50%)]" :
                            profile.profile_shape === 'rounded' ? "rounded-[2.5rem]" : "rounded-none";
+
+  // Helper untuk membangun jalur link grup yang aman (Subdomain & Preview Friendly)
+  const getGroupHref = (groupId: string) => {
+    const base = window.location.pathname.endsWith('/') ? window.location.pathname : `${window.location.pathname}/`;
+    return `${base}g/${groupId}`;
+  };
 
   return (
     <div className="min-h-screen relative overflow-x-hidden bg-[#0a0a0a]" style={{ 
@@ -236,9 +243,9 @@ export default function ProfileClient({ username }: { username: string }) {
            </div>
         </div>
 
-        {/* SPOTLIGHT SECTION */}
+        {/* SPOTLIGHT SECTION (TAUTAN TERBARU) */}
         {latestLink && (
-          <div className="space-y-3">
+          <div className="space-y-3 animate-in fade-in slide-in-from-top-4 duration-1000">
              <div className="flex items-center gap-2 px-4">
                 <Sparkles size={12} className="text-primary animate-pulse" />
                 <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40">Latest Update</p>
@@ -251,7 +258,7 @@ export default function ProfileClient({ username }: { username: string }) {
              >
                 <div className="w-full h-24 bg-black/80 backdrop-blur-3xl rounded-[2.2rem] flex items-center px-6 gap-4 border border-white/10">
                    <div className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center overflow-hidden border border-white/10 shadow-xl shrink-0">
-                      {latestLink.imageUrl ? <img src={latestLink.imageUrl} className="w-full h-full object-cover" /> : <Link2 size={24} style={{ color: primaryColor }} />}
+                      {latestLink.imageUrl ? <img src={latestLink.imageUrl} className="w-full h-full object-cover" alt={latestLink.title} /> : <Link2 size={24} style={{ color: primaryColor }} />}
                    </div>
                    <div className="flex-1 text-left min-w-0">
                       <span className="text-lg font-black text-white tracking-tight block truncate uppercase">{latestLink.title}</span>
@@ -271,11 +278,11 @@ export default function ProfileClient({ username }: { username: string }) {
 
            <div className="space-y-4">
               {groups?.filter(g => g.title.toLowerCase().includes(searchQuery.toLowerCase())).map(group => (
-                <Link key={group.id} href={`${window.location.pathname}/g/${group.id}`} className="block group px-1">
+                <Link key={group.id} href={getGroupHref(group.id)} className="block group px-1">
                   <div className="p-0.5 rounded-[2.5rem] glass-card border-white/5 hover:border-white/20 transition-all hover:scale-[1.02] shadow-xl">
                     <div className="w-full h-24 bg-black/40 backdrop-blur-2xl rounded-[2.4rem] flex items-center px-6 gap-4 border border-white/10">
                       <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10 shrink-0">
-                        {group.imageUrl ? <img src={group.imageUrl} className="w-full h-full object-cover" /> : <LayoutGrid size={32} style={{ color: primaryColor }} />}
+                        {group.imageUrl ? <img src={group.imageUrl} className="w-full h-full object-cover" alt={group.title} /> : <LayoutGrid size={32} style={{ color: primaryColor }} />}
                       </div>
                       <div className="flex-1 text-left min-w-0">
                         <span className="text-lg font-black text-white tracking-tight block truncate uppercase">{group.title}</span>
@@ -300,7 +307,7 @@ export default function ProfileClient({ username }: { username: string }) {
                   )}
                 >
                   <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10">
-                    {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" /> : <Link2 size={24} style={{ color: primaryColor }} />}
+                    {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" alt={link.title} /> : <Link2 size={24} style={{ color: primaryColor }} />}
                   </div>
                   <div className="flex-1 text-left min-w-0">
                     <span className="text-base font-black text-white tracking-tight truncate block uppercase">{link.title}</span>
