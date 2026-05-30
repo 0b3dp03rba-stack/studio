@@ -1,3 +1,4 @@
+
 "use client";
 
 import { use } from 'react';
@@ -10,6 +11,7 @@ import ProfileClient from '@/app/[username]/ProfileClient';
  */
 export default function UnifiedProfilePage({ params }: { params: Promise<{ username: string }> }) {
   const { username } = use(params);
+  // Decode URL karena parameter mungkin mengandung karakter khusus atau titik pada domain
   const decodedUsername = decodeURIComponent(username);
   
   return <ProfileClient username={decodedUsername} />;

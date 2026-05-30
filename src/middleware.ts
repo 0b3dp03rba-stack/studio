@@ -1,8 +1,9 @@
+
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 /**
- * @fileOverview Linku Engine v56.0 - UNIFIED ROUTING SYSTEM
+ * @fileOverview Linku Engine v57.0 - UNIFIED ROUTING SYSTEM
  * Mengarahkan Subdomain dan Custom Domain ke satu "Dapur" (_view) dengan label u: atau d:.
  */
 

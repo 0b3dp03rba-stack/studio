@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, useMemo } from 'react';
@@ -66,7 +67,7 @@ export default function GroupClient({ username, groupId }: { username: string; g
   if (isResolving) {
     return (
       <div className="min-h-screen bg-black flex flex-col items-center justify-center gap-4">
-        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-2xl animate-spin"></div>
+        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
         <p className="text-[10px] font-black uppercase tracking-widest text-primary/50">Sinkronisasi Koleksi...</p>
       </div>
     );
