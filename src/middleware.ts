@@ -2,9 +2,8 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 /**
- * @fileOverview Linku Engine v44.0 - STRICT HOST ARCHITECTURE
- * Menerapkan logika 'RewriteCond' versi Next.js untuk mencegah Loop.
- * Memisahkan trafik Main Domain, Subdomain, dan Custom Domain secara absolut.
+ * @fileOverview Linku Engine v45.0 - PRO PREVIEW & STRICT HOST
+ * Menerapkan logika 'RewriteCond' versi Next.js untuk mencegah Loop dan 404 pada Dashboard.
  */
 
 export function middleware(req: NextRequest) {
@@ -12,8 +11,7 @@ export function middleware(req: NextRequest) {
   const host = req.headers.get('host') || '';
   const pathname = url.pathname;
 
-  // 1. EXIT STRATEGY (Flag [L] equivalent)
-  // Jangan proses file sistem, api, atau folder internal viewer
+  // 1. EXIT STRATEGY (Flag [L] - Jangan proses file sistem, api, atau folder internal)
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api') ||
@@ -25,52 +23,59 @@ export function middleware(req: NextRequest) {
   }
 
   const mainDomain = 'linku.biz.id';
-  // Bersihkan host dari port (untuk testing localhost) dan www
-  const hostOnly = host.split(':')[0].toLowerCase().replace('www.', '');
+  // Bersihkan host dari port saja (jangan hapus www untuk deteksi sistem)
+  const hostOnly = host.split(':')[0].toLowerCase();
   
-  // Daftar rute yang HANYA boleh diakses di domain utama
+  // 2. RESERVED PATH PROTECTION (Rute sistem selalu boleh diakses di host mana saja tanpa rewrite)
   const reservedPaths = [
-    'dashboard', 'login', 'register', 'admin', 'u',
-    'verify-email', 'forgot-password', 'auth', 'reviews'
+    '/dashboard', '/login', '/register', '/admin', '/u',
+    '/verify-email', '/forgot-password', '/auth', '/reviews'
   ];
-  const firstSegment = pathname.split('/')[1];
-
-  const isLocal = hostOnly.includes('localhost') || hostOnly.includes('127.0.0.1');
-  const isMainDomain = hostOnly === mainDomain || hostOnly.endsWith('.web.app') || hostOnly.endsWith('.firebaseapp.com');
-
-  // A. LOGIKA DOMAIN UTAMA (linku.biz.id)
-  if (isMainDomain || (isLocal && !hostOnly.includes('.'))) {
-    // Jika user mencoba akses path yang bukan rute sistem, biarkan sistem menghandle (404 via App Router)
-    // Jangan lakukan rewrite apapun di domain utama untuk path-based username
+  
+  if (reservedPaths.some(p => pathname.startsWith(p))) {
     return NextResponse.next();
   }
 
-  // B. LOGIKA SUBDOMAIN (user.linku.biz.id)
-  if (hostOnly.endsWith(mainDomain) || (isLocal && hostOnly.split('.').length > 1)) {
-    const subdomain = hostOnly.replace(`.${mainDomain}`, '').replace('.localhost', '');
-    
-    // Jika subdomain mencoba akses rute sistem (misal: budi.linku.biz.id/dashboard)
-    // Biarkan saja, atau bisa di-redirect ke domain utama jika ingin sangat ketat.
-    // Tapi untuk keamanan routing internal, kita lakukan rewrite ke folder _view
+  // 3. SYSTEM HOST DETECTION (Domain yang dianggap sebagai "Main Console")
+  const systemHosts = [
+    'linku.biz.id',
+    'www.linku.biz.id',
+    'localhost',
+    '127.0.0.1',
+    'web.app',
+    'firebaseapp.com',
+    'firebase.google.com', // KHUSUS PREVIEW STUDIO
+    'cloudworkstations.dev' // KHUSUS DEV ENVIRONMENT
+  ];
+
+  const isSystemHost = systemHosts.some(sh => hostOnly === sh || hostOnly.endsWith('.' + sh));
+
+  // A. LOGIKA DOMAIN SISTEM (linku.biz.id / preview)
+  if (isSystemHost && !hostOnly.includes(mainDomain)) {
+    // Jika di localhost atau domain preview tanpa subdomain kustom
+    if (!hostOnly.includes('.') || hostOnly === 'localhost' || hostOnly.endsWith('firebase.google.com')) {
+       return NextResponse.next();
+    }
+  }
+
+  // B. LOGIKA SUBDOMAIN RESMI (user.linku.biz.id)
+  if (hostOnly.endsWith('.' + mainDomain)) {
+    const subdomain = hostOnly.replace('.' + mainDomain, '').replace('www.', '');
     url.pathname = `/_view/u:${subdomain}${pathname}`;
     return NextResponse.rewrite(url);
   }
 
-  // C. LOGIKA CUSTOM DOMAIN (budi.com)
-  // Jika host bukan domain utama dan bukan subdomain resmi, anggap sebagai Custom Domain
-  url.pathname = `/_view/d:${hostOnly}${pathname}`;
-  return NextResponse.rewrite(url);
+  // C. LOGIKA CUSTOM DOMAIN (budi.com) - Jika bukan domain sistem dan bukan subdomain resmi
+  if (!isSystemHost) {
+    url.pathname = `/_view/d:${hostOnly}${pathname}`;
+    return NextResponse.rewrite(url);
+  }
+
+  return NextResponse.next();
 }
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     */
     '/((?!api|_next/static|_next/image|favicon.ico).*)',
   ],
 };
