@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, useMemo } from 'react';
@@ -10,6 +9,14 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { getSmartSocialUrl } from '@/lib/utils-app';
+
+const platformIcons: Record<string, any> = {
+  Instagram, YouTube: Youtube, Facebook, WhatsApp: MessageCircle, Email: Mail, Website: Globe,
+  TikTok: ({ className, size = 16 }: any) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" /></svg>
+  )
+};
 
 export default function ProfileClient({ username }: { username: string }) {
   const db = useFirestore();
@@ -90,66 +97,100 @@ export default function ProfileClient({ username }: { username: string }) {
   const isMinimal = profile.layout_type === 'minimal';
   const isSplit = profile.layout_type === 'split';
 
+  const avatarShapeClass = profile.profile_shape === 'circle' ? "rounded-full" : 
+                           profile.profile_shape === 'hexagon' ? "[clip-path:polygon(25%_0%,75%_0%,100%_50%,75%_100%,25%_100%,0%_50%)]" :
+                           profile.profile_shape === 'rounded' ? "rounded-[2.5rem]" : "rounded-none";
+
   return (
-    <div className="min-h-screen relative overflow-x-hidden bg-black" style={{ 
+    <div className="min-h-screen relative overflow-x-hidden bg-[#0a0a0a]" style={{ 
       backgroundImage: profile.wallpaperUrl ? `url(${profile.wallpaperUrl})` : 'none',
       backgroundSize: 'cover',
       backgroundPosition: 'center',
       backgroundAttachment: 'fixed'
     }}>
       {/* OVERLAY WALLPAPER AGAR TEXT TETAP TERBACA */}
-      {profile.wallpaperUrl && <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />}
+      {profile.wallpaperUrl && <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" />}
 
-      {/* BANNER / COVER */}
-      {profile.bannerUrl && (
-        <div className="absolute top-0 left-0 w-full h-64 overflow-hidden z-0">
-           <img src={profile.bannerUrl} className="w-full h-full object-cover opacity-80" alt="Cover" />
-           <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#0a0a0a]" />
-        </div>
-      )}
+      <div className="max-w-md mx-auto relative z-10 p-4 pb-24 pt-6 space-y-8">
+        
+        {/* IDENTITY CARD (SAMPUL) */}
+        <div className="relative glass-card border-none rounded-[3rem] overflow-hidden shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)]">
+           {/* Background Banner Inside Card */}
+           {profile.bannerUrl ? (
+             <div className="absolute inset-0 z-0">
+                <img src={profile.bannerUrl} className="w-full h-full object-cover opacity-40" alt="Card Cover" />
+                <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/40 to-black/90" />
+             </div>
+           ) : (
+             <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-secondary/10 z-0" />
+           )}
 
-      <div className={cn("max-w-md mx-auto relative z-10 p-6 pb-24", isMinimal ? "pt-12" : "pt-24")}>
-        <div className="flex justify-end mb-4">
-           <Button variant="ghost" size="icon" onClick={() => { navigator.clipboard.writeText(window.location.href); toast({title: "Link Tersalin"}); }} className="glass-card text-white rounded-2xl border-white/10"><Share2 size={20} /></Button>
-        </div>
-
-        <div className={cn("text-center space-y-6", isMinimal && "flex items-center gap-4 text-left space-y-0")}>
-           <div className={cn(
-             "mx-auto p-1 shadow-2xl animate-flowing-gradient relative",
-             profile.profile_shape === 'circle' ? "w-32 h-32 rounded-full" : 
-             profile.profile_shape === 'hexagon' ? "w-32 h-32 [clip-path:polygon(25%_0%,75%_0%,100%_50%,75%_100%,25%_100%,0%_50%)]" :
-             profile.profile_shape === 'rounded' ? "w-32 h-32 rounded-[2.5rem]" : "w-32 h-32 rounded-none",
-             isMinimal && "mx-0 w-16 h-16"
-           )} style={{ backgroundImage: `linear-gradient(45deg, ${primaryColor}, ${secondaryColor})` }}>
-              <div className={cn("w-full h-full bg-background flex items-center justify-center overflow-hidden border-4 border-background", 
-                profile.profile_shape === 'circle' ? "rounded-full" : 
-                profile.profile_shape === 'hexagon' ? "[clip-path:polygon(25%_0%,75%_0%,100%_50%,75%_100%,25%_100%,0%_50%)]" :
-                profile.profile_shape === 'rounded' ? "rounded-[2.3rem]" : "rounded-none"
-              )}>
-                 {profile.avatarUrl ? <img src={profile.avatarUrl} className="w-full h-full object-cover" alt="Avatar" /> : <User size={isMinimal ? 24 : 64} className="text-white/20" />}
+           <div className="relative z-10 p-8 flex flex-col items-center text-center">
+              {/* Share Action */}
+              <div className="absolute top-6 right-6">
+                 <Button 
+                   variant="ghost" 
+                   size="icon" 
+                   onClick={() => { navigator.clipboard.writeText(window.location.href); toast({title: "Link Tersalin"}); }} 
+                   className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/20 transition-all"
+                 >
+                   <Share2 size={18} />
+                 </Button>
               </div>
-           </div>
-           
-           <div className="space-y-2 flex-1">
-              <h1 className={cn("font-black text-white tracking-tighter uppercase leading-none", isMinimal ? "text-xl" : "text-4xl")}>{profile.displayName}</h1>
-              {profile.bio && <p className="text-sm font-medium text-white/60 leading-relaxed max-w-xs mx-auto">{profile.bio}</p>}
+
+              {/* Avatar Section */}
+              <div className={cn(
+                "p-1 shadow-2xl animate-flowing-gradient relative mb-6",
+                avatarShapeClass,
+                "w-28 h-28"
+              )} style={{ backgroundImage: `linear-gradient(45deg, ${primaryColor}, ${secondaryColor})` }}>
+                 <div className={cn("w-full h-full bg-background flex items-center justify-center overflow-hidden border-4 border-background", avatarShapeClass)}>
+                    {profile.avatarUrl ? <img src={profile.avatarUrl} className="w-full h-full object-cover" alt="Avatar" /> : <User size={48} className="text-white/20" />}
+                 </div>
+              </div>
+
+              {/* Info Section */}
+              <div className="space-y-2">
+                 <h1 className="text-3xl font-black text-white tracking-tighter uppercase leading-none">{profile.displayName}</h1>
+                 {profile.bio && <p className="text-[10px] font-bold text-white/60 leading-relaxed max-w-[240px] mx-auto uppercase tracking-widest">{profile.bio}</p>}
+              </div>
+
+              {/* Social Links Bar */}
+              {profile.socialLinks && profile.socialLinks.length > 0 && (
+                <div className="flex flex-wrap justify-center gap-3 mt-8 pt-6 border-t border-white/5 w-full">
+                  {profile.socialLinks.map((social: any, i: number) => {
+                    const Icon = platformIcons[social.platform] || Globe;
+                    return (
+                      <a 
+                        key={i} 
+                        href={getSmartSocialUrl(social.platform, social.label)} 
+                        target="_blank" 
+                        rel="noreferrer"
+                        className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:text-primary hover:border-primary/50 hover:bg-primary/10 transition-all active:scale-90"
+                      >
+                        <Icon size={18} />
+                      </a>
+                    );
+                  })}
+                </div>
+              )}
            </div>
         </div>
 
         {/* SPOTLIGHT SECTION */}
         {latestLink && (
-          <div className="mt-12 space-y-3">
-             <div className="flex items-center gap-2 px-1">
+          <div className="space-y-3">
+             <div className="flex items-center gap-2 px-4">
                 <Sparkles size={12} className="text-primary animate-pulse" />
                 <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40">Latest Update</p>
                 <div className="bg-primary px-2 py-0.5 rounded-full text-[8px] font-black text-background animate-pulse">NEW</div>
              </div>
              <button 
                onClick={() => { updateDoc(doc(db, 'userProfiles', resolvedUserId!, 'links', latestLink.id), { clicks: increment(1) }).catch(()=>{}); window.open(latestLink.url, '_blank'); }}
-               className="w-full p-1 rounded-3xl animate-flowing-gradient shadow-2xl transition-transform active:scale-95"
+               className="w-full p-1 rounded-[2.5rem] animate-flowing-gradient shadow-2xl transition-transform active:scale-95"
                style={{ backgroundImage: `linear-gradient(45deg, ${primaryColor}, ${secondaryColor})` }}
              >
-                <div className="w-full h-24 bg-black/80 backdrop-blur-3xl rounded-[1.4rem] flex items-center px-6 gap-4 border border-white/10">
+                <div className="w-full h-24 bg-black/80 backdrop-blur-3xl rounded-[2.2rem] flex items-center px-6 gap-4 border border-white/10">
                    <div className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center overflow-hidden border border-white/10 shadow-xl shrink-0">
                       {latestLink.imageUrl ? <img src={latestLink.imageUrl} className="w-full h-full object-cover" /> : <Link2 size={24} style={{ color: primaryColor }} />}
                    </div>
@@ -163,17 +204,17 @@ export default function ProfileClient({ username }: { username: string }) {
           </div>
         )}
 
-        <div className="mt-12 space-y-6">
-           <div className="relative glass-card rounded-2xl flex items-center px-4 gap-3 border border-white/10 h-14">
+        <div className="space-y-6">
+           <div className="relative glass-card rounded-[2rem] flex items-center px-6 gap-3 border border-white/10 h-14 mx-1">
               <Search size={18} className="text-white/40" />
               <Input placeholder="Cari koleksi..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="bg-transparent border-none focus-visible:ring-0 text-sm font-bold text-white placeholder:text-white/20 h-full" />
            </div>
 
            <div className="space-y-4">
               {groups?.filter(g => g.title.toLowerCase().includes(searchQuery.toLowerCase())).map(group => (
-                <Link key={group.id} href={`${window.location.pathname}/g/${group.id}`} className="block group">
-                  <div className="p-0.5 rounded-[2rem] glass-card border-white/5 hover:border-white/20 transition-all hover:scale-[1.02]">
-                    <div className="w-full h-24 bg-black/40 backdrop-blur-2xl rounded-[1.9rem] flex items-center px-6 gap-4 border border-white/10">
+                <Link key={group.id} href={`${window.location.pathname}/g/${group.id}`} className="block group px-1">
+                  <div className="p-0.5 rounded-[2.5rem] glass-card border-white/5 hover:border-white/20 transition-all hover:scale-[1.02] shadow-xl">
+                    <div className="w-full h-24 bg-black/40 backdrop-blur-2xl rounded-[2.4rem] flex items-center px-6 gap-4 border border-white/10">
                       <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10 shrink-0">
                         {group.imageUrl ? <img src={group.imageUrl} className="w-full h-full object-cover" /> : <LayoutGrid size={32} style={{ color: primaryColor }} />}
                       </div>
@@ -192,12 +233,11 @@ export default function ProfileClient({ username }: { username: string }) {
                   key={link.id}
                   onClick={() => { updateDoc(doc(db, 'userProfiles', resolvedUserId!, 'links', link.id), { clicks: increment(1) }).catch(()=>{}); window.open(link.url, '_blank'); }}
                   className={cn(
-                    "w-full p-4 flex items-center gap-4 transition-all active:scale-95 group",
-                    link.button_style === 'glassmorphism' ? "glass-card border-white/10 rounded-2xl" : 
-                    link.button_style === 'outline' ? "bg-transparent border border-white/20 rounded-2xl" :
-                    "bg-white/5 border border-white/5 rounded-2xl",
-                    link.button_radius === 'pill' && "rounded-full",
-                    link.button_radius === 'square' && "rounded-none"
+                    "w-full p-5 flex items-center gap-4 transition-all active:scale-95 group shadow-lg mx-1",
+                    link.button_style === 'glassmorphism' ? "glass-card border-white/10" : 
+                    link.button_style === 'outline' ? "bg-transparent border-2 border-white/20" :
+                    "bg-white/5 border border-white/5",
+                    link.button_radius === 'pill' ? "rounded-full" : (link.button_radius === 'square' ? "rounded-none" : "rounded-[2rem]")
                   )}
                 >
                   <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10">
@@ -214,7 +254,7 @@ export default function ProfileClient({ username }: { username: string }) {
 
         {!(profile.isPremium || profile.role === 'Admin') && (
           <div className="pt-24 text-center">
-             <Link href="https://linku.biz.id" className="text-[10px] font-black uppercase tracking-[0.4em] text-white/20 hover:text-primary transition-colors flex items-center justify-center gap-2">
+             <Link href="/" className="text-[10px] font-black uppercase tracking-[0.4em] text-white/20 hover:text-primary transition-colors flex items-center justify-center gap-2">
                 <Link2 size={12} /> Powered by Linku Engine
              </Link>
           </div>

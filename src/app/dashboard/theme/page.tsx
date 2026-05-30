@@ -1,9 +1,8 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Palette, Sparkles, Loader2, Save, Upload, LayoutGrid, Circle, Square, Hexagon, Maximize, Image as ImageIcon, Trash2 } from 'lucide-react';
+import { Palette, Sparkles, Loader2, Save, Upload, LayoutGrid, Circle, Square, Hexagon, Maximize, Image as ImageIcon, Trash2, Smartphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
@@ -90,64 +89,65 @@ export default function ThemePage() {
   };
 
   return (
-    <div className="space-y-8 animate-in pb-32 pt-24">
+    <div className="space-y-8 animate-in pb-32 pt-24 px-4">
       <div className="space-y-1">
         <h1 className="text-4xl font-black tracking-tighter text-white uppercase leading-none">Visual Lab</h1>
-        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/70">Kustomisasi Estetika Identitas</p>
+        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/70">Kustomisasi Identity Card Master</p>
       </div>
 
       <div className="grid gap-6">
-        {/* BANNER EDITOR */}
-        <Card className="glass-card border-none rounded-[2.5rem] overflow-hidden p-6 shadow-2xl space-y-6">
+        {/* IDENTITY CARD EDITOR (SAMPUL) */}
+        <Card className="glass-card border-none rounded-[3rem] overflow-hidden p-8 shadow-2xl space-y-6">
            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase tracking-widest"><Maximize size={16} /><span>Cover Banner (3:1)</span></div>
+              <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase tracking-widest"><Maximize size={16} /><span>Identity Cover (3:1)</span></div>
               {localProfile.bannerUrl && (
                 <button onClick={() => handleRemoveImage('banner')} className="text-[9px] font-black text-destructive uppercase flex items-center gap-1 hover:underline">
-                  <Trash2 size={10} /> Hapus
+                  <Trash2 size={10} /> Hapus Sampul
                 </button>
               )}
            </div>
-           <div className="w-full aspect-[3/1] bg-white/5 rounded-2xl overflow-hidden border border-white/10 relative group">
-              {localProfile.bannerUrl ? <img src={localProfile.bannerUrl} className="w-full h-full object-cover" alt="Banner Preview" /> : <div className="w-full h-full flex items-center justify-center text-white/10"><ImageIcon size={32} /></div>}
-              <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity">
+           <div className="w-full aspect-[3/1] bg-white/5 rounded-[2rem] overflow-hidden border border-white/10 relative group shadow-inner">
+              {localProfile.bannerUrl ? <img src={localProfile.bannerUrl} className="w-full h-full object-cover" alt="Banner Preview" /> : <div className="w-full h-full flex items-center justify-center text-white/5"><ImageIcon size={32} /></div>}
+              <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity backdrop-blur-sm">
                  <div className="flex flex-col items-center gap-2">
                     <Upload className="text-white" size={24} />
-                    <span className="text-[10px] font-black text-white uppercase">Upload Banner</span>
+                    <span className="text-[10px] font-black text-white uppercase">Ganti Foto Sampul</span>
                  </div>
                  <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageSelect(e, 'banner')} />
               </label>
            </div>
+           <p className="text-[9px] font-bold text-white/30 uppercase text-center leading-relaxed">Identity Cover akan menjadi latar belakang dari kartu informasi utama (Avatar, Nama, dan Sosmed).</p>
         </Card>
 
         {/* WALLPAPER EDITOR */}
-        <Card className="glass-card border-none rounded-[2.5rem] overflow-hidden p-6 shadow-2xl space-y-6">
+        <Card className="glass-card border-none rounded-[3rem] overflow-hidden p-8 shadow-2xl space-y-6">
            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase tracking-widest"><ImageIcon size={16} /><span>Wallpaper (9:16)</span></div>
+              <div className="flex items-center gap-2 text-secondary font-black text-[10px] uppercase tracking-widest"><ImageIcon size={16} /><span>Full Wallpaper (9:16)</span></div>
               {localProfile.wallpaperUrl && (
                 <button onClick={() => handleRemoveImage('wallpaper')} className="text-[9px] font-black text-destructive uppercase flex items-center gap-1 hover:underline">
-                  <Trash2 size={10} /> Hapus
+                  <Trash2 size={10} /> Hapus Wallpaper
                 </button>
               )}
            </div>
            <div className="flex gap-6 items-center">
-              <div className="w-32 aspect-[9/16] bg-white/5 rounded-2xl overflow-hidden border border-white/10 relative group shrink-0">
-                {localProfile.wallpaperUrl ? <img src={localProfile.wallpaperUrl} className="w-full h-full object-cover" alt="Wallpaper Preview" /> : <div className="w-full h-full flex items-center justify-center text-white/5"><ImageIcon size={24} /></div>}
-                <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity">
+              <div className="w-32 aspect-[9/16] bg-white/5 rounded-[1.5rem] overflow-hidden border border-white/10 relative group shrink-0 shadow-2xl">
+                {localProfile.wallpaperUrl ? <img src={localProfile.wallpaperUrl} className="w-full h-full object-cover" alt="Wallpaper Preview" /> : <div className="w-full h-full flex items-center justify-center text-white/5"><Smartphone size={24} /></div>}
+                <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity backdrop-blur-sm">
                    <Upload className="text-white" size={20} />
                    <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageSelect(e, 'wallpaper')} />
                 </label>
               </div>
               <div className="space-y-2">
-                 <p className="text-xs font-bold text-white uppercase">Latar Belakang Penuh</p>
-                 <p className="text-[10px] text-white/40 leading-relaxed uppercase">Unggah wallpaper untuk membuat profil Anda jauh lebih imersif dan mewah.</p>
+                 <p className="text-xs font-black text-white uppercase tracking-tight">Latar Belakang Penuh</p>
+                 <p className="text-[10px] text-white/40 leading-relaxed uppercase font-medium">Unggah wallpaper untuk memberikan atmosfer yang lebih personal dan imersif pada seluruh halaman Master.</p>
               </div>
            </div>
         </Card>
 
         {/* SHAPE & LAYOUT */}
-        <Card className="glass-card border-none rounded-[2.5rem] p-6 shadow-2xl space-y-8">
+        <Card className="glass-card border-none rounded-[3rem] p-8 shadow-2xl space-y-8">
            <div className="space-y-4">
-              <label className="text-[10px] font-black uppercase text-white/30 tracking-[0.3em] ml-1">Avatar Shape</label>
+              <label className="text-[10px] font-black uppercase text-white/30 tracking-[0.3em] ml-1">Avatar Frame Shape</label>
               <div className="grid grid-cols-4 gap-4">
                 {[
                   { id: 'circle', icon: Circle },
@@ -158,7 +158,7 @@ export default function ThemePage() {
                   <button 
                     key={s.id} 
                     onClick={() => setLocalProfile({...localProfile, profile_shape: s.id})}
-                    className={cn("aspect-square rounded-2xl flex items-center justify-center transition-all", localProfile.profile_shape === s.id ? "neon-gradient text-background shadow-xl" : "bg-white/5 text-white/20")}
+                    className={cn("aspect-square rounded-2xl flex items-center justify-center transition-all", localProfile.profile_shape === s.id ? "neon-gradient text-background shadow-xl scale-110" : "bg-white/5 text-white/20 hover:bg-white/10")}
                   >
                     <s.icon size={24} />
                   </button>
@@ -167,22 +167,24 @@ export default function ThemePage() {
            </div>
 
            <div className="space-y-4">
-              <label className="text-[10px] font-black uppercase text-white/30 tracking-[0.3em] ml-1">Profile Layout</label>
+              <label className="text-[10px] font-black uppercase text-white/30 tracking-[0.3em] ml-1">Identity Layout</label>
               <Select value={localProfile.layout_type} onValueChange={(v) => setLocalProfile({...localProfile, layout_type: v})}>
-                <SelectTrigger className="bg-white/5 border-none h-14 rounded-2xl font-black uppercase text-xs">
+                <SelectTrigger className="bg-white/5 border-none h-14 rounded-2xl font-black uppercase text-[10px] tracking-widest px-6">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="glass-card border-none rounded-xl">
-                   <SelectItem value="classic" className="text-xs uppercase font-bold">Classic (Center)</SelectItem>
-                   <SelectItem value="split" className="text-xs uppercase font-bold">Split (Modern)</SelectItem>
-                   <SelectItem value="minimal" className="text-xs uppercase font-bold">Minimal (Sidebar)</SelectItem>
+                <SelectContent className="glass-card border-none rounded-[1.5rem]">
+                   <SelectItem value="classic" className="text-xs uppercase font-bold py-3">Classic (Centered Hub)</SelectItem>
+                   <SelectItem value="split" className="text-xs uppercase font-bold py-3">Modern (Split View)</SelectItem>
+                   <SelectItem value="minimal" className="text-xs uppercase font-bold py-3">Minimal (Essential)</SelectItem>
                 </SelectContent>
               </Select>
            </div>
            
-           <Button onClick={handleSave} disabled={isSaving} className="w-full h-16 neon-gradient text-background font-black rounded-3xl shadow-xl uppercase tracking-widest text-sm">
-             {isSaving ? <Loader2 className="animate-spin" /> : "Terapkan Desain"}
-           </Button>
+           <div className="pt-4">
+              <Button onClick={handleSave} disabled={isSaving} className="w-full h-20 neon-gradient text-background font-black rounded-[2rem] shadow-2xl uppercase tracking-[0.3em] text-xs glow-primary active:scale-95 transition-all">
+                {isSaving ? <Loader2 className="animate-spin" /> : "PUBLISH DESIGN"}
+              </Button>
+           </div>
         </Card>
       </div>
       <ImageCropperModal imageSrc={tempImage} isOpen={cropperOpen} onClose={() => setCropperOpen(false)} onCropComplete={onCropComplete} aspect={getAspect()} />
