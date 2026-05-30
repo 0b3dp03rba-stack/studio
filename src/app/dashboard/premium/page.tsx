@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Sparkles, ShieldCheck, Zap, Globe, Loader2, Save, ReceiptText, ArrowRight, Info, Network, CheckCircle2 } from 'lucide-react';
+import { Sparkles, ShieldCheck, Zap, Globe, Loader2, Save, ReceiptText, ArrowRight, Info, Network, CheckCircle2, Trash2 } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, updateDoc, serverTimestamp, collection, setDoc, query, where, limit } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
@@ -36,7 +36,10 @@ export default function PremiumPage() {
   
   const PREMIUM_PRICE = globalStats?.premiumPrice || 10000;
 
-  useEffect(() => { if (profile?.customDomain) setCustomDomain(profile.customDomain); }, [profile]);
+  useEffect(() => { 
+    if (profile?.customDomain) setCustomDomain(profile.customDomain); 
+    else setCustomDomain('');
+  }, [profile]);
 
   const activeInvoice = pendingPayments?.[0];
 
@@ -78,9 +81,21 @@ export default function PremiumPage() {
     setIsSavingDomain(true);
     try {
       await updateDoc(profileRef, { customDomain: customDomain.trim().toLowerCase(), updatedAt: serverTimestamp() });
-      toast({ title: "DOMAIN DISIMPAN", description: "Sekarang lakukan konfigurasi DNS di panel domain Anda." });
+      toast({ title: "DOMAIN DISIMPAN", description: "Identitas kustom Anda telah diperbarui." });
     } catch (e) {
       toast({ variant: "destructive", title: "GAGAL MENYIMPAN" });
+    } finally { setIsSavingDomain(false); }
+  };
+
+  const handleDeleteDomain = async () => {
+    if (!profileRef) return;
+    setIsSavingDomain(true);
+    try {
+      await updateDoc(profileRef, { customDomain: "", updatedAt: serverTimestamp() });
+      setCustomDomain('');
+      toast({ title: "DOMAIN DIHAPUS", description: "Profil Anda kini kembali menggunakan subdomain standar." });
+    } catch (e) {
+      toast({ variant: "destructive", title: "GAGAL MENGHAPUS" });
     } finally { setIsSavingDomain(false); }
   };
 
@@ -98,9 +113,16 @@ export default function PremiumPage() {
         </div>
 
         <Card className="glass-card border-none rounded-[2.5rem] p-8 space-y-8">
-           <div className="flex items-center gap-3 border-b border-white/5 pb-6">
-              <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary"><Globe size={24} /></div>
-              <h3 className="font-black text-base uppercase text-white">Custom Domain</h3>
+           <div className="flex items-center justify-between border-b border-white/5 pb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary"><Globe size={24} /></div>
+                <h3 className="font-black text-base uppercase text-white">Custom Domain</h3>
+              </div>
+              {profile?.customDomain && (
+                <Button variant="ghost" size="icon" onClick={handleDeleteDomain} disabled={isSavingDomain} className="h-12 w-12 rounded-2xl text-destructive/40 hover:text-destructive hover:bg-destructive/10 transition-all">
+                   {isSavingDomain ? <Loader2 className="animate-spin" size={20} /> : <Trash2 size={20} />}
+                </Button>
+              )}
            </div>
            
            <div className="space-y-6">
@@ -108,13 +130,13 @@ export default function PremiumPage() {
                  <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Domain / Subdomain Anda:</label>
                  <div className="flex gap-2">
                     <Input placeholder="contoh: budi.com" value={customDomain} onChange={(e) => setCustomDomain(e.target.value)} className="bg-white/5 border-none h-16 rounded-2xl font-bold text-base px-6 focus-visible:ring-primary/20" />
-                    <Button onClick={handleSaveDomain} disabled={isSavingDomain} className="h-16 w-16 rounded-2xl neon-gradient text-background shrink-0 active:scale-95 transition-transform shadow-xl">
+                    <Button onClick={handleSaveDomain} disabled={isSavingDomain || !customDomain} className="h-16 w-16 rounded-2xl neon-gradient text-background shrink-0 active:scale-95 transition-transform shadow-xl">
                       {isSavingDomain ? <Loader2 className="animate-spin" /> : <Save size={28} />}
                     </Button>
                  </div>
               </div>
 
-              {customDomain && (
+              {customDomain && customDomain === profile?.customDomain && (
                 <div className="p-6 bg-primary/5 rounded-[2rem] border border-primary/20 space-y-6 animate-in slide-in-from-bottom-4 duration-500">
                   <div className="flex items-center gap-3 text-primary">
                     <Network size={20} />
@@ -122,7 +144,7 @@ export default function PremiumPage() {
                   </div>
                   
                   <p className="text-[10px] font-bold text-white/60 leading-relaxed uppercase">
-                    Silakan buka panel kontrol domain Anda (Niagahoster, Cloudflare, dll) dan tambahkan record berikut:
+                    Hubungkan domain Anda ke infrastruktur Linku dengan menambahkan record berikut di panel DNS Anda:
                   </p>
 
                   <div className="bg-black/40 rounded-2xl overflow-hidden border border-white/10 shadow-inner">
@@ -147,7 +169,7 @@ export default function PremiumPage() {
                   <div className="flex gap-4 p-4 bg-white/5 rounded-2xl">
                     <CheckCircle2 size={20} className="text-primary shrink-0" />
                     <p className="text-[9px] font-bold text-white/40 uppercase leading-relaxed">
-                      Metode <span className="text-white underline decoration-primary decoration-2 underline-offset-4">CNAME</span> adalah metode paling stabil. Sistem kami akan otomatis mengenali domain Anda setelah DNS menyebar (propagation).
+                      Sistem akan otomatis mendeteksi konfigurasi Anda. Subdomain standar Anda kini akan otomatis mengalihkan traffic ke domain kustom ini.
                     </p>
                   </div>
                 </div>

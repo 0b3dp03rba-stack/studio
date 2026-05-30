@@ -73,6 +73,18 @@ export default function ProfileClient({ username }: { username: string }) {
   const profileRef = useMemoFirebase(() => resolvedUserId ? doc(db, 'userProfiles', resolvedUserId) : null, [db, resolvedUserId]);
   const { data: profile, isLoading: isProfileLoading } = useDoc(profileRef);
 
+  // LOGIKA AUTO-REDIRECT: Jika diakses via subdomain tapi punya domain kustom
+  useEffect(() => {
+    if (profile?.customDomain && profile.isPremium && typeof window !== 'undefined') {
+      const hostname = window.location.hostname;
+      // Cek apakah host saat ini adalah subdomain linku
+      if (hostname.endsWith('linku.biz.id') && hostname !== 'linku.biz.id') {
+        const targetUrl = `https://${profile.customDomain}${window.location.pathname}${window.location.search}`;
+        window.location.replace(targetUrl);
+      }
+    }
+  }, [profile]);
+
   const groupsQuery = useMemoFirebase(() => {
     if (!resolvedUserId) return null;
     return query(collection(db, 'userProfiles', resolvedUserId, 'linkGroups'), orderBy('order', 'asc'));
@@ -243,7 +255,7 @@ export default function ProfileClient({ username }: { username: string }) {
                    <div className="bg-white text-background text-[8px] font-black px-2 py-0.5 rounded-full shadow-lg">NEW</div>
                 </div>
                 <div className="w-full h-24 bg-black/80 backdrop-blur-2xl rounded-[1.4rem] flex items-center px-6 gap-4 border border-white/10">
-                  <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10 shadow-xl">
+                  <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10 shadow-xl shrink-0">
                     {newestLink.imageUrl ? <img src={newestLink.imageUrl} className="w-full h-full object-cover" alt="Link" /> : <Link2 size={32} style={{ color: primaryColor }} />}
                   </div>
                   <div className="flex-1 text-left min-w-0">
