@@ -31,9 +31,11 @@ export default function AdminActivityPage() {
     );
   }
 
-  // Jika index belum dibuat atau ada masalah izin
+  // Jika index belum dibuat atau ada masalah kueri
   if (error) {
-    const isPermissionError = error.message?.toLowerCase().includes('permission');
+    const errorMsg = error.message || "";
+    const isIndexError = errorMsg.toLowerCase().includes('index');
+    const isPermissionError = errorMsg.toLowerCase().includes('permission');
     
     return (
       <div className="py-20 px-6 text-center space-y-6">
@@ -45,9 +47,9 @@ export default function AdminActivityPage() {
             {isPermissionError ? 'Izin Ditolak' : 'Index Diperlukan'}
           </h2>
           <p className="text-xs font-medium text-white/40 leading-relaxed uppercase tracking-widest max-w-xs mx-auto">
-            {isPermissionError 
-              ? 'Firestore menolak permintaan kueri. Pastikan Rules sudah benar.' 
-              : 'Firestore butuh jalur khusus untuk memantau seluruh tautan. Klik tombol di bawah untuk membuatnya di Firebase Console.'}
+            {isIndexError 
+              ? 'Firestore butuh jalur khusus untuk memantau seluruh tautan secara global. Klik tombol di bawah untuk membuatnya secara otomatis.' 
+              : errorMsg || 'Kesalahan kueri database.'}
           </p>
         </div>
         <Button asChild className="neon-gradient text-background font-black rounded-2xl h-14 px-8 uppercase text-[10px] tracking-widest shadow-xl">

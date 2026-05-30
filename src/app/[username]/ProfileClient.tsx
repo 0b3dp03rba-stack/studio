@@ -59,7 +59,7 @@ export default function ProfileClient({ username }: { username: string }) {
   const { data: profile } = useDoc(profileRef);
 
   // SPOTLIGHT (GLOBAL LATEST LINK ACROSS ALL FOLDERS)
-  // This query requires a composite index on collection group 'links' with fields: userId ASC, createdAt DESC
+  // Membutuhkan Index: Collection Group 'links' -> userId ASC, createdAt DESC
   const spotlightQuery = useMemoFirebase(() => {
     if (!resolvedUserId) return null;
     return query(collectionGroup(db, 'links'), where('userId', '==', resolvedUserId), orderBy('createdAt', 'desc'), limit(1));
@@ -109,6 +109,16 @@ export default function ProfileClient({ username }: { username: string }) {
     const currentPath = window.location.pathname;
     const base = currentPath.endsWith('/') ? currentPath.slice(0, -1) : currentPath;
     return `${base}/g/${groupId}`;
+  };
+
+  const handleLinkClick = (link: any) => {
+    const isStandalone = link.isStandalone || !link.groupId;
+    const linkRef = isStandalone 
+      ? doc(db, 'userProfiles', resolvedUserId!, 'links', link.id)
+      : doc(db, 'userProfiles', resolvedUserId!, 'linkGroups', link.groupId, 'links', link.id);
+    
+    updateDoc(linkRef, { clicks: increment(1) }).catch(() => {});
+    window.open(link.url, '_blank');
   };
 
   return (
@@ -240,7 +250,7 @@ export default function ProfileClient({ username }: { username: string }) {
                 <div className="bg-primary px-2 py-0.5 rounded-full text-[8px] font-black text-background animate-pulse">NEW</div>
              </div>
              <button 
-               onClick={() => { updateDoc(doc(db, 'userProfiles', resolvedUserId!, 'links', latestLink.id), { clicks: increment(1) }).catch(()=>{}); window.open(latestLink.url, '_blank'); }}
+               onClick={() => handleLinkClick(latestLink)}
                className={cn("w-full p-1 animate-flowing-gradient shadow-2xl transition-transform active:scale-95", getShapeClass('card'))}
                style={{ backgroundImage: `linear-gradient(45deg, ${primaryColor}, ${secondaryColor})` }}
              >
@@ -285,7 +295,7 @@ export default function ProfileClient({ username }: { username: string }) {
               {standaloneLinks.filter(l => l.title.toLowerCase().includes(searchQuery.toLowerCase())).map(link => (
                 <button
                   key={link.id}
-                  onClick={() => { updateDoc(doc(db, 'userProfiles', resolvedUserId!, 'links', link.id), { clicks: increment(1) }).catch(()=>{}); window.open(link.url, '_blank'); }}
+                  onClick={() => handleLinkClick(link)}
                   className={cn(
                     "w-full p-5 flex items-center gap-4 transition-all active:scale-95 group shadow-lg mx-1",
                     getShapeClass('button'),
@@ -306,10 +316,13 @@ export default function ProfileClient({ username }: { username: string }) {
            </div>
         </div>
 
-        {spotlightError && (
+        {spotlightError && profile?.id === resolvedUserId && (
           <div className="p-4 bg-primary/10 border border-primary/20 rounded-2xl flex items-center gap-3 text-primary mx-1">
             <AlertTriangle size={20} />
-            <p className="text-[9px] font-black uppercase">Firestore Index Required. Go to Admin Activity to see the setup link.</p>
+            <div className="flex-1">
+              <p className="text-[9px] font-black uppercase">Firestore Index Required</p>
+              <p className="text-[7px] font-bold opacity-60 uppercase mt-0.5">Go to Admin Activity to see the setup link.</p>
+            </div>
           </div>
         )}
 
