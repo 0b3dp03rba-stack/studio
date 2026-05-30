@@ -1,8 +1,7 @@
 import { notFound } from 'next/navigation';
 
 /**
- * @fileOverview Jalur ini dimatikan total.
- * Semua akses diarahkan ke subdomain via middleware.
+ * @fileOverview Rute Path-Based MATI TOTAL.
  */
 export default function LegacyGroupPage() {
   return notFound();

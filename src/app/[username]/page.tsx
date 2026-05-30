@@ -1,8 +1,8 @@
 import { notFound } from 'next/navigation';
 
 /**
- * @fileOverview Jalur ini dimatikan total.
- * Semua akses diarahkan ke subdomain via middleware.
+ * @fileOverview Rute Path-Based MATI TOTAL.
+ * Folder ini hanya dibiarkan untuk mencegah build error, tapi isinya 404.
  */
 export default function LegacyProfilePage() {
   return notFound();

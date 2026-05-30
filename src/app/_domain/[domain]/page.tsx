@@ -1,4 +1,3 @@
-
 "use client";
 
 import { use, useEffect, useState } from 'react';
@@ -11,7 +10,6 @@ import Link from 'next/link';
 
 /**
  * @fileOverview Internal route to handle Custom Domain Resolution
- * Rute ini tidak terlihat oleh user, tapi dipetakan oleh middleware.
  */
 export default function CustomDomainResolver({ params }: { params: Promise<{ domain: string }> }) {
   const { domain } = use(params);
@@ -19,7 +17,6 @@ export default function CustomDomainResolver({ params }: { params: Promise<{ dom
   const [username, setResolvedUsername] = useState<string | null>(null);
   const [isSearching, setIsSearching] = useState(true);
 
-  // Cari user yang memiliki customDomain ini
   const usersQuery = useMemoFirebase(() => 
     query(collection(db, 'userProfiles'), where('customDomain', '==', domain), limit(1)),
     [db, domain]
@@ -45,12 +42,10 @@ export default function CustomDomainResolver({ params }: { params: Promise<{ dom
     );
   }
 
-  // Jika domain terdaftar, render profilnya secara transparan
   if (username) {
     return <ProfileClient username={username} />;
   }
 
-  // Jika domain tidak dikenal di sistem kita
   return (
     <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6 text-center space-y-8">
       <div className="w-24 h-24 rounded-[2rem] bg-primary/10 flex items-center justify-center text-primary glow-primary animate-bounce">
