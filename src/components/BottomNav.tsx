@@ -1,12 +1,17 @@
 
 "use client";
 
-import { LayoutDashboard, User, Palette, FolderKanban, Sparkles, BarChart3, Clock, Users, LogOut, History } from 'lucide-react';
+import { LayoutDashboard, User, Palette, FolderKanban, Zap, BarChart3, Clock, Users, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useUser, useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
+
+/**
+ * @fileOverview Bottom Navigation Linku Engine v87.0
+ * Menyederhanakan navigasi menjadi 5 menu utama sesuai alur kerja Master.
+ */
 
 export default function BottomNav() {
   const { user } = useUser();
@@ -24,15 +29,15 @@ export default function BottomNav() {
 
   const handleLogout = async () => {
     await signOut(auth);
-    router.push('/'); // FIX PRIORITAS 5: Redirect to home instead of login
+    router.push('/'); // Redirect ke home
   };
 
   const userItems = [
-    { label: 'Overview', icon: LayoutDashboard, href: '/dashboard' },
-    { label: 'Hub', icon: FolderKanban, href: '/dashboard/manage' },
-    { label: 'Visual', icon: Palette, href: '/dashboard/theme' },
-    { label: 'Riwayat', icon: History, href: '/dashboard/riwayat' },
-    { label: 'ID Set', icon: User, href: '/dashboard/profil' },
+    { label: 'Dash', icon: LayoutDashboard, href: '/dashboard' },
+    { label: 'Manage', icon: FolderKanban, href: '/dashboard/manage' },
+    { label: 'Premium', icon: Zap, href: '/dashboard/premium' },
+    { label: 'Visual Lab', icon: Palette, href: '/dashboard/theme' },
+    { label: 'User Set', icon: User, href: '/dashboard/profil' },
   ];
 
   const adminItems = [
@@ -45,7 +50,7 @@ export default function BottomNav() {
   const navItems = isAdminPath ? adminItems : userItems;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 h-24 bg-black/90 backdrop-blur-3xl border-t border-white/5 flex items-center justify-around px-4 z-50 rounded-t-[2.5rem]">
+    <nav className="fixed bottom-0 left-0 right-0 h-24 bg-black/95 backdrop-blur-3xl border-t border-white/5 flex items-center justify-around px-4 z-50 rounded-t-[2.5rem]">
       {navItems.map((item) => {
         const isActive = pathname === item.href;
         const Icon = item.icon;
