@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 /**
- * @fileOverview Linku Engine v42.0 - UNIFIED INTERNAL VIEW ARCHITECTURE
- * Menghapus rute lama dan menyatukan resolusi subdomain & custom domain.
+ * @fileOverview Linku Engine v43.0 - UNIFIED INTERNAL VIEW ARCHITECTURE
+ * Menggunakan folder internal _view untuk melayani Subdomain & Custom Domain.
  */
 
 export function middleware(req: NextRequest) {
@@ -54,9 +54,6 @@ export function middleware(req: NextRequest) {
     return NextResponse.rewrite(url);
   }
 
-  // C. PROTEKSI JALUR LEGACY (Path-based /username)
-  // Folder [username] sudah dihapus, jadi Next.js otomatis akan lempar 404
-  
   return NextResponse.next();
 }
 
