@@ -16,7 +16,6 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 export default function ManagePage() {
-  const { user } = user ? useUser() : { user: null };
   const { user: currentUser } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
@@ -325,7 +324,7 @@ export default function ManagePage() {
 
       <ImageCropperModal imageSrc={tempImage} isOpen={cropperOpen} onClose={() => setCropperOpen(false)} onCropComplete={onCropComplete} />
 
-      {/* MODAL EDIT DENGAN FITUR CARD STYLE */}
+      {/* MODAL EDIT */}
       <Dialog open={!!editingItem} onOpenChange={() => setEditingItem(null)}>
         <DialogContent className="glass-card border-none rounded-[2.5rem] p-8 shadow-2xl max-w-md mx-auto text-left">
           <DialogHeader><DialogTitle className="text-xl font-black uppercase tracking-tighter text-white">Edit Hub Item</DialogTitle></DialogHeader>
