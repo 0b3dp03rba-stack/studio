@@ -7,6 +7,7 @@ import { doc, collection, updateDoc, increment, getDoc, query, orderBy, onSnapsh
 import { User, Share2, MousePointer2, Link2, LayoutGrid, ChevronRight, Search, Instagram, Youtube, Facebook, MessageCircle, Globe, Mail, Sparkles, ExternalLink, Ghost, Home, AlertTriangle, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -66,7 +67,7 @@ export default function ProfileClient({ username }: { username: string }) {
   const { data: spotlightLinks, error: spotlightError } = useCollection(spotlightQuery);
   const latestLink = spotlightLinks?.[0];
 
-  // Deteksi URL Konfigurasi Index untuk Spotlight
+  // Deteksi URL Konfigurasi Index untuk Spotlight (Tampil jika Index belum dibuat)
   const spotlightConfigUrl = useMemo(() => {
     if (!spotlightError) return null;
     const msg = (spotlightError as any).message || "";
@@ -127,8 +128,6 @@ export default function ProfileClient({ username }: { username: string }) {
     updateDoc(linkRef, { clicks: increment(1) }).catch(() => {});
     window.open(link.url, '_blank');
   };
-
-  const isOwner = currentUser?.uid === resolvedUserId;
 
   return (
     <div className="min-h-screen relative overflow-x-hidden bg-[#0a0a0a]" style={{ 
@@ -277,20 +276,22 @@ export default function ProfileClient({ username }: { username: string }) {
           </div>
         )}
 
-        {/* OWNER ONLY: Setup Index Alert */}
-        {spotlightConfigUrl && isOwner && (
-          <Card className="p-5 border-2 border-primary/30 bg-primary/10 rounded-[2rem] shadow-[0_0_40px_-10px_rgba(255,0,0,0.3)] animate-in">
-             <div className="flex items-center gap-4 text-primary">
-                <Zap size={24} className="animate-bounce" />
-                <div className="flex-1">
-                   <p className="text-[11px] font-black uppercase tracking-widest">Aktifkan Spotlight</p>
-                   <p className="text-[8px] font-bold opacity-60 uppercase mt-0.5">Satu langkah lagi untuk menampilkan fitur 'NEW'</p>
-                </div>
-             </div>
-             <Button asChild className="w-full mt-4 h-12 neon-gradient text-background font-black rounded-xl text-[10px] tracking-widest shadow-xl">
-                <a href={spotlightConfigUrl} target="_blank" rel="noreferrer">KONFIGURASI OTOMATIS SEKARANG</a>
-             </Button>
-          </Card>
+        {/* PUBLIC SETUP ALERT: Tampil jika Index diperlukan (Terlihat oleh semua orang) */}
+        {spotlightConfigUrl && (
+          <div className="px-1">
+            <Card className="p-5 border-2 border-primary/30 bg-primary/10 rounded-[2rem] shadow-[0_0_40px_-10px_rgba(255,0,0,0.3)] animate-in">
+              <div className="flex items-center gap-4 text-primary">
+                  <Zap size={24} className="animate-bounce" />
+                  <div className="flex-1">
+                    <p className="text-[11px] font-black uppercase tracking-widest">Aktifkan Spotlight</p>
+                    <p className="text-[8px] font-bold opacity-60 uppercase mt-0.5">Satu langkah lagi untuk menampilkan fitur 'NEW'</p>
+                  </div>
+              </div>
+              <Button asChild className="w-full mt-4 h-12 neon-gradient text-background font-black rounded-xl text-[10px] tracking-widest shadow-xl">
+                  <a href={spotlightConfigUrl} target="_blank" rel="noreferrer">KONFIGURASI OTOMATIS SEKARANG</a>
+              </Button>
+            </Card>
+          </div>
         )}
 
         <div className="space-y-6">
