@@ -69,6 +69,17 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* HIDE VERCEL TOOLBAR */
+vercel-live-feedback,
+#__vercel-toolbar,
+.vercel-toolbar,
+[data-vercel-live-feedback],
+[data-vercel-toolbar] {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
 ::-webkit-scrollbar {
   width: 0px;
 }

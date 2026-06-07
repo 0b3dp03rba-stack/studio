@@ -1,25 +1,22 @@
 {
-  "name": "Linku",
+  "name": "Linku Master",
   "short_name": "Linku",
-  "description": "Premium Link Hub dengan Tema Neon. Tampilkan semua dunia Anda dalam satu link.",
+  "description": "Platform Manajemen Tautan Modern dengan Tema Neon. Tampilkan semua dunia Anda dalam satu link.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0a0a",
   "theme_color": "#ff0000",
-  "orientation": "portrait",
-  "scope": "/",
   "icons": [
     {
-      "src": "https://picsum.photos/seed/linku-logo-192/192/192",
+      "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiB2aWV3Qm94PSIwIDAgMTkyIDE5MiI+CiAgPHJlY3Qgd2lkdGg9IjE5MiIgaGVpZ2h0PSIxOTIiIHJ4PSI0MCIgZmlsbD0iYmxhY2siLz4KICA8cGF0aCBkPSJNNzIgOTZIMTIwIiBzdHJva2U9IiNmZjAwMDAiIHN0cm9rZS13aWR0aD0iMTIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogIDxwYXRoIGQ9Ik04OCA3Mkg3MkM1OC43NDUyIDcyIDQ4IDgyLjc0NTIgNDggOTZDNDggMTA5LjI1NSA1OC43NDUyIDEyMCA3MiAxMjBIODgiIHN0cm9rZT0iI2ZmMDAwMCIgc3Ryb2tlLXdpZHRoPSIxMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPHBhdGggZD0iTTEwNCA3MkgxMjBDMTMzLjI1NSA3MiAxNDQgODIuNzQ1MiAxNDQgOTZDMTQ0IDEwOS4yNTUgMTMzLjI1NSAxMjAgMTIwIDEyMEgxMDQiIHN0cm9rZT0iI2ZmMDAwMCIgc3Ryb2tlLXdpZHRoPSIxMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+Cjwvc3ZnPg==",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "https://picsum.photos/seed/linku-logo-512/512/512",
+      "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiB2aWV3Qm94PSIwIDAgNTEyIDUxMiI+CiAgPHJlY3Qgd2lkdGg9IjUxMiIgaGVpZ2h0PSI1MTIiIHJ4PSIxMDAiIGZpbGw9ImJsYWNrIi8+CiAgPHBhdGggZD0iTTE5MiAyNTZIMzIwIiBzdHJva2U9IiNmZjAwMDAiIHN0cm9rZS13aWR0aD0iMzIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogIDxwYXRoIGQ9Ik0yNDAgMTkySDE5MkMxNTYuNzQ1IDE5MiAxMjggMjIyLjc0NSAxMjggMjU2QzEyOCAyODkuMjU1IDE1Ni43NDUgMzIwIDE5MiAzMjBIMjQwIiBzdHJva2U9IiNmZjAwMDAiIHN0cm9rZS13aWR0aD0iMzIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogIDxwYXRoIGQ9Ik0yNzIgMTkySDMyMEMzNTMuMjU1IDE5MiAzODQgMjIyLjc0NSAzODQgMjU2QzM4NCAyODkuMjU1IDM1My4yNTUgMzIwIDMyMCAzMjBIMjcyIiBzdHJva2U9IiNmZjAwMDAiIHN0cm9rZS13aWR0aD0iMzIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgo8L3N2Zz4=",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/png"
     }
   ]
 }
