@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useDoc, useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { doc, collection, updateDoc, increment, getDoc, query, orderBy, onSnapshot, where, limit, getDocs, collectionGroup } from 'firebase/firestore';
-import { User, Share2, MousePointer2, Link2, LayoutGrid, ChevronRight, Search, Instagram, Youtube, Facebook, MessageCircle, Globe, Mail, Sparkles, ExternalLink, Ghost, Home, AlertTriangle, Zap } from 'lucide-react';
+import { User, Share2, MousePointer2, Link2, LayoutGrid, ChevronRight, Search, Instagram, Youtube, Facebook, MessageCircle, Globe, Mail, Sparkles, ExternalLink, Ghost, Home, AlertTriangle, Zap, Link as LinkIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -29,9 +29,13 @@ export default function ProfileClient({ username }: { username: string }) {
   const [isResolving, setIsResolving] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [standaloneLinks, setStandaloneLinks] = useState<any[]>([]);
+  const [basePath, setBasePath] = useState('');
 
   useEffect(() => {
     setMounted(true);
+    // SSR Safe: Window only available on client
+    setBasePath(window.location.pathname.endsWith('/') ? window.location.pathname.slice(0, -1) : window.location.pathname);
+    
     const resolveUser = async () => {
       try {
         let uid = null;
@@ -58,7 +62,7 @@ export default function ProfileClient({ username }: { username: string }) {
   const profileRef = useMemoFirebase(() => resolvedUserId ? doc(db, 'userProfiles', resolvedUserId) : null, [db, resolvedUserId]);
   const { data: profile } = useDoc(profileRef);
 
-  // SPOTLIGHT QUERY (Collection Group for Latest Link)
+  // SPOTLIGHT QUERY
   const spotlightQuery = useMemoFirebase(() => {
     if (!resolvedUserId) return null;
     return query(collectionGroup(db, 'links'), where('userId', '==', resolvedUserId), orderBy('createdAt', 'desc'), limit(1));
@@ -66,7 +70,6 @@ export default function ProfileClient({ username }: { username: string }) {
   const { data: spotlightLinks, error: spotlightError } = useCollection(spotlightQuery);
   const latestLink = spotlightLinks?.[0];
 
-  // Deteksi URL Konfigurasi Index dari Firestore Error (Tampil secara publik untuk memudahkan setup)
   const spotlightConfigUrl = useMemo(() => {
     if (!spotlightError) return null;
     const msg = (spotlightError as any).message || "";
@@ -113,9 +116,7 @@ export default function ProfileClient({ username }: { username: string }) {
   const avatarClass = "rounded-[2rem]";
 
   const getGroupHref = (groupId: string) => {
-    const currentPath = window.location.pathname;
-    const base = currentPath.endsWith('/') ? currentPath.slice(0, -1) : currentPath;
-    return `${base}/g/${groupId}`;
+    return `${basePath}/g/${groupId}`;
   };
 
   const handleLinkClick = (link: any) => {
@@ -138,7 +139,6 @@ export default function ProfileClient({ username }: { username: string }) {
       {profile.wallpaperUrl && <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" />}
 
       <div className="max-w-md mx-auto relative z-10 p-4 pb-24 pt-6 space-y-8">
-        
         <div className={cn(
           "relative glass-card border-none overflow-hidden shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] transition-all duration-500",
           getShapeClass('card'),
@@ -154,7 +154,6 @@ export default function ProfileClient({ username }: { username: string }) {
            )}
 
            <div className="relative z-10 p-8">
-              
               {profile.layout_type === 'split' ? (
                 <div className="flex justify-between items-start gap-4">
                    <div className="flex flex-col gap-6 flex-1 min-w-0 text-left">
@@ -168,12 +167,10 @@ export default function ProfileClient({ username }: { username: string }) {
                          {profile.bio && <p className="text-[10px] font-bold text-white/50 leading-relaxed uppercase tracking-widest line-clamp-3">{profile.bio}</p>}
                       </div>
                    </div>
-                   
                    <div className="flex flex-col items-end gap-6 shrink-0">
                       <Button variant="ghost" size="icon" onClick={() => { navigator.clipboard.writeText(window.location.href); toast({title: "Link Tersalin"}); }} className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/20 transition-all">
                         <Share2 size={22} />
                       </Button>
-                      
                       {profile.socialLinks?.length > 0 && (
                         <div className="flex flex-col gap-4">
                            {profile.socialLinks.map((social: any, i: number) => {
@@ -222,7 +219,6 @@ export default function ProfileClient({ username }: { username: string }) {
                         <Share2 size={22} />
                       </Button>
                    </div>
-
                    <div className={cn("p-1 shadow-2xl animate-flowing-gradient mb-6 w-28 h-28", avatarClass)} style={{ backgroundImage: `linear-gradient(45deg, ${primaryColor}, ${secondaryColor})` }}>
                      <div className={cn("w-full h-full bg-background flex items-center justify-center overflow-hidden border-4 border-background", avatarClass)}>
                         {profile.avatarUrl ? <img src={profile.avatarUrl} className="w-full h-full object-cover" alt="Avatar" /> : <User size={48} className="text-white/20" />}
@@ -249,7 +245,6 @@ export default function ProfileClient({ username }: { username: string }) {
            </div>
         </div>
 
-        {/* SETUP ALERT: Tampil publik agar Master bisa setup tanpa login */}
         {spotlightConfigUrl && (
           <Card className="p-6 border-2 border-primary/30 bg-primary/10 rounded-[2.5rem] shadow-[0_0_50px_-10px_rgba(255,0,0,0.4)] animate-in zoom-in-95">
              <div className="flex items-center gap-4 text-primary">
@@ -279,7 +274,7 @@ export default function ProfileClient({ username }: { username: string }) {
              >
                 <div className={cn("w-full h-24 bg-black/80 backdrop-blur-3xl flex items-center px-6 gap-4 border border-white/10", getShapeClass('card'))}>
                    <div className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center overflow-hidden border border-white/10 shadow-xl shrink-0">
-                      {latestLink.imageUrl ? <img src={latestLink.imageUrl} className="w-full h-full object-cover" alt={latestLink.title} /> : <Link2 size={24} style={{ color: primaryColor }} />}
+                      {latestLink.imageUrl ? <img src={latestLink.imageUrl} className="w-full h-full object-cover" alt={latestLink.title} /> : <LinkIcon size={24} style={{ color: primaryColor }} />}
                    </div>
                    <div className="flex-1 text-left min-w-0">
                       <span className="text-lg font-black text-white tracking-tight block truncate uppercase">{latestLink.title}</span>
@@ -328,7 +323,7 @@ export default function ProfileClient({ username }: { username: string }) {
                   )}
                 >
                   <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10">
-                    {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" alt={link.title} /> : <Link2 size={24} style={{ color: primaryColor }} />}
+                    {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" alt={link.title} /> : <LinkIcon size={24} style={{ color: primaryColor }} />}
                   </div>
                   <div className="flex-1 text-left min-w-0">
                     <span className="text-base font-black text-white tracking-tight truncate block uppercase">{link.title}</span>
@@ -342,7 +337,7 @@ export default function ProfileClient({ username }: { username: string }) {
         {!(profile.isPremium || profile.role === 'Admin') && (
           <div className="pt-24 text-center">
              <Link href="/" className="text-[10px] font-black uppercase tracking-[0.4em] text-white/20 hover:text-primary transition-colors flex items-center justify-center gap-2">
-                <Link2 size={12} /> Powered by Linku Engine
+                <LinkIcon size={12} /> Powered by Linku Engine
              </Link>
           </div>
         )}
