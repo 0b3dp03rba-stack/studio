@@ -35,7 +35,7 @@ export default function Header() {
 
   const handleLogout = async () => {
     await signOut(auth);
-    router.push('/login');
+    router.push('/');
   };
 
   const isAdmin = profile?.role === 'Admin' || user?.email === 'creeppermoment@gmail.com';

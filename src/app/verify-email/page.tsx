@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -50,7 +49,7 @@ export default function VerifyEmailPage() {
 
   const handleBackToLogin = async () => {
     await signOut(auth);
-    router.push('/login');
+    router.push('/');
   };
 
   if (!mounted || isUserLoading) {
@@ -134,7 +133,7 @@ export default function VerifyEmailPage() {
               variant="ghost"
               className="w-full h-12 text-white/40 hover:text-white font-black uppercase text-[10px] tracking-widest rounded-xl"
             >
-              <ArrowLeft size={16} className="mr-2" /> Kembali ke Login
+              <ArrowLeft size={16} className="mr-2" /> Kembali ke Beranda
             </Button>
           </div>
         </CardContent>

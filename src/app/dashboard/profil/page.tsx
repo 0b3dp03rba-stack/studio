@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -108,7 +107,7 @@ export default function ProfilPage() {
 
   const handleLogout = async () => {
     await signOut(getAuth());
-    router.push('/login');
+    router.push('/');
   };
 
   const handleSaveProfile = async () => {
