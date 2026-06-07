@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, useMemo } from 'react';
@@ -36,11 +35,11 @@ export default function LandingPage() {
     if (user && !isUserLoading && user.emailVerified) router.push('/dashboard');
   }, [user, isUserLoading, router]);
 
-  // Fetch reviews for Wall of Love
+  // Fetch 3 reviews terbaru untuk Wall of Love
   const reviewsQuery = useMemoFirebase(() => query(
     collection(db, 'platformReviews'), 
     orderBy('createdAt', 'desc'),
-    limit(6)
+    limit(3)
   ), [db]);
   const { data: reviews } = useCollection(reviewsQuery);
 
@@ -107,7 +106,7 @@ export default function LandingPage() {
            ))}
         </div>
 
-        {/* WALL OF LOVE SECTION */}
+        {/* WALL OF LOVE SECTION (3 Items Only) */}
         {reviews && reviews.length > 0 && (
           <section className="space-y-16 animate-in">
              <div className="space-y-4">
@@ -132,15 +131,15 @@ export default function LandingPage() {
                            <StaticStarRating rating={review.rating} />
                         </div>
                      </div>
-                     <p className="text-xs text-white/70 font-medium leading-relaxed italic">
+                     <p className="text-xs text-white/70 font-medium leading-relaxed italic line-clamp-4">
                         "{review.comment}"
                      </p>
                   </div>
                 ))}
              </div>
 
-             <Button asChild variant="ghost" className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30 hover:text-primary">
-                <Link href="/reviews">Lihat Semua Kesaksian Master <ArrowRight size={12} className="ml-2" /></Link>
+             <Button asChild variant="ghost" className="h-14 px-10 glass-card border-white/10 text-white/60 font-black uppercase text-[10px] tracking-[0.3em] rounded-2xl hover:text-primary transition-all">
+                <Link href="/reviews">Baca Selengkapnya <ArrowRight size={14} className="ml-2" /></Link>
              </Button>
           </section>
         )}
