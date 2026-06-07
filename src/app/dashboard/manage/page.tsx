@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -13,9 +12,12 @@ import ImageCropperModal from '@/components/ImageCropperModal';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 export default function ManagePage() {
-  const { user } = useUser();
+  const { user } = user ? useUser() : { user: null };
+  const { user: currentUser } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
   
@@ -39,28 +41,28 @@ export default function ManagePage() {
   const [groupLinksData, setGroupLinksData] = useState<Record<string, any[]>>({});
 
   const groupsQuery = useMemoFirebase(() => {
-    if (!user) return null;
-    return query(collection(db, 'userProfiles', user.uid, 'linkGroups'), orderBy('order', 'asc'));
-  }, [db, user?.uid]);
+    if (!currentUser) return null;
+    return query(collection(db, 'userProfiles', currentUser.uid, 'linkGroups'), orderBy('order', 'asc'));
+  }, [db, currentUser?.uid]);
   const { data: groups, isLoading: isGroupsLoading } = useCollection(groupsQuery);
 
   const linksQuery = useMemoFirebase(() => {
-    if (!user) return null;
-    return query(collection(db, 'userProfiles', user.uid, 'links'), orderBy('createdAt', 'desc'));
-  }, [db, user?.uid]);
+    if (!currentUser) return null;
+    return query(collection(db, 'userProfiles', currentUser.uid, 'links'), orderBy('createdAt', 'desc'));
+  }, [db, currentUser?.uid]);
   const { data: standaloneLinks, isLoading: isLinksLoading } = useCollection(linksQuery);
 
   useEffect(() => {
-    if (!user || !groups) return;
+    if (!currentUser || !groups) return;
     const unsubs = groups.map(group => {
-      const q = query(collection(db, 'userProfiles', user.uid, 'linkGroups', group.id, 'links'), orderBy('createdAt', 'desc'));
+      const q = query(collection(db, 'userProfiles', currentUser.uid, 'linkGroups', group.id, 'links'), orderBy('createdAt', 'desc'));
       return onSnapshot(q, (snap) => {
         const links = snap.docs.map(d => ({ ...d.data(), id: d.id, groupId: group.id }));
         setGroupLinksData(prev => ({ ...prev, [group.id]: links }));
       });
     });
     return () => unsubs.forEach(unsub => unsub());
-  }, [user, groups, db]);
+  }, [currentUser, groups, db]);
 
   const toggleGroupExpand = (groupId: string) => {
     setExpandedGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }));
@@ -85,84 +87,120 @@ export default function ManagePage() {
     if (activeCropTarget === 'edit') setEditingItem({ ...editingItem, imageUrl: cropped });
   };
 
-  const handleAddGroup = async () => {
-    if (!user || !newGroupTitle) return;
-    try {
-      await addDoc(collection(db, 'userProfiles', user.uid, 'linkGroups'), {
-        userId: user.uid,
-        title: newGroupTitle,
-        imageUrl: newGroupImage || '',
-        isEnabled: true,
-        order: (groups?.length || 0) + 1,
-        createdAt: serverTimestamp()
-      });
-      setNewGroupTitle('');
-      setNewGroupImage('');
-      toast({ title: "Koleksi Dibuat" });
-    } catch (e) { toast({ variant: "destructive", title: "Gagal" }); }
+  const handleAddGroup = () => {
+    if (!currentUser || !newGroupTitle) return;
+    const colRef = collection(db, 'userProfiles', currentUser.uid, 'linkGroups');
+    const data = {
+      userId: currentUser.uid,
+      title: newGroupTitle,
+      imageUrl: newGroupImage || '',
+      isEnabled: true,
+      order: (groups?.length || 0) + 1,
+      createdAt: serverTimestamp()
+    };
+
+    addDoc(colRef, data).catch(async (e) => {
+      const permissionError = new FirestorePermissionError({
+        path: colRef.path,
+        operation: 'create',
+        requestResourceData: data
+      } satisfies SecurityRuleContext);
+      errorEmitter.emit('permission-error', permissionError);
+    });
+
+    setNewGroupTitle('');
+    setNewGroupImage('');
+    toast({ title: "Koleksi Dibuat" });
   };
 
-  const handleAddLink = async () => {
-    if (!user || !newLinkTitle || !newLinkUrl) return;
-    try {
-      const colPath = targetGroupId === 'main' 
-        ? collection(db, 'userProfiles', user.uid, 'links')
-        : collection(db, 'userProfiles', user.uid, 'linkGroups', targetGroupId, 'links');
+  const handleAddLink = () => {
+    if (!currentUser || !newLinkTitle || !newLinkUrl) return;
+    const colPath = targetGroupId === 'main' 
+      ? collection(db, 'userProfiles', currentUser.uid, 'links')
+      : collection(db, 'userProfiles', currentUser.uid, 'linkGroups', targetGroupId, 'links');
 
-      await addDoc(colPath, {
-        userId: user.uid,
-        title: newLinkTitle,
-        url: newLinkUrl.startsWith('http') ? newLinkUrl : `https://${newLinkUrl}`,
-        imageUrl: newLinkImage || '',
-        isEnabled: true,
-        clicks: 0,
-        button_style: 'solid',
-        button_radius: 'rounded',
-        createdAt: serverTimestamp(),
-        groupId: targetGroupId === 'main' ? null : targetGroupId
-      });
-      setNewLinkTitle('');
-      setNewLinkUrl('');
-      setNewLinkImage('');
-      toast({ title: "Tautan Ditambahkan" });
-    } catch (e) { toast({ variant: "destructive", title: "Gagal" }); }
+    const data = {
+      userId: currentUser.uid,
+      title: newLinkTitle,
+      url: newLinkUrl.startsWith('http') ? newLinkUrl : `https://${newLinkUrl}`,
+      imageUrl: newLinkImage || '',
+      isEnabled: true,
+      clicks: 0,
+      button_style: 'solid',
+      button_radius: 'rounded',
+      createdAt: serverTimestamp(),
+      groupId: targetGroupId === 'main' ? null : targetGroupId
+    };
+
+    addDoc(colPath, data).catch(async (e) => {
+      const permissionError = new FirestorePermissionError({
+        path: colPath.path,
+        operation: 'create',
+        requestResourceData: data
+      } satisfies SecurityRuleContext);
+      errorEmitter.emit('permission-error', permissionError);
+    });
+
+    setNewLinkTitle('');
+    setNewLinkUrl('');
+    setNewLinkImage('');
+    toast({ title: "Tautan Ditambahkan" });
   };
 
-  const handleSaveEdit = async () => {
-    if (!user || !editingItem) return;
+  const handleSaveEdit = () => {
+    if (!currentUser || !editingItem) return;
     setIsSavingEdit(true);
-    try {
-      if (editingItem.type === 'group') {
-        const docRef = doc(db, 'userProfiles', user.uid, 'linkGroups', editingItem.id);
-        await updateDoc(docRef, { title: editingItem.title, imageUrl: editingItem.imageUrl || '', updatedAt: serverTimestamp() });
-      } else {
-        const docRef = editingItem.groupId 
-          ? doc(db, 'userProfiles', user.uid, 'linkGroups', editingItem.groupId, 'links', editingItem.id)
-          : doc(db, 'userProfiles', user.uid, 'links', editingItem.id);
-        
-        await updateDoc(docRef, {
+    
+    const docRef = editingItem.type === 'group'
+      ? doc(db, 'userProfiles', currentUser.uid, 'linkGroups', editingItem.id)
+      : (editingItem.groupId 
+          ? doc(db, 'userProfiles', currentUser.uid, 'linkGroups', editingItem.groupId, 'links', editingItem.id)
+          : doc(db, 'userProfiles', currentUser.uid, 'links', editingItem.id));
+    
+    const updateData = editingItem.type === 'group' 
+      ? { title: editingItem.title, imageUrl: editingItem.imageUrl || '', updatedAt: serverTimestamp() }
+      : {
           title: editingItem.title,
           url: editingItem.url,
           imageUrl: editingItem.imageUrl || '',
           button_style: editingItem.button_style || 'solid',
           button_radius: editingItem.button_radius || 'rounded',
           updatedAt: serverTimestamp()
-        });
-      }
-      toast({ title: "Perubahan Disimpan" });
-      setEditingItem(null);
-    } catch (e) { toast({ variant: "destructive", title: "Gagal Simpan" }); } finally { setIsSavingEdit(false); }
+        };
+
+    updateDoc(docRef, updateData).catch(async (e) => {
+      const permissionError = new FirestorePermissionError({
+        path: docRef.path,
+        operation: 'update',
+        requestResourceData: updateData
+      } satisfies SecurityRuleContext);
+      errorEmitter.emit('permission-error', permissionError);
+    });
+
+    toast({ title: "Perubahan Disimpan" });
+    setEditingItem(null);
+    setIsSavingEdit(false);
   };
 
-  const confirmDelete = async () => {
-    if (!user || !itemToDelete) return;
-    try {
-      const docRef = itemToDelete.type === 'group' 
-        ? doc(db, 'userProfiles', user.uid, 'linkGroups', itemToDelete.id)
-        : (itemToDelete.groupId ? doc(db, 'userProfiles', user.uid, 'linkGroups', itemToDelete.groupId, 'links', itemToDelete.id) : doc(db, 'userProfiles', user.uid, 'links', itemToDelete.id));
-      await deleteDoc(docRef);
-      toast({ title: "Dihapus" });
-    } catch (e) { toast({ variant: "destructive", title: "Gagal Hapus" }); } finally { setItemToDelete(null); }
+  const confirmDelete = () => {
+    if (!currentUser || !itemToDelete) return;
+    
+    const docRef = itemToDelete.type === 'group' 
+      ? doc(db, 'userProfiles', currentUser.uid, 'linkGroups', itemToDelete.id)
+      : (itemToDelete.groupId 
+          ? doc(db, 'userProfiles', currentUser.uid, 'linkGroups', itemToDelete.groupId, 'links', itemToDelete.id) 
+          : doc(db, 'userProfiles', currentUser.uid, 'links', itemToDelete.id));
+    
+    deleteDoc(docRef).catch(async (e) => {
+      const permissionError = new FirestorePermissionError({
+        path: docRef.path,
+        operation: 'delete',
+      } satisfies SecurityRuleContext);
+      errorEmitter.emit('permission-error', permissionError);
+    });
+
+    toast({ title: "Dihapus" });
+    setItemToDelete(null);
   };
 
   return (
@@ -254,7 +292,10 @@ export default function ManagePage() {
                            <p className="text-sm font-bold text-white/90 truncate">{link.title}</p>
                            <p className="text-[8px] text-white/20 truncate uppercase font-mono">{link.clicks || 0} CLICKS</p>
                         </div>
-                        <Button size="icon" variant="ghost" onClick={() => setEditingItem({ ...link, type: 'link' })} className="h-8 w-8 text-white/20 hover:text-primary rounded-lg"><Edit3 size={14} /></Button>
+                        <div className="flex gap-1">
+                          <Button size="icon" variant="ghost" onClick={() => setEditingItem({ ...link, type: 'link' })} className="h-8 w-8 text-white/20 hover:text-primary rounded-lg"><Edit3 size={14} /></Button>
+                          <Button size="icon" variant="ghost" onClick={() => setItemToDelete({ ...link, type: 'link' })} className="h-8 w-8 text-white/20 hover:text-destructive rounded-lg"><Trash2 size={14} /></Button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -332,9 +373,17 @@ export default function ManagePage() {
       </Dialog>
 
       <AlertDialog open={!!itemToDelete} onOpenChange={() => setItemToDelete(null)}>
-        <AlertDialogContent className="glass-card border-none rounded-[2rem]">
-          <AlertDialogHeader><AlertDialogTitle className="text-white">Konfirmasi Hapus</AlertDialogTitle><AlertDialogDescription className="text-white/40">Item "{itemToDelete?.title}" akan dihapus selamanya.</AlertDialogDescription></AlertDialogHeader>
-          <AlertDialogFooter><AlertDialogCancel className="bg-white/5 border-none text-white rounded-xl">Batal</AlertDialogCancel><AlertDialogAction onClick={confirmDelete} className="bg-destructive text-white rounded-xl">HAPUS</AlertDialogAction></AlertDialogFooter>
+        <AlertDialogContent className="glass-card border-none rounded-[2rem] bg-black/95 backdrop-blur-3xl p-8 shadow-2xl max-w-[90%] sm:max-w-md mx-auto">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white uppercase font-black tracking-tighter text-2xl">Konfirmasi Hapus</AlertDialogTitle>
+            <AlertDialogDescription className="text-white/40 text-xs font-medium">
+              Item "<span className="text-white font-bold">{itemToDelete?.title}</span>" akan dihapus selamanya dari katalog Master.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-8 flex gap-3">
+            <AlertDialogCancel className="bg-white/5 border-none text-white rounded-xl text-[10px] font-black uppercase h-12 flex-1">Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/80 text-white rounded-xl text-[10px] font-black uppercase h-12 flex-1">YA, HAPUS</AlertDialogAction>
+          </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </div>
