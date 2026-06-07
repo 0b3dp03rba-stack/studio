@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -7,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Link2, Mail, Lock, Check, Chrome, ArrowRight } from 'lucide-react';
+import { Link as LinkIcon, Mail, Lock, Check, Chrome } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth, useUser, useFirestore } from '@/firebase';
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
@@ -77,7 +76,6 @@ export default function LoginPage() {
     setIsGoogleLoading(true);
     try {
       const provider = new GoogleAuthProvider();
-      // Mengatur parameter agar Google selalu menanyakan akun
       provider.setCustomParameters({ prompt: 'select_account' });
       
       const result = await signInWithPopup(auth, provider);
@@ -118,14 +116,10 @@ export default function LoginPage() {
       router.push('/dashboard');
     } catch (error: any) {
       console.error("Google Auth Error:", error);
-      let desc = "Gagal menghubungkan ke Google.";
-      if (error.code === 'auth/operation-not-allowed') desc = "Metode Google belum aktif di Firebase Console.";
-      if (error.code === 'auth/unauthorized-domain') desc = "Domain ini belum terdaftar di Authorized Domains Firebase.";
-      
       toast({ 
         variant: "destructive", 
         title: "Google Gagal", 
-        description: desc 
+        description: "Gagal menghubungkan ke Google." 
       });
     } finally {
       setIsGoogleLoading(false);
@@ -141,7 +135,7 @@ export default function LoginPage() {
         <CardHeader className="text-center space-y-4 pt-12">
           <div className="mx-auto w-24 h-24 bg-black rounded-[2.5rem] flex items-center justify-center border border-white/10 shadow-2xl relative group">
             <div className="relative flex items-center justify-center">
-              <Link2 size={48} className="text-primary group-hover:scale-110 transition-transform duration-500" />
+              <LinkIcon size={48} className="text-primary group-hover:scale-110 transition-transform duration-500" />
               <div className="absolute -bottom-2 -right-2 bg-black rounded-lg p-1.5 border border-white/10">
                 <Check size={16} className="text-primary" strokeWidth={4} />
               </div>

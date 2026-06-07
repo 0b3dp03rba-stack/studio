@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOut, Link2, Check, ShieldAlert, LayoutDashboard } from 'lucide-react';
+import { LogOut, Link as LinkIcon, Check, ShieldAlert, LayoutDashboard } from 'lucide-react';
 import { Button } from './ui/button';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth, useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
@@ -54,7 +54,7 @@ export default function Header() {
           <Link href="/dashboard" className="flex items-center gap-5 group">
             <div className="w-14 h-14 bg-black rounded-2xl flex items-center justify-center border border-white/10 shadow-xl relative overflow-hidden transition-transform group-active:scale-95">
                 <div className="relative flex items-center justify-center">
-                  <Link2 size={32} className="text-primary" />
+                  <LinkIcon size={32} className="text-primary" />
                   <div className="absolute -bottom-1 -right-1 bg-black rounded-sm flex items-center justify-center p-0.5">
                     <Check size={12} className="text-primary" strokeWidth={5} />
                   </div>

@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     siteName: 'Linku',
     images: [
       {
-        url: 'https://picsum.photos/seed/linku-logo/1200/630',
+        url: 'https://picsum.photos/seed/linku-og/1200/630',
         width: 1200,
         height: 630,
         alt: 'Linku Logo',
@@ -38,8 +38,12 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Linku - Premium Link Hub',
     description: 'Platform Manajemen Tautan Modern dengan Tema Neon.',
-    images: ['https://picsum.photos/seed/linku-logo/1200/630'],
+    images: ['https://picsum.photos/seed/linku-og/1200/630'],
   },
+  icons: {
+    icon: 'https://picsum.photos/seed/linku-logo-32/32/32',
+    apple: 'https://picsum.photos/seed/linku-logo-192/192/192',
+  }
 };
 
 export const viewport: Viewport = {
@@ -61,7 +65,6 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-        <link rel="apple-touch-icon" href="https://picsum.photos/seed/linku-192/192/192" />
       </head>
       <body className="font-body antialiased min-h-screen pb-20">
         <FirebaseClientProvider>

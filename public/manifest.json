@@ -1,21 +1,22 @@
 {
-  "name": "Linku - Premium Link Hub",
+  "name": "Linku",
   "short_name": "Linku",
-  "description": "Platform Manajemen Tautan Modern dengan Tema Neon. Tampilkan semua dunia Anda dalam satu link.",
+  "description": "Premium Link Hub dengan Tema Neon. Tampilkan semua dunia Anda dalam satu link.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0a0a",
   "theme_color": "#ff0000",
   "orientation": "portrait",
+  "scope": "/",
   "icons": [
     {
-      "src": "https://picsum.photos/seed/linku-192/192/192",
+      "src": "https://picsum.photos/seed/linku-logo-192/192/192",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "https://picsum.photos/seed/linku-512/512/512",
+      "src": "https://picsum.photos/seed/linku-logo-512/512/512",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

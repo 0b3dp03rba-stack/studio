@@ -1,15 +1,14 @@
 "use client";
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Link2, Sparkles, LayoutGrid, ArrowRight, ShieldCheck, Zap, Globe, MousePointer2, Star, Quote, Heart } from 'lucide-react';
+import { Link as LinkIcon, Sparkles, LayoutGrid, ArrowRight, ShieldCheck, Zap, Globe, MousePointer2, Star, Quote, Heart } from 'lucide-react';
 import Link from 'next/link';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { collection, query, orderBy, limit } from 'firebase/firestore';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
-// Komponen rating statis
 const StaticStarRating = ({ rating, size = 14 }: { rating: number, size?: number }) => {
   return (
     <div className="flex items-center gap-0.5">
@@ -35,7 +34,6 @@ export default function LandingPage() {
     if (user && !isUserLoading && user.emailVerified) router.push('/dashboard');
   }, [user, isUserLoading, router]);
 
-  // Fetch 3 reviews terbaru untuk Wall of Love
   const reviewsQuery = useMemoFirebase(() => query(
     collection(db, 'platformReviews'), 
     orderBy('createdAt', 'desc'),
@@ -53,7 +51,7 @@ export default function LandingPage() {
       <header className="fixed top-0 w-full h-20 px-6 flex items-center justify-between z-50 backdrop-blur-xl border-b border-white/5">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center border border-white/10 shadow-xl">
-            <Link2 size={24} className="text-primary" />
+            <LinkIcon size={24} className="text-primary" />
           </div>
           <span className="text-2xl font-black tracking-tighter text-white">Linku</span>
         </div>
@@ -66,7 +64,6 @@ export default function LandingPage() {
       </header>
 
       <main className="relative z-10 pt-44 pb-32 px-6 max-w-5xl mx-auto text-center space-y-32">
-        {/* HERO SECTION */}
         <div className="space-y-12">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-full animate-in">
             <Sparkles size={14} className="text-primary" />
@@ -89,7 +86,6 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* FEATURES GRID */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
            {[
              { t: 'Desain Tanpa Batas', d: 'Kustomisasi bentuk, warna, dan layout sesuka hati Master.', i: LayoutGrid },
@@ -106,7 +102,6 @@ export default function LandingPage() {
            ))}
         </div>
 
-        {/* WALL OF LOVE SECTION (3 Items Only) */}
         {reviews && reviews.length > 0 && (
           <section className="space-y-16 animate-in">
              <div className="space-y-4">
@@ -144,7 +139,6 @@ export default function LandingPage() {
           </section>
         )}
 
-        {/* PRICING PREVIEW */}
         <section className="glass-card p-12 rounded-[4rem] border-primary/10 shadow-[0_0_100px_-20px_rgba(255,0,0,0.1)]">
            <div className="space-y-12">
               <h2 className="text-4xl font-black text-white uppercase tracking-tighter">Identity Investment</h2>

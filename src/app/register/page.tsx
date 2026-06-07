@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -7,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Mail, Lock, User, Link2, Check, AtSign, Chrome } from 'lucide-react';
+import { Mail, Lock, Link as LinkIcon, Check, AtSign, Chrome } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth, useFirestore } from '@/firebase';
 import { createUserWithEmailAndPassword, sendEmailVerification, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
@@ -144,7 +143,7 @@ export default function RegisterPage() {
         <div className="absolute top-0 left-0 w-full h-1 neon-gradient"></div>
         <CardHeader className="text-center space-y-4 pt-12">
           <div className="mx-auto w-24 h-24 bg-black rounded-[2.5rem] flex items-center justify-center border border-white/10 shadow-2xl relative">
-            <Link2 size={48} className="text-primary" />
+            <LinkIcon size={48} className="text-primary" />
           </div>
           <div className="space-y-1">
             <CardTitle className="text-5xl font-black tracking-tighter text-white">Linku</CardTitle>

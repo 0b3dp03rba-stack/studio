@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from 'react';
@@ -6,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Mail, ArrowLeft, Send, Sparkles, Key } from 'lucide-react';
+import { Mail, ArrowLeft, Send, Sparkles, Link as LinkIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/firebase';
 import { sendPasswordResetEmail } from 'firebase/auth';
@@ -36,10 +35,10 @@ export default function ForgotPasswordPage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-[#0a0a0a] bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-primary/20 via-background to-background">
       <Card className="w-full max-w-md glass-card border-white/5 shadow-2xl overflow-hidden relative">
-        <div className="absolute top-0 left-0 w-full h-1.5 neon-gradient"></div>
+        <div className="absolute top-0 left-0 w-full h-1 neon-gradient"></div>
         <CardHeader className="text-center space-y-6 pt-12">
-          <div className="mx-auto w-24 h-24 bg-primary/10 rounded-[2rem] flex items-center justify-center border border-primary/20 shadow-2xl relative">
-             <Key size={48} className="text-primary relative z-10" />
+          <div className="mx-auto w-24 h-24 bg-black rounded-[2rem] flex items-center justify-center border border-white/10 shadow-2xl relative">
+             <LinkIcon size={48} className="text-primary relative z-10" />
           </div>
           <div className="space-y-2">
             <CardTitle className="text-3xl font-black tracking-tighter text-white uppercase">Reset Sandi</CardTitle>
