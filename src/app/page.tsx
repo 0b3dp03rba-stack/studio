@@ -1,15 +1,33 @@
 
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { Link2, Sparkles, LayoutGrid, ArrowRight, ShieldCheck, Zap, Globe, MousePointer2 } from 'lucide-react';
+import { Link2, Sparkles, LayoutGrid, ArrowRight, ShieldCheck, Zap, Globe, MousePointer2, Star, Quote, Heart } from 'lucide-react';
 import Link from 'next/link';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { useRouter } from 'next/navigation';
+import { collection, query, orderBy, limit } from 'firebase/firestore';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+
+// Komponen rating statis
+const StaticStarRating = ({ rating, size = 14 }: { rating: number, size?: number }) => {
+  return (
+    <div className="flex items-center gap-0.5">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <Star 
+          key={i} 
+          size={size} 
+          className={i <= Math.round(rating) ? "text-primary fill-primary" : "text-white/10"} 
+        />
+      ))}
+    </div>
+  );
+};
 
 export default function LandingPage() {
   const { user, isUserLoading } = useUser();
+  const db = useFirestore();
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
 
@@ -17,6 +35,14 @@ export default function LandingPage() {
     setMounted(true);
     if (user && !isUserLoading && user.emailVerified) router.push('/dashboard');
   }, [user, isUserLoading, router]);
+
+  // Fetch reviews for Wall of Love
+  const reviewsQuery = useMemoFirebase(() => query(
+    collection(db, 'platformReviews'), 
+    orderBy('createdAt', 'desc'),
+    limit(6)
+  ), [db]);
+  const { data: reviews } = useCollection(reviewsQuery);
 
   if (!mounted) return <div className="min-h-screen bg-black" />;
 
@@ -81,6 +107,44 @@ export default function LandingPage() {
            ))}
         </div>
 
+        {/* WALL OF LOVE SECTION */}
+        {reviews && reviews.length > 0 && (
+          <section className="space-y-16 animate-in">
+             <div className="space-y-4">
+                <div className="inline-flex items-center gap-2 px-3 py-1 bg-red-500/10 border border-red-500/20 rounded-full">
+                   <Heart size={12} className="text-primary fill-primary" />
+                   <span className="text-[10px] font-black uppercase text-primary tracking-widest">Wall of Love</span>
+                </div>
+                <h2 className="text-4xl font-black text-white uppercase tracking-tighter">Dipercaya Ribuan Master</h2>
+             </div>
+
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {reviews.map((review) => (
+                  <div key={review.id} className="glass-card p-6 rounded-[2.5rem] text-left space-y-4 relative shadow-2xl group hover:bg-white/[0.05] transition-all">
+                     <Quote className="absolute top-6 right-6 text-primary/10 w-10 h-10" />
+                     <div className="flex items-center gap-4">
+                        <Avatar className="w-10 h-10 border border-primary/20">
+                          <AvatarImage src={review.avatarUrl} />
+                          <AvatarFallback className="bg-primary/10 text-primary font-black uppercase text-[10px]">{review.username?.slice(0, 2)}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                           <p className="text-[11px] font-black text-white uppercase tracking-tight">{review.displayName || review.username}</p>
+                           <StaticStarRating rating={review.rating} />
+                        </div>
+                     </div>
+                     <p className="text-xs text-white/70 font-medium leading-relaxed italic">
+                        "{review.comment}"
+                     </p>
+                  </div>
+                ))}
+             </div>
+
+             <Button asChild variant="ghost" className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30 hover:text-primary">
+                <Link href="/reviews">Lihat Semua Kesaksian Master <ArrowRight size={12} className="ml-2" /></Link>
+             </Button>
+          </section>
+        )}
+
         {/* PRICING PREVIEW */}
         <section className="glass-card p-12 rounded-[4rem] border-primary/10 shadow-[0_0_100px_-20px_rgba(255,0,0,0.1)]">
            <div className="space-y-12">
@@ -105,9 +169,6 @@ export default function LandingPage() {
                     </ul>
                  </div>
               </div>
-              <Button asChild className="h-16 px-12 bg-white text-black font-black text-lg rounded-2xl shadow-xl hover:bg-white/90">
-                 <Link href="/register">Amankan Username Master Sekarang</Link>
-              </Button>
            </div>
         </section>
       </main>
