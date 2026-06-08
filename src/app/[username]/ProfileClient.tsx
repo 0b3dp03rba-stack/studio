@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useDoc, useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { doc, collection, updateDoc, increment, getDoc, query, orderBy, onSnapshot, where, limit, getDocs, collectionGroup } from 'firebase/firestore';
-import { User, Share2, MousePointer2, Link2, LayoutGrid, ChevronRight, Search, Instagram, Youtube, Facebook, MessageCircle, Globe, Mail, Sparkles, ExternalLink, Ghost, Home, AlertTriangle, Zap, Link as LinkIcon } from 'lucide-react';
+import { User, Share2, MousePointer2, Link2 as LinkIcon, LayoutGrid, ChevronRight, Search, Instagram, Youtube, Facebook, MessageCircle, Globe, Mail, Sparkles, ExternalLink, Ghost, Home, AlertTriangle, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -21,7 +21,6 @@ const platformIcons: Record<string, any> = {
 
 export default function ProfileClient({ username }: { username: string }) {
   const db = useFirestore();
-  const { user: currentUser } = useUser();
   const { toast } = useToast();
   
   const [mounted, setMounted] = useState(false);
@@ -33,7 +32,6 @@ export default function ProfileClient({ username }: { username: string }) {
 
   useEffect(() => {
     setMounted(true);
-    // SSR Safe: Window only available on client
     setBasePath(window.location.pathname.endsWith('/') ? window.location.pathname.slice(0, -1) : window.location.pathname);
     
     const resolveUser = async () => {
@@ -54,7 +52,11 @@ export default function ProfileClient({ username }: { username: string }) {
           setResolvedUserId(uid);
           updateDoc(doc(db, 'userProfiles', uid), { views: increment(1) }).catch(() => {});
         }
-      } catch (e) { console.error(e); } finally { setIsResolving(false); }
+      } catch (e) { 
+        console.error("Resolution Error:", e); 
+      } finally { 
+        setIsResolving(false); 
+      }
     };
     resolveUser();
   }, [db, username]);
@@ -62,7 +64,6 @@ export default function ProfileClient({ username }: { username: string }) {
   const profileRef = useMemoFirebase(() => resolvedUserId ? doc(db, 'userProfiles', resolvedUserId) : null, [db, resolvedUserId]);
   const { data: profile } = useDoc(profileRef);
 
-  // SPOTLIGHT QUERY
   const spotlightQuery = useMemoFirebase(() => {
     if (!resolvedUserId) return null;
     return query(collectionGroup(db, 'links'), where('userId', '==', resolvedUserId), orderBy('createdAt', 'desc'), limit(1));
@@ -91,32 +92,39 @@ export default function ProfileClient({ username }: { username: string }) {
     return () => unsubStandalone();
   }, [resolvedUserId, db]);
 
-  if (!mounted || isResolving) return <div className="min-h-screen bg-black flex items-center justify-center"><div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div></div>;
-
-  if (!profile) return (
-    <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6 text-center space-y-8">
-      <div className="w-24 h-24 rounded-[2rem] bg-primary/10 flex items-center justify-center text-primary glow-primary animate-bounce"><Ghost size={48} /></div>
-      <h1 className="text-4xl font-black text-white uppercase tracking-tighter">Profil Tidak Ada</h1>
-      <Button asChild className="neon-gradient text-background font-black rounded-2xl"><Link href="/"><Home size={16} className="mr-2" /> Ke Beranda</Link></Button>
+  // Loading State - Always black to prevent white flash
+  if (isResolving) return (
+    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+      <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin shadow-2xl"></div>
     </div>
   );
 
+  // Profile Not Found
+  if (mounted && !isResolving && !profile) return (
+    <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center p-6 text-center space-y-8">
+      <div className="w-24 h-24 rounded-[2rem] bg-primary/10 flex items-center justify-center text-primary glow-primary animate-bounce shadow-2xl">
+        <Ghost size={48} />
+      </div>
+      <h1 className="text-4xl font-black text-white uppercase tracking-tighter">Profil Tidak Ada</h1>
+      <Button asChild className="neon-gradient text-background font-black rounded-2xl h-16 px-10 shadow-2xl active:scale-95 transition-all">
+        <Link href="/"><Home size={16} className="mr-2" /> Ke Beranda</Link>
+      </Button>
+    </div>
+  );
+
+  if (!profile) return <div className="min-h-screen bg-[#0a0a0a]" />;
+
   const primaryColor = profile.themeColor || '#ff0000';
   const secondaryColor = profile.themeColorSecondary || '#ffea00';
-  
   const shape = profile.profile_shape || 'rounded';
+  const avatarClass = "rounded-[2rem]";
+
   const getShapeClass = (type: 'card' | 'search' | 'button') => {
     if (shape === 'square') return "rounded-none";
     if (shape === 'hexagon') return type === 'card' ? "rounded-[3rem]" : "rounded-full"; 
     if (shape === 'circle') return "rounded-[3rem]";
     if (shape === 'rounded') return "rounded-[2.5rem]";
     return "rounded-2xl";
-  };
-
-  const avatarClass = "rounded-[2rem]";
-
-  const getGroupHref = (groupId: string) => {
-    return `${basePath}/g/${groupId}`;
   };
 
   const handleLinkClick = (link: any) => {
@@ -132,17 +140,14 @@ export default function ProfileClient({ username }: { username: string }) {
   return (
     <div className="min-h-screen relative overflow-x-hidden bg-[#0a0a0a]" style={{ 
       backgroundImage: profile.wallpaperUrl ? `url(${profile.wallpaperUrl})` : 'none',
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-      backgroundAttachment: 'fixed'
+      backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed'
     }}>
       {profile.wallpaperUrl && <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" />}
 
-      <div className="max-w-md mx-auto relative z-10 p-4 pb-24 pt-6 space-y-8">
+      <div className="max-w-md mx-auto relative z-10 p-4 pb-24 pt-6 space-y-8 animate-in">
         <div className={cn(
           "relative glass-card border-none overflow-hidden shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] transition-all duration-500",
-          getShapeClass('card'),
-          "before:absolute before:inset-0 before:p-[1px] before:bg-gradient-to-br before:from-white/10 before:to-transparent before:-z-10"
+          getShapeClass('card')
         )}>
            {profile.bannerUrl ? (
              <div className="absolute inset-0 z-0">
@@ -168,7 +173,7 @@ export default function ProfileClient({ username }: { username: string }) {
                       </div>
                    </div>
                    <div className="flex flex-col items-end gap-6 shrink-0">
-                      <Button variant="ghost" size="icon" onClick={() => { navigator.clipboard.writeText(window.location.href); toast({title: "Link Tersalin"}); }} className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/20 transition-all">
+                      <Button variant="ghost" size="icon" onClick={() => { navigator.clipboard.writeText(window.location.href); toast({title: "Link Tersalin"}); }} className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 text-white/60 hover:text-white transition-all shadow-xl">
                         <Share2 size={22} />
                       </Button>
                       {profile.socialLinks?.length > 0 && (
@@ -176,7 +181,7 @@ export default function ProfileClient({ username }: { username: string }) {
                            {profile.socialLinks.map((social: any, i: number) => {
                              const Icon = platformIcons[social.platform] || Globe;
                              return (
-                               <a key={i} href={getSmartSocialUrl(social.platform, social.label)} target="_blank" rel="noreferrer" className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:text-primary transition-all">
+                               <a key={i} href={getSmartSocialUrl(social.platform, social.label)} target="_blank" rel="noreferrer" className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:text-primary transition-all shadow-lg">
                                  <Icon size={22} />
                                </a>
                              );
@@ -233,7 +238,7 @@ export default function ProfileClient({ username }: { username: string }) {
                       {profile.socialLinks.map((social: any, i: number) => {
                         const Icon = platformIcons[social.platform] || Globe;
                         return (
-                          <a key={i} href={getSmartSocialUrl(social.platform, social.label)} target="_blank" rel="noreferrer" className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:text-primary transition-all">
+                          <a key={i} href={getSmartSocialUrl(social.platform, social.label)} target="_blank" rel="noreferrer" className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:text-primary transition-all shadow-lg">
                             <Icon size={22} />
                           </a>
                         );
@@ -267,11 +272,7 @@ export default function ProfileClient({ username }: { username: string }) {
                 <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40">Latest Update</p>
                 <div className="bg-primary px-2 py-0.5 rounded-full text-[8px] font-black text-background animate-pulse">NEW</div>
              </div>
-             <button 
-               onClick={() => handleLinkClick(latestLink)}
-               className={cn("w-full p-1 animate-flowing-gradient shadow-2xl transition-transform active:scale-95", getShapeClass('card'))}
-               style={{ backgroundImage: `linear-gradient(45deg, ${primaryColor}, ${secondaryColor})` }}
-             >
+             <button onClick={() => handleLinkClick(latestLink)} className={cn("w-full p-1 animate-flowing-gradient shadow-2xl transition-transform active:scale-95", getShapeClass('card'))} style={{ backgroundImage: `linear-gradient(45deg, ${primaryColor}, ${secondaryColor})` }}>
                 <div className={cn("w-full h-24 bg-black/80 backdrop-blur-3xl flex items-center px-6 gap-4 border border-white/10", getShapeClass('card'))}>
                    <div className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center overflow-hidden border border-white/10 shadow-xl shrink-0">
                       {latestLink.imageUrl ? <img src={latestLink.imageUrl} className="w-full h-full object-cover" alt={latestLink.title} /> : <LinkIcon size={24} style={{ color: primaryColor }} />}
@@ -294,7 +295,7 @@ export default function ProfileClient({ username }: { username: string }) {
 
            <div className="space-y-4">
               {groups?.filter(g => g.title.toLowerCase().includes(searchQuery.toLowerCase())).map(group => (
-                <Link key={group.id} href={getGroupHref(group.id)} className="block group px-1">
+                <Link key={group.id} href={`${basePath}/g/${group.id}`} className="block group px-1">
                   <div className={cn("p-0.5 glass-card border-white/5 hover:border-white/20 transition-all hover:scale-[1.02] shadow-xl", getShapeClass('card'))}>
                     <div className={cn("w-full h-24 bg-black/40 backdrop-blur-2xl flex items-center px-6 gap-4 border border-white/10", getShapeClass('card'))}>
                       <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10 shrink-0">
@@ -311,17 +312,7 @@ export default function ProfileClient({ username }: { username: string }) {
               ))}
 
               {standaloneLinks.filter(l => l.title.toLowerCase().includes(searchQuery.toLowerCase())).map(link => (
-                <button
-                  key={link.id}
-                  onClick={() => handleLinkClick(link)}
-                  className={cn(
-                    "w-full p-5 flex items-center gap-4 transition-all active:scale-95 group shadow-lg mx-1",
-                    getShapeClass('button'),
-                    link.button_style === 'glassmorphism' ? "glass-card border-white/10" : 
-                    link.button_style === 'outline' ? "bg-transparent border-2 border-white/20" :
-                    "bg-white/5 border border-white/5"
-                  )}
-                >
+                <button key={link.id} onClick={() => handleLinkClick(link)} className={cn("w-full p-5 flex items-center gap-4 transition-all active:scale-95 group shadow-lg mx-1", getShapeClass('button'), link.button_style === 'glassmorphism' ? "glass-card border-white/10" : link.button_style === 'outline' ? "bg-transparent border-2 border-white/20" : "bg-white/5 border border-white/5")}>
                   <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10">
                     {link.imageUrl ? <img src={link.imageUrl} className="w-full h-full object-cover" alt={link.title} /> : <LinkIcon size={24} style={{ color: primaryColor }} />}
                   </div>

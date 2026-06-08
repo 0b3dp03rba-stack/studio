@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Link as LinkIcon, Mail, Lock, Check, Chrome } from 'lucide-react';
+import { Link2 as LinkIcon, Mail, Lock, Check, Chrome } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth, useUser, useFirestore } from '@/firebase';
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
@@ -77,7 +77,6 @@ export default function LoginPage() {
     try {
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
-      
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
@@ -87,7 +86,6 @@ export default function LoginPage() {
       if (!profileSnap.exists()) {
         const baseUsername = (user.email?.split('@')[0] || 'user').toLowerCase().replace(/[^a-z0-9_]/g, '');
         let finalUsername = baseUsername;
-        
         const userCheckRef = doc(db, 'usernames', finalUsername);
         const userCheckSnap = await getDoc(userCheckRef);
         if (userCheckSnap.exists()) {
@@ -111,22 +109,16 @@ export default function LoginPage() {
           createdAt: serverTimestamp()
         });
       }
-
       toast({ title: "Berhasil Masuk", description: "Otentikasi Google berhasil." });
       router.push('/dashboard');
     } catch (error: any) {
-      console.error("Google Auth Error:", error);
-      toast({ 
-        variant: "destructive", 
-        title: "Google Gagal", 
-        description: "Gagal menghubungkan ke Google." 
-      });
+      toast({ variant: "destructive", title: "Google Gagal", description: "Gagal menghubungkan ke Google." });
     } finally {
       setIsGoogleLoading(false);
     }
   };
 
-  if (!mounted || isUserLoading) return null;
+  if (!mounted || isUserLoading) return <div className="min-h-screen bg-black" />;
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-[#0a0a0a] bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-primary/20 via-background to-background">
@@ -147,11 +139,7 @@ export default function LoginPage() {
           </div>
         </CardHeader>
         <CardContent className="px-8 pb-12 pt-4 space-y-6">
-          <Button 
-            onClick={handleGoogleLogin} 
-            disabled={isGoogleLoading}
-            className="w-full h-14 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-2xl font-bold transition-all flex items-center justify-center gap-3"
-          >
+          <Button onClick={handleGoogleLogin} disabled={isGoogleLoading} className="w-full h-14 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-2xl font-bold transition-all flex items-center justify-center gap-3">
             {isGoogleLoading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Chrome size={20} className="text-white" />}
             MASUK DENGAN GOOGLE
           </Button>
@@ -167,14 +155,7 @@ export default function LoginPage() {
               <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Email Address</label>
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
-                <Input 
-                  type="email" 
-                  placeholder="name@example.com" 
-                  value={email} 
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="bg-white/5 border-white/10 h-14 pl-12 rounded-2xl focus-visible:ring-primary/30 font-medium"
-                />
+                <Input type="email" placeholder="name@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required className="bg-white/5 border-white/10 h-14 pl-12 rounded-2xl focus-visible:ring-primary/30 font-medium" />
               </div>
             </div>
             <div className="space-y-2">
@@ -184,31 +165,15 @@ export default function LoginPage() {
               </div>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
-                <Input 
-                  type="password" 
-                  placeholder="••••••••" 
-                  value={password} 
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="bg-white/5 border-white/10 h-14 pl-12 rounded-2xl focus-visible:ring-primary/30 font-medium"
-                />
+                <Input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required className="bg-white/5 border-white/10 h-14 pl-12 rounded-2xl focus-visible:ring-primary/30 font-medium" />
               </div>
             </div>
-
             <Captcha onVerify={setIsCaptchaVerified} />
-
-            <Button 
-              type="submit" 
-              disabled={isLoading || !isCaptchaVerified}
-              className="w-full h-16 neon-gradient text-background font-black text-xl glow-primary mt-4 rounded-2xl active:scale-95 transition-all shadow-2xl disabled:opacity-50 disabled:grayscale"
-            >
+            <Button type="submit" disabled={isLoading || !isCaptchaVerified} className="w-full h-16 neon-gradient text-background font-black text-xl glow-primary mt-4 rounded-2xl active:scale-95 transition-all shadow-2xl disabled:opacity-50">
               {isLoading ? "PROSES..." : "MASUK HUB"}
             </Button>
-            
-            <div className="text-center space-y-4 pt-4">
-              <p className="text-xs text-muted-foreground font-medium">
-                Belum punya identitas? <Link href="/register" className="text-primary font-black hover:underline uppercase tracking-tighter">Daftar Disini</Link>
-              </p>
+            <div className="text-center pt-4">
+              <p className="text-xs text-muted-foreground font-medium">Belum punya identitas? <Link href="/register" className="text-primary font-black hover:underline uppercase tracking-tighter">Daftar Disini</Link></p>
             </div>
           </form>
         </CardContent>

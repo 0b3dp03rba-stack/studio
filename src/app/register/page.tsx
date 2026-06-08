@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Mail, Lock, Link as LinkIcon, Check, AtSign, Chrome } from 'lucide-react';
+import { Mail, Lock, Link2 as LinkIcon, Check, AtSign, Chrome } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth, useFirestore } from '@/firebase';
 import { createUserWithEmailAndPassword, sendEmailVerification, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
@@ -51,7 +51,6 @@ export default function RegisterPage() {
     try {
       const usernameRef = doc(db, 'usernames', cleanUsername);
       const usernameSnap = await getDoc(usernameRef);
-      
       if (usernameSnap.exists()) {
         toast({ variant: "destructive", title: "Username Dipakai", description: "Cari nama lain." });
         setIsLoading(false);
@@ -72,11 +71,7 @@ export default function RegisterPage() {
         updatedAt: serverTimestamp(),
       });
 
-      await setDoc(usernameRef, {
-        userId: firebaseUser.uid,
-        createdAt: serverTimestamp()
-      });
-
+      await setDoc(usernameRef, { userId: firebaseUser.uid, createdAt: serverTimestamp() });
       await sendEmailVerification(firebaseUser);
       toast({ title: "Sukses", description: "Link verifikasi telah dikirim ke email Anda." });
       router.push('/verify-email');
@@ -94,20 +89,17 @@ export default function RegisterPage() {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
-
       const profileRef = doc(db, 'userProfiles', user.uid);
       const profileSnap = await getDoc(profileRef);
 
       if (!profileSnap.exists()) {
         const baseUsername = (user.email?.split('@')[0] || 'user').toLowerCase().replace(/[^a-z0-9_]/g, '');
         let finalUsername = baseUsername;
-        
         const userCheckRef = doc(db, 'usernames', finalUsername);
         const userCheckSnap = await getDoc(userCheckRef);
         if (userCheckSnap.exists()) {
           finalUsername = `${baseUsername}_${Math.floor(Math.random() * 1000)}`;
         }
-
         await setDoc(profileRef, {
           id: user.uid,
           email: user.email,
@@ -119,27 +111,22 @@ export default function RegisterPage() {
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
-
-        await setDoc(doc(db, 'usernames', finalUsername), {
-          userId: user.uid,
-          createdAt: serverTimestamp()
-        });
+        await setDoc(doc(db, 'usernames', finalUsername), { userId: user.uid, createdAt: serverTimestamp() });
       }
-
       toast({ title: "Berhasil", description: "Akun Google terhubung." });
       router.push('/dashboard');
-    } catch (error: any) {
+    } catch (error) {
       toast({ variant: "destructive", title: "Gagal", description: "Koneksi Google gagal." });
     } finally {
       setIsGoogleLoading(false);
     }
   };
 
-  if (!mounted) return null;
+  if (!mounted) return <div className="min-h-screen bg-black" />;
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-[#0a0a0a] bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-primary/20 via-background to-background">
-      <Card className="w-full max-w-md glass-card border-white/5 shadow-2xl relative overflow-hidden">
+      <Card className="w-full max-w-md glass-card border-white/5 shadow-2xl overflow-hidden relative">
         <div className="absolute top-0 left-0 w-full h-1 neon-gradient"></div>
         <CardHeader className="text-center space-y-4 pt-12">
           <div className="mx-auto w-24 h-24 bg-black rounded-[2.5rem] flex items-center justify-center border border-white/10 shadow-2xl relative">
@@ -151,82 +138,41 @@ export default function RegisterPage() {
           </div>
         </CardHeader>
         <CardContent className="px-8 pb-12 pt-4 space-y-6">
-          <Button 
-            onClick={handleGoogleLogin} 
-            disabled={isGoogleLoading}
-            className="w-full h-14 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-2xl font-bold transition-all flex items-center justify-center gap-3"
-          >
+          <Button onClick={handleGoogleLogin} disabled={isGoogleLoading} className="w-full h-14 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-2xl font-bold transition-all flex items-center justify-center gap-3">
             {isGoogleLoading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Chrome size={20} />}
             DAFTAR DENGAN GOOGLE
           </Button>
-
           <div className="flex items-center gap-4">
             <div className="h-px flex-1 bg-white/5" />
             <span className="text-[10px] font-black text-white/20 uppercase">ATAU MANUAL</span>
             <div className="h-px flex-1 bg-white/5" />
           </div>
-
           <form onSubmit={handleRegister} className="space-y-5">
             <div className="space-y-2">
               <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Username Unik</label>
               <div className="relative">
                 <AtSign className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
-                <Input 
-                  placeholder="username_kamu" 
-                  value={username} 
-                  onChange={(e) => setUsername(e.target.value)}
-                  required
-                  className="bg-white/5 border-white/10 h-14 pl-12 rounded-2xl focus-visible:ring-primary/30"
-                />
+                <Input placeholder="username_kamu" value={username} onChange={(e) => setUsername(e.target.value)} required className="bg-white/5 border-white/10 h-14 pl-12 rounded-2xl focus-visible:ring-primary/30" />
               </div>
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Email Address</label>
-              <Input 
-                type="email" 
-                placeholder="name@example.com" 
-                value={email} 
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="bg-white/5 border-white/10 h-14 rounded-2xl"
-              />
+              <Input type="email" placeholder="name@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required className="bg-white/5 border-white/10 h-14 rounded-2xl" />
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Password</label>
-              <Input 
-                type="password" 
-                placeholder="Min 6 karakter" 
-                value={password} 
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="bg-white/5 border-white/10 h-14 rounded-2xl"
-              />
+              <Input type="password" placeholder="Min 6 karakter" value={password} onChange={(e) => setPassword(e.target.value)} required className="bg-white/5 border-white/10 h-14 rounded-2xl" />
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Ulangi Password</label>
-              <Input 
-                type="password" 
-                placeholder="Ulangi sandi" 
-                value={confirmPassword} 
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                className="bg-white/5 border-white/10 h-14 rounded-2xl"
-              />
+              <Input type="password" placeholder="Ulangi sandi" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required className="bg-white/5 border-white/10 h-14 rounded-2xl" />
             </div>
-
             <Captcha onVerify={setIsCaptchaVerified} />
-
-            <Button 
-              type="submit" 
-              disabled={isLoading || !isCaptchaVerified}
-              className="w-full h-16 neon-gradient text-background font-black rounded-2xl glow-primary mt-4 active:scale-95 transition-all shadow-2xl disabled:opacity-50"
-            >
+            <Button type="submit" disabled={isLoading || !isCaptchaVerified} className="w-full h-16 neon-gradient text-background font-black rounded-2xl glow-primary mt-4 active:scale-95 transition-all shadow-2xl disabled:opacity-50">
               {isLoading ? "MENDAFTAR..." : "DAFTAR SEKARANG"}
             </Button>
             <div className="text-center pt-6">
-              <p className="text-xs text-muted-foreground font-medium">
-                Sudah punya akun? <Link href="/login" className="text-primary font-black hover:underline uppercase tracking-tighter">Masuk Disini</Link>
-              </p>
+              <p className="text-xs text-muted-foreground font-medium">Sudah punya akun? <Link href="/login" className="text-primary font-black hover:underline uppercase tracking-tighter">Masuk Disini</Link></p>
             </div>
           </form>
         </CardContent>

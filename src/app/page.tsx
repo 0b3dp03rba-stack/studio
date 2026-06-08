@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Link as LinkIcon, Sparkles, LayoutGrid, ArrowRight, ShieldCheck, Zap, Globe, MousePointer2, Star, Quote, Heart } from 'lucide-react';
+import { Link2 as LinkIcon, Sparkles, LayoutGrid, ArrowRight, ShieldCheck, Zap, Globe, MousePointer2, Star, Quote, Heart } from 'lucide-react';
 import Link from 'next/link';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { useRouter } from 'next/navigation';
@@ -50,7 +50,7 @@ export default function LandingPage() {
 
       <header className="fixed top-0 w-full h-20 px-6 flex items-center justify-between z-50 backdrop-blur-xl border-b border-white/5">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center border border-white/10 shadow-xl">
+          <div className="logo-box">
             <LinkIcon size={24} className="text-primary" />
           </div>
           <span className="text-2xl font-black tracking-tighter text-white">Linku</span>

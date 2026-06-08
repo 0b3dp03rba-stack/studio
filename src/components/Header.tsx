@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOut, Link as LinkIcon, Check, ShieldAlert, LayoutDashboard } from 'lucide-react';
+import { LogOut, Link2 as LinkIcon, Check, ShieldAlert, LayoutDashboard } from 'lucide-react';
 import { Button } from './ui/button';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth, useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
@@ -20,17 +20,12 @@ export default function Header() {
   useEffect(() => {
     const host = window.location.hostname;
     const mainDomain = 'linku.biz.id';
-    
     const isLocal = host.includes('localhost');
     const isMain = host === mainDomain || host === `www.${mainDomain}` || (isLocal && (host.includes('localhost') || host.includes('127.0.0.1')));
-    
     setIsSystemDomain(isMain);
   }, []);
 
-  const profileRef = useMemoFirebase(() => 
-    user ? doc(db, 'userProfiles', user.uid) : null, 
-    [db, user?.uid]
-  );
+  const profileRef = useMemoFirebase(() => user ? doc(db, 'userProfiles', user.uid) : null, [db, user?.uid]);
   const { data: profile } = useDoc(profileRef);
 
   const handleLogout = async () => {
@@ -52,7 +47,7 @@ export default function Header() {
       <div className="max-w-4xl mx-auto w-full flex items-center justify-between">
         <div className="flex items-center gap-5">
           <Link href="/dashboard" className="flex items-center gap-5 group">
-            <div className="w-14 h-14 bg-black rounded-2xl flex items-center justify-center border border-white/10 shadow-xl relative overflow-hidden transition-transform group-active:scale-95">
+            <div className="logo-box relative overflow-hidden transition-transform group-active:scale-95">
                 <div className="relative flex items-center justify-center">
                   <LinkIcon size={32} className="text-primary" />
                   <div className="absolute -bottom-1 -right-1 bg-black rounded-sm flex items-center justify-center p-0.5">
@@ -61,9 +56,7 @@ export default function Header() {
                 </div>
             </div>
             <div className="flex flex-col">
-              <span className="font-black text-3xl tracking-tighter text-white leading-none">
-                Linku
-              </span>
+              <span className="font-black text-3xl tracking-tighter text-white leading-none">Linku</span>
               <span className="text-[9px] font-black uppercase tracking-[0.4em] text-primary/70 leading-none mt-1.5 animate-pulse">
                 {isAdminPage ? 'MASTER PANEL' : (isAdmin ? 'ADMIN CONTROL' : 'PREMIUM HUB')}
               </span>
@@ -73,37 +66,18 @@ export default function Header() {
         
         <div className="flex items-center gap-2">
           {isAdmin && !isAdminPage && (
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              asChild
-              className="h-12 w-12 rounded-2xl text-white/40 hover:text-primary hover:bg-primary/10 transition-all"
-            >
-              <Link href="/admin">
-                <ShieldAlert size={22} />
-              </Link>
+            <Button variant="ghost" size="icon" asChild className="h-12 w-12 rounded-2xl text-white/40 hover:text-primary hover:bg-primary/10 transition-all">
+              <Link href="/admin"><ShieldAlert size={22} /></Link>
             </Button>
           )}
 
           {isAdminPage && (
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              asChild
-              className="h-12 w-12 rounded-2xl text-white/40 hover:text-primary hover:bg-primary/10 transition-all"
-            >
-              <Link href="/dashboard">
-                <LayoutDashboard size={22} />
-              </Link>
+            <Button variant="ghost" size="icon" asChild className="h-12 w-12 rounded-2xl text-white/40 hover:text-primary hover:bg-primary/10 transition-all">
+              <Link href="/dashboard"><LayoutDashboard size={22} /></Link>
             </Button>
           )}
           
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={handleLogout}
-            className="text-white/40 hover:text-destructive transition-all rounded-2xl hover:bg-white/5 h-12 w-12"
-          >
+          <Button variant="ghost" size="icon" onClick={handleLogout} className="text-white/40 hover:text-destructive transition-all rounded-2xl hover:bg-white/5 h-12 w-12">
             <LogOut size={22} />
           </Button>
         </div>
