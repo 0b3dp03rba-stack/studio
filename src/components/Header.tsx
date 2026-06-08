@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOut, Link2 as LinkIcon, Check, ShieldAlert, LayoutDashboard } from 'lucide-react';
+import { LogOut, Check, ShieldAlert, LayoutDashboard } from 'lucide-react';
 import { Button } from './ui/button';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth, useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
@@ -8,6 +8,24 @@ import { signOut } from 'firebase/auth';
 import { doc } from 'firebase/firestore';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+
+const HorizontalLinkIcon = ({ size = 32, className = "" }: { size?: number, className?: string }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="3" 
+    strokeLinecap="round" 
+    strokeLinejoin="round" 
+    className={className}
+  >
+    <path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3" />
+    <path d="M9 17H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3" />
+    <line x1="8" y1="12" x2="16" y2="12" />
+  </svg>
+);
 
 export default function Header() {
   const { user } = useUser();
@@ -49,9 +67,9 @@ export default function Header() {
           <Link href="/dashboard" className="flex items-center gap-5 group">
             <div className="logo-box relative overflow-hidden transition-transform group-active:scale-95">
                 <div className="relative flex items-center justify-center">
-                  <LinkIcon size={32} className="text-primary" />
+                  <HorizontalLinkIcon size={24} className="text-primary" />
                   <div className="absolute -bottom-1 -right-1 bg-black rounded-sm flex items-center justify-center p-0.5">
-                    <Check size={12} className="text-primary" strokeWidth={5} />
+                    <Check size={8} className="text-primary" strokeWidth={5} />
                   </div>
                 </div>
             </div>

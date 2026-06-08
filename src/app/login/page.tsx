@@ -6,12 +6,30 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Link2 as LinkIcon, Mail, Lock, Check, Chrome } from 'lucide-react';
+import { Mail, Lock, Check, Chrome } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth, useUser, useFirestore } from '@/firebase';
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import Captcha from '@/components/Captcha';
+
+const HorizontalLinkIcon = ({ size = 32, className = "" }: { size?: number, className?: string }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="3" 
+    strokeLinecap="round" 
+    strokeLinejoin="round" 
+    className={className}
+  >
+    <path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3" />
+    <path d="M9 17H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3" />
+    <line x1="8" y1="12" x2="16" y2="12" />
+  </svg>
+);
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -127,7 +145,7 @@ export default function LoginPage() {
         <CardHeader className="text-center space-y-4 pt-12">
           <div className="mx-auto w-24 h-24 bg-black rounded-[2.5rem] flex items-center justify-center border border-white/10 shadow-2xl relative group">
             <div className="relative flex items-center justify-center">
-              <LinkIcon size={48} className="text-primary group-hover:scale-110 transition-transform duration-500" />
+              <HorizontalLinkIcon size={48} className="text-primary group-hover:scale-110 transition-transform duration-500" />
               <div className="absolute -bottom-2 -right-2 bg-black rounded-lg p-1.5 border border-white/10">
                 <Check size={16} className="text-primary" strokeWidth={4} />
               </div>

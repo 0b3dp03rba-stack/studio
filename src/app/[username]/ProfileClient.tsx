@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState, useMemo } from 'react';
-import { useDoc, useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
+import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc, collection, updateDoc, increment, getDoc, query, orderBy, onSnapshot, where, limit, getDocs, collectionGroup } from 'firebase/firestore';
-import { User, Share2, MousePointer2, Link2 as LinkIcon, LayoutGrid, ChevronRight, Search, Instagram, Youtube, Facebook, MessageCircle, Globe, Mail, Sparkles, ExternalLink, Ghost, Home, AlertTriangle, Zap } from 'lucide-react';
+import { User, Share2, MousePointer2, Link2 as LinkIcon, LayoutGrid, ChevronRight, Search, Instagram, Youtube, Facebook, MessageCircle, Globe, Mail, Sparkles, ExternalLink, Ghost, Home, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -23,7 +23,6 @@ export default function ProfileClient({ username }: { username: string }) {
   const db = useFirestore();
   const { toast } = useToast();
   
-  const [mounted, setMounted] = useState(false);
   const [resolvedUserId, setResolvedUserId] = useState<string | null>(null);
   const [isResolving, setIsResolving] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -31,7 +30,6 @@ export default function ProfileClient({ username }: { username: string }) {
   const [basePath, setBasePath] = useState('');
 
   useEffect(() => {
-    setMounted(true);
     setBasePath(window.location.pathname.endsWith('/') ? window.location.pathname.slice(0, -1) : window.location.pathname);
     
     const resolveUser = async () => {
@@ -100,7 +98,7 @@ export default function ProfileClient({ username }: { username: string }) {
   );
 
   // Profile Not Found
-  if (mounted && !isResolving && !profile) return (
+  if (!isResolving && !profile) return (
     <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center p-6 text-center space-y-8">
       <div className="w-24 h-24 rounded-[2rem] bg-primary/10 flex items-center justify-center text-primary glow-primary animate-bounce shadow-2xl">
         <Ghost size={48} />
